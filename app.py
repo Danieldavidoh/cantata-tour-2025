@@ -121,7 +121,7 @@ if st.session_state.route:
         col_add, _ = st.columns([1, 3])
         with col_add:
             if st.button("Add", use_container_width=True):
-        new_city = st.selectbox("다음 도시", available, key="next_city")
+                new_city = st.selectbox("다음 도시", available, key="next_city")
         col_add, _ = st.columns([1, 3])
         with col_add:
             if st.button("➕ 추가", use_container_width=True):
