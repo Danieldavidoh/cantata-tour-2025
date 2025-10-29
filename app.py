@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 import folium
 from streamlit_folium import folium_static
 import math
-from fpdf2 import FPDF  # fpdf2 사용
 
 # =============================================
 # 🌆 도시 리스트 (알파벳 정렬)
