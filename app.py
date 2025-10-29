@@ -73,17 +73,27 @@ def init_session():
 init_session()
 
 # =============================================
-# UI 시작
+# UI 시작 – 한 줄 타이틀 (모바일 최적화)
 # =============================================
 st.set_page_config(page_title="칸타타 투어", layout="wide", initial_sidebar_state="collapsed")
-st.header("칸타타 투어 (마하라슈트라)")
+
+# 한 줄 타이틀: 큰 글씨 + 작은 괄호
+st.markdown(
+    """
+    <h1 style='margin:0; padding:0; font-size:2.2rem;'>
+        🎼 칸타타 투어 
+        <span style='font-size:1.1rem; color:#888; font-weight:normal;'>(마하라슈트라)</span>
+    </h1>
+    """,
+    unsafe_allow_html=True
+)
 
 # 시작 도시 선택
 start_city = st.selectbox("시작 도시", cities, index=cities.index(st.session_state.start_city) if st.session_state.start_city in cities else 0)
 
 col_start, col_reset = st.columns([1, 4])
 with col_start:
-    if st.button("시작", use_container_width=True):
+    if st.button("🚀 시작", use_container_width=True):
         if start_city not in st.session_state.route:
             st.session_state.route = [start_city]
             st.session_state.dates[start_city] = datetime.now().date()
@@ -91,7 +101,7 @@ with col_start:
             st.rerun()
 
 with col_reset:
-    if st.button("전체 초기화", use_container_width=True):
+    if st.button("🔄 전체 초기화", use_container_width=True):
         init_session()
         st.rerun()
 
@@ -106,7 +116,7 @@ if st.session_state.route:
         new_city = st.selectbox("다음 도시", available, key="next_city")
         col_add, _ = st.columns([1, 3])
         with col_add:
-            if st.button("추가", use_container_width=True):
+            if st.button("➕ 추가", use_container_width=True):
                 st.session_state.route.append(new_city)
                 if len(st.session_state.route) > 1:
                     prev = st.session_state.route[-2]
