@@ -146,7 +146,7 @@ if st.session_state.route:
                 st.rerun()
 
     st.markdown("### Current Route")
-        st.success(f"{new_city} 추가! ({km}km, {hrs}h)")
+                st.success(f"{new_city} 추가! ({km}km, {hrs}h)")
                 st.rerun()
 
     st.markdown("### 🛣️ 현재 루트")
