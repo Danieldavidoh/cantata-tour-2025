@@ -6,7 +6,7 @@ from streamlit_folium import folium_static
 import math
 
 # =============================================
-# Cities (alphabetically sorted)
+# 도시 리스트 (알파벳 정렬)
 # =============================================
 cities = [
     'Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Thane', 'Aurangabad', 'Solapur', 'Amravati', 'Nanded', 'Kolhapur',
@@ -56,14 +56,14 @@ coords = {
 }
 
 # =============================================
-# Session State Initialization
+# 세션 상태 초기화
 # =============================================
 def init_session():
     defaults = {
         'route': [],
         'dates': {},
         'distances': {},
-        'venues': {city: pd.DataFrame(columns=['Venue', 'Seats', 'Google Maps Link']) for city in cities},
+        'venues': {city: pd.DataFrame(columns=['장소', '좌석수', '구글맵링크']) for city in cities},
         'start_city': 'Mumbai'
     }
     for key, value in defaults.items():
@@ -73,40 +73,40 @@ def init_session():
 init_session()
 
 # =============================================
-# UI Start
+# UI 시작
 # =============================================
-st.set_page_config(page_title="Cantata Tour", layout="wide", initial_sidebar_state="collapsed")
-st.header("Cantata Tour (Maharashtra)")
+st.set_page_config(page_title="칸타타 투어", layout="wide", initial_sidebar_state="collapsed")
+st.header("칸타타 투어 (마하라슈트라)")
 
-# Starting city selection
-start_city = st.selectbox("Starting City", cities, index=cities.index(st.session_state.start_city) if st.session_state.start_city in cities else 0)
+# 시작 도시 선택
+start_city = st.selectbox("시작 도시", cities, index=cities.index(st.session_state.start_city) if st.session_state.start_city in cities else 0)
 
 col_start, col_reset = st.columns([1, 4])
 with col_start:
-    if st.button("Start", use_container_width=True):
+    if st.button("시작", use_container_width=True):
         if start_city not in st.session_state.route:
             st.session_state.route = [start_city]
             st.session_state.dates[start_city] = datetime.now().date()
-            st.success(f"Tour started from {start_city}!")
+            st.success(f"{start_city}에서 투어 시작!")
             st.rerun()
 
 with col_reset:
-    if st.button("Reset All", use_container_width=True):
+    if st.button("전체 초기화", use_container_width=True):
         init_session()
         st.rerun()
 
 # =============================================
-# Route Management
+# 루트 관리
 # =============================================
 if st.session_state.route:
     st.markdown("---")
     
     available = [c for c in cities if c not in st.session_state.route]
     if available:
-        new_city = st.selectbox("Next City", available, key="next_city")
+        new_city = st.selectbox("다음 도시", available, key="next_city")
         col_add, _ = st.columns([1, 3])
         with col_add:
-            if st.button("Add", use_container_width=True):
+            if st.button("추가", use_container_width=True):
                 st.session_state.route.append(new_city)
                 if len(st.session_state.route) > 1:
                     prev = st.session_state.route[-2]
@@ -124,10 +124,10 @@ if st.session_state.route:
                     prev_date = st.session_state.dates.get(prev, datetime.now().date())
                     travel_dt = datetime.combine(prev_date, datetime.min.time()) + timedelta(hours=hrs)
                     st.session_state.dates[new_city] = travel_dt.date()
-                st.success(f"{new_city} added! ({km}km, {hrs}h)")
+                st.success(f"{new_city} 추가! ({km}km, {hrs}h)")
                 st.rerun()
 
-    st.markdown("### Current Route")
+    st.markdown("### 현재 루트")
     st.write(" → ".join(st.session_state.route))
 
     total_km = total_hrs = 0
@@ -138,69 +138,69 @@ if st.session_state.route:
         total_hrs += hrs
 
     col_k, col_t = st.columns(2)
-    with col_k: st.metric("Total Distance", f"{total_km:,} km")
-    with col_t: st.metric("Total Time", f"{total_hrs:.1f} h")
+    with col_k: st.metric("총 거리", f"{total_km:,} km")
+    with col_t: st.metric("총 시간", f"{total_hrs:.1f} h")
 
     # =============================================
-    # Venue Management + Date + Google Maps Preview
+    # 공연장소 관리 + 날짜 달력 + 하이퍼링크 미리보기
     # =============================================
     st.markdown("---")
-    st.subheader("Venues & Dates")
+    st.subheader("공연장소 & 날짜")
 
     for i, city in enumerate(st.session_state.route):
         with st.expander(f"{city}", expanded=False):
             current_date = st.session_state.dates.get(city, datetime.now().date())
-            new_date = st.date_input("Performance Date", value=current_date, key=f"date_{city}")
+            new_date = st.date_input("공연 날짜", value=current_date, key=f"date_{city}")
             if new_date != current_date:
                 st.session_state.dates[city] = new_date
-                st.success(f"{city} date updated → {new_date}")
+                st.success(f"{city} 날짜 → {new_date}")
                 st.rerun()
 
             df = st.session_state.venues[city]
             if not df.empty:
-                st.dataframe(df[['Venue', 'Seats']], use_container_width=True, hide_index=True)
+                st.dataframe(df[['장소', '좌석수']], use_container_width=True, hide_index=True)
 
             with st.form(key=f"add_{city}"):
                 col1, col2 = st.columns([2, 1])
                 with col1:
-                    venue = st.text_input("Venue Name", key=f"v_{city}")
+                    venue = st.text_input("장소명", key=f"v_{city}")
                 with col2:
-                    seats = st.number_input("Seats", min_value=1, step=50, key=f"s_{city}")
-                link = st.text_input("Google Maps Link", placeholder="https://maps.google.com/...", key=f"l_{city}")
-                submitted = st.form_submit_button("Register")
+                    seats = st.number_input("좌석수", min_value=1, step=50, key=f"s_{city}")
+                link = st.text_input("구글맵 링크", placeholder="https://maps.google.com/...", key=f"l_{city}")
+                submitted = st.form_submit_button("등록")
 
-            # Link preview
+            # 하이퍼링크 미리보기
             if link and link.startswith("http"):
-                st.markdown(f"[Open in Google Maps]({link})", unsafe_allow_html=True)
+                st.markdown(f"[구글맵 바로가기]({link})", unsafe_allow_html=True)
 
             if submitted and venue:
-                new_row = pd.DataFrame([{'Venue': venue, 'Seats': seats, 'Google Maps Link': link}])
+                new_row = pd.DataFrame([{'장소': venue, '좌석수': seats, '구글맵링크': link}])
                 st.session_state.venues[city] = pd.concat([df, new_row], ignore_index=True)
-                st.success("Registered!")
+                st.success("등록됨!")
                 st.rerun()
 
             for idx, row in df.iterrows():
-                with st.expander(f"{row['Venue']} ({row['Seats']} seats)", expanded=False):
+                with st.expander(f"{row['장소']} ({row['좌석수']}석)", expanded=False):
                     col_e1, col_e2 = st.columns([2, 1])
                     with col_e1:
-                        new_venue = st.text_input("Venue Name", value=row['Venue'], key=f"ev_{city}_{idx}")
+                        new_venue = st.text_input("장소명", value=row['장소'], key=f"ev_{city}_{idx}")
                     with col_e2:
-                        new_seats = st.number_input("Seats", value=int(row['Seats']), min_value=1, key=f"es_{city}_{idx}")
-                    new_link = st.text_input("Google Maps", value=row['Google Maps Link'], key=f"el_{city}_{idx}")
+                        new_seats = st.number_input("좌석수", value=int(row['좌석수']), min_value=1, key=f"es_{city}_{idx}")
+                    new_link = st.text_input("구글맵", value=row['구글맵링크'], key=f"el_{city}_{idx}")
                     col_save, col_del = st.columns(2)
                     with col_save:
-                        if st.button("Save", key=f"save_{city}_{idx}"):
+                        if st.button("저장", key=f"save_{city}_{idx}"):
                             st.session_state.venues[city].loc[idx] = [new_venue, new_seats, new_link]
-                            st.success("Updated")
+                            st.success("수정됨")
                             st.rerun()
                     with col_del:
-                        if st.button("Delete", key=f"del_{city}_{idx}"):
+                        if st.button("삭제", key=f"del_{city}_{idx}"):
                             st.session_state.venues[city] = df.drop(idx).reset_index(drop=True)
-                            st.success("Deleted")
+                            st.success("삭제됨")
                             st.rerun()
 
-                    if row['Google Maps Link'] and row['Google Maps Link'].startswith("http"):
-                        st.markdown(f"[Open in Google Maps]({row['Google Maps Link']})", unsafe_allow_html=True)
+                    if row['구글맵링크'] and row['구글맵링크'].startswith("http"):
+                        st.markdown(f"[구글맵 바로가기]({row['구글맵링크']})", unsafe_allow_html=True)
 
         if i < len(st.session_state.route) - 1:
             next_c = st.session_state.route[i+1]
@@ -208,10 +208,10 @@ if st.session_state.route:
             st.markdown(f"<div style='text-align:center; margin:4px 0; color:#666;'>↓ {km}km | {hrs}h ↓</div>", unsafe_allow_html=True)
 
     # =============================================
-    # Tour Map + Click to Open Google Maps
+    # 투어 지도 + 말풍선 전체 클릭 시 구글맵 열림
     # =============================================
     st.markdown("---")
-    st.subheader("Tour Map")
+    st.subheader("투어 지도")
     center = coords.get(st.session_state.route[0] if st.session_state.route else 'Mumbai', (19.75, 75.71))
     m = folium.Map(location=center, zoom_start=7, tiles="CartoDB positron")
 
@@ -221,7 +221,7 @@ if st.session_state.route:
 
     for city in st.session_state.route:
         df = st.session_state.venues.get(city, pd.DataFrame())
-        links = [row['Google Maps Link'] for _, row in df.iterrows() if row['Google Maps Link'] and row['Google Maps Link'].startswith("http")]
+        links = [row['구글맵링크'] for _, row in df.iterrows() if row['구글맵링크'] and row['구글맵링크'].startswith("http")]
         
         if links:
             map_link = links[0]
@@ -229,8 +229,8 @@ if st.session_state.route:
             <a href="{map_link}" target="_blank" style="text-decoration:none; color:inherit; cursor:pointer; display:block;">
                 <div style="font-size:14px; min-width:180px; text-align:center; padding:8px;">
                     <b style="font-size:16px;">{city}</b><br>
-                    Date: {st.session_state.dates.get(city, 'TBD')}<br>
-                    <i style="color:#1a73e8;">Open in Google Maps</i>
+                    📅 {st.session_state.dates.get(city, '미정')}<br>
+                    <i style="color:#1a73e8;">구글맵으로 이동</i>
                 </div>
             </a>
             """
@@ -238,7 +238,7 @@ if st.session_state.route:
             popup_html = f"""
             <div style="font-size:14px; min-width:180px; text-align:center; padding:8px;">
                 <b style="font-size:16px;">{city}</b><br>
-                Date: {st.session_state.dates.get(city, 'TBD')}
+                📅 {st.session_state.dates.get(city, '미정')}
             </div>
             """
         
@@ -255,4 +255,4 @@ if st.session_state.route:
 
     folium_static(m, width=700, height=500)
 
-st.caption("Mobile: ⋮ → 'Add to Home Screen' → Use like an app!")
+st.caption("모바일: ⋮ → '홈 화면에 추가' → 앱처럼 사용!")
