@@ -2,4 +2,3 @@ streamlit
 pandas
 folium
 streamlit-folium
-fpdf2
