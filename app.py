@@ -90,7 +90,7 @@ with col_start:
 with col_reset:
     if st.button("Reset All", use_container_width=True):
 # 🎨 UI 시작
-st.set_page_config(page_title="칸타타 투어", layout="wide", initial_sidebar_state="collapsed")
+    st.set_page_config(page_title="칸타타 투어", layout="wide", initial_sidebar_state="collapsed")
 st.header("🎼 칸타타 투어 (마하라슈트라)")
 
 # 시작 도시 선택
