@@ -5,13 +5,8 @@ import folium
 from streamlit_folium import folium_static
 import math
 
-# =============================================
-<<<<<<< HEAD
 # Cities (alphabetically sorted)
-=======
 # 🌆 도시 리스트 (알파벳 정렬)
->>>>>>> 807700e698f50f33f57b6e44c419502b3e9b866d
-# =============================================
 cities = [
     'Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Thane', 'Aurangabad', 'Solapur', 'Amravati', 'Nanded', 'Kolhapur',
     'Akola', 'Latur', 'Ahmadnagar', 'Jalgaon', 'Dhule', 'Ichalkaranji', 'Malegaon', 'Bhusawal', 'Bhiwandi', 'Bhandara',
@@ -59,23 +54,15 @@ coords = {
     'Shiroli (Kolhapur)': (16.70, 74.24)
 }
 
-# =============================================
-<<<<<<< HEAD
 # Session State Initialization
-=======
 # 🔧 세션 상태 초기화
->>>>>>> 807700e698f50f33f57b6e44c419502b3e9b866d
-# =============================================
 def init_session():
     defaults = {
         'route': [],
         'dates': {},
         'distances': {},
-<<<<<<< HEAD
         'venues': {city: pd.DataFrame(columns=['Venue', 'Seats', 'Google Maps Link']) for city in cities},
-=======
         'venues': {city: pd.DataFrame(columns=['장소', '좌석수', '구글맵링크']) for city in cities},
->>>>>>> 807700e698f50f33f57b6e44c419502b3e9b866d
         'start_city': 'Mumbai'
     }
     for key, value in defaults.items():
@@ -84,10 +71,7 @@ def init_session():
 
 init_session()
 
-# =============================================
-<<<<<<< HEAD
 # UI Start
-# =============================================
 st.set_page_config(page_title="Cantata Tour", layout="wide", initial_sidebar_state="collapsed")
 st.header("Cantata Tour (Maharashtra)")
 
@@ -105,9 +89,7 @@ with col_start:
 
 with col_reset:
     if st.button("Reset All", use_container_width=True):
-=======
 # 🎨 UI 시작
-# =============================================
 st.set_page_config(page_title="칸타타 투어", layout="wide", initial_sidebar_state="collapsed")
 st.header("🎼 칸타타 투어 (마하라슈트라)")
 
@@ -125,33 +107,24 @@ with col_start:
 
 with col_reset:
     if st.button("🔄 전체 초기화", use_container_width=True):
->>>>>>> 807700e698f50f33f57b6e44c419502b3e9b866d
         init_session()
         st.rerun()
 
-# =============================================
-<<<<<<< HEAD
 # Route Management
-=======
 # 🛣️ 루트 관리
->>>>>>> 807700e698f50f33f57b6e44c419502b3e9b866d
-# =============================================
 if st.session_state.route:
     st.markdown("---")
     
     available = [c for c in cities if c not in st.session_state.route]
     if available:
-<<<<<<< HEAD
         new_city = st.selectbox("Next City", available, key="next_city")
         col_add, _ = st.columns([1, 3])
         with col_add:
             if st.button("Add", use_container_width=True):
-=======
         new_city = st.selectbox("다음 도시", available, key="next_city")
         col_add, _ = st.columns([1, 3])
         with col_add:
             if st.button("➕ 추가", use_container_width=True):
->>>>>>> 807700e698f50f33f57b6e44c419502b3e9b866d
                 st.session_state.route.append(new_city)
                 if len(st.session_state.route) > 1:
                     prev = st.session_state.route[-2]
@@ -169,17 +142,14 @@ if st.session_state.route:
                     prev_date = st.session_state.dates.get(prev, datetime.now().date())
                     travel_dt = datetime.combine(prev_date, datetime.min.time()) + timedelta(hours=hrs)
                     st.session_state.dates[new_city] = travel_dt.date()
-<<<<<<< HEAD
                 st.success(f"{new_city} added! ({km}km, {hrs}h)")
                 st.rerun()
 
     st.markdown("### Current Route")
-=======
                 st.success(f"{new_city} 추가! ({km}km, {hrs}h)")
                 st.rerun()
 
     st.markdown("### 🛣️ 현재 루트")
->>>>>>> 807700e698f50f33f57b6e44c419502b3e9b866d
     st.write(" → ".join(st.session_state.route))
 
     total_km = total_hrs = 0
@@ -190,13 +160,10 @@ if st.session_state.route:
         total_hrs += hrs
 
     col_k, col_t = st.columns(2)
-<<<<<<< HEAD
     with col_k: st.metric("Total Distance", f"{total_km:,} km")
     with col_t: st.metric("Total Time", f"{total_hrs:.1f} h")
 
-    # =============================================
     # Venue Management + Date + Google Maps Preview
-    # =============================================
     st.markdown("---")
     st.subheader("Venues & Dates")
 
@@ -207,13 +174,10 @@ if st.session_state.route:
             if new_date != current_date:
                 st.session_state.dates[city] = new_date
                 st.success(f"{city} date updated → {new_date}")
-=======
     with col_k: st.metric("총 거리", f"{total_km:,} km")
     with col_t: st.metric("총 시간", f"{total_hrs:.1f} h")
 
-    # =============================================
     # 🎭 공연장소 관리 + 날짜 달력 + 하이퍼링크 미리보기
-    # =============================================
     st.markdown("---")
     st.subheader("🎭 공연장소 & 날짜")
 
@@ -224,21 +188,16 @@ if st.session_state.route:
             if new_date != current_date:
                 st.session_state.dates[city] = new_date
                 st.success(f"{city} 날짜 → {new_date}")
->>>>>>> 807700e698f50f33f57b6e44c419502b3e9b866d
                 st.rerun()
 
             df = st.session_state.venues[city]
             if not df.empty:
-<<<<<<< HEAD
                 st.dataframe(df[['Venue', 'Seats']], use_container_width=True, hide_index=True)
-=======
                 st.dataframe(df[['장소', '좌석수']], use_container_width=True, hide_index=True)
->>>>>>> 807700e698f50f33f57b6e44c419502b3e9b866d
 
             with st.form(key=f"add_{city}"):
                 col1, col2 = st.columns([2, 1])
                 with col1:
-<<<<<<< HEAD
                     venue = st.text_input("Venue Name", key=f"v_{city}")
                 with col2:
                     seats = st.number_input("Seats", min_value=1, step=50, key=f"s_{city}")
@@ -277,7 +236,6 @@ if st.session_state.route:
 
                     if row['Google Maps Link'] and row['Google Maps Link'].startswith("http"):
                         st.markdown(f"[Open in Google Maps]({row['Google Maps Link']})", unsafe_allow_html=True)
-=======
                     venue = st.text_input("장소명", key=f"v_{city}")
                 with col2:
                     seats = st.number_input("좌석수", min_value=1, step=50, key=f"s_{city}")
@@ -317,25 +275,18 @@ if st.session_state.route:
                     # 하이퍼링크 처리
                     if row['구글맵링크'] and row['구글맵링크'].startswith("http"):
                         st.markdown(f"[🚗 구글맵 바로가기]({row['구글맵링크']})", unsafe_allow_html=True)
->>>>>>> 807700e698f50f33f57b6e44c419502b3e9b866d
 
         if i < len(st.session_state.route) - 1:
             next_c = st.session_state.route[i+1]
             km, hrs = st.session_state.distances.get(city, {}).get(next_c, (100, 2.0))
             st.markdown(f"<div style='text-align:center; margin:4px 0; color:#666;'>↓ {km}km | {hrs}h ↓</div>", unsafe_allow_html=True)
 
-    # =============================================
-<<<<<<< HEAD
     # Tour Map + Click to Open Google Maps
-    # =============================================
     st.markdown("---")
     st.subheader("Tour Map")
-=======
     # 🗺️ 지도 + 말풍선 전체 클릭 시 구글맵 열림
-    # =============================================
     st.markdown("---")
     st.subheader("🗺️ 투어 지도")
->>>>>>> 807700e698f50f33f57b6e44c419502b3e9b866d
     center = coords.get(st.session_state.route[0] if st.session_state.route else 'Mumbai', (19.75, 75.71))
     m = folium.Map(location=center, zoom_start=7, tiles="CartoDB positron")
 
@@ -345,11 +296,8 @@ if st.session_state.route:
 
     for city in st.session_state.route:
         df = st.session_state.venues.get(city, pd.DataFrame())
-<<<<<<< HEAD
         links = [row['Google Maps Link'] for _, row in df.iterrows() if row['Google Maps Link'] and row['Google Maps Link'].startswith("http")]
-=======
         links = [row['구글맵링크'] for _, row in df.iterrows() if row['구글맵링크'] and row['구글맵링크'].startswith("http")]
->>>>>>> 807700e698f50f33f57b6e44c419502b3e9b866d
         
         if links:
             map_link = links[0]
@@ -357,13 +305,10 @@ if st.session_state.route:
             <a href="{map_link}" target="_blank" style="text-decoration:none; color:inherit; cursor:pointer; display:block;">
                 <div style="font-size:14px; min-width:180px; text-align:center; padding:8px;">
                     <b style="font-size:16px;">{city}</b><br>
-<<<<<<< HEAD
                     Date: {st.session_state.dates.get(city, 'TBD')}<br>
                     <i style="color:#1a73e8;">Open in Google Maps</i>
-=======
                     📅 {st.session_state.dates.get(city, '미정')}<br>
                     <i style="color:#1a73e8;">🚗 구글맵으로 이동</i>
->>>>>>> 807700e698f50f33f57b6e44c419502b3e9b866d
                 </div>
             </a>
             """
@@ -371,11 +316,8 @@ if st.session_state.route:
             popup_html = f"""
             <div style="font-size:14px; min-width:180px; text-align:center; padding:8px;">
                 <b style="font-size:16px;">{city}</b><br>
-<<<<<<< HEAD
                 Date: {st.session_state.dates.get(city, 'TBD')}
-=======
                 📅 {st.session_state.dates.get(city, '미정')}
->>>>>>> 807700e698f50f33f57b6e44c419502b3e9b866d
             </div>
             """
         
@@ -392,12 +334,8 @@ if st.session_state.route:
 
     folium_static(m, width=700, height=500)
 
-<<<<<<< HEAD
 st.caption("Mobile: ⋮ → 'Add to Home Screen' → Use like an app!")
-=======
-    # =============================================
     # 📄 PDF 내보내기 (fpdf2 + 한글 폰트)
-    # =============================================
     st.markdown("---")
     st.subheader("📄 PDF 일정표")
     if st.button("📥 PDF 다운로드"):
@@ -433,4 +371,3 @@ st.caption("Mobile: ⋮ → 'Add to Home Screen' → Use like an app!")
             st.download_button("📄 PDF 다운로드", data=f, file_name=pdf_output, mime="application/pdf")
 
 st.caption("📱 모바일: ⋮ → '홈 화면에 추가' → 앱처럼 사용!")
->>>>>>> 807700e698f50f33f57b6e44c419502b3e9b866d
