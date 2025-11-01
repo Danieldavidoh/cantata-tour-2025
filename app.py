@@ -293,16 +293,17 @@ if st.session_state.route:
                         st.markdown(f"[{_['open_maps']}]({row['Google Maps Link']})")
 
             if st.session_state.admin or city not in st.session_state.admin_venues:
+                # 실내/실외 토글 버튼을 form 밖으로 이동
+                io = st.session_state.get(f"io_{city}", _["outdoor"])
+                if st.button(_["indoor_outdoor"], key=f"io_btn_{city}"):
+                    io = _["indoor"] if io == _["outdoor"] else _["outdoor"]
+                    st.session_state[f"io_{city}"] = io
+                st.write(io)
+
                 with st.form(key=f"add_{city}"):
-                    c1, c2, c3 = st.columns([2, 1, 1])
+                    c1, c2 = st.columns([2, 1])
                     with c1: v = st.text_input(_["venue_name"], key=f"v_{city}")
                     with c2: s = st.number_input(_["seats"], 1, step=50, key=f"s_{city}")
-                    with c3:
-                        io = st.session_state.get(f"io_{city}", _["outdoor"])
-                        if st.button(_["indoor_outdoor"], key=f"io_btn_{city}"):
-                            io = _["indoor"] if io == _["outdoor"] else _["outdoor"]
-                            st.session_state[f"io_{city}"] = io
-                        st.write(io)
                     l = st.text_input(_["google_link"], key=f"l_{city}")
                     if st.form_submit_button(_["register"]) and v:
                         new_row = pd.DataFrame([{'Venue': v, 'Seats': s, 'IndoorOutdoor': io, 'Google Maps Link': l}])
