@@ -1,4 +1,3 @@
-cd /mount/src/cantata-tour-2025 && \
 cat > app.py << 'EOF'
 import streamlit as st
 import pandas as pd
@@ -484,5 +483,5 @@ folium_static(m, width=700, height=500)
 st.caption(_["caption"])
 EOF && \
 git add app.py && \
-git commit -m "fix: syntax error - remove bash from app.py content; spicy update with full features unlocked, no holds barred" && \
+git commit -m "feat: multilingual UI (EN/KO/HI) + sidebar language selector + admin mode + venue edits" && \
 git push
