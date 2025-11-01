@@ -10,12 +10,12 @@ import math
 # =============================================
 LANG = {
     "en": {
-        "title": "Cantata Tour 2025",
+        "title": "🎄 Cantata Tour 2025 🎅",
         "start_city": "Starting City",
-        "start_btn": "Start",
-        "reset_btn": "Reset All",
+        "start_btn": "🚀 Start",
+        "reset_btn": "🔄 Reset All",
         "next_city": "Next City",
-        "add_btn": "Add",
+        "add_btn": "➕ Add",
         "current_route": "### Current Route",
         "total_distance": "Total Distance",
         "total_time": "Total Time",
@@ -34,24 +34,24 @@ LANG = {
         "save": "Save",
         "delete": "Delete",
         "tour_map": "Tour Map",
-        "caption": "Mobile: Add to Home Screen → Use like an app!",
+        "caption": "Mobile: ⋮ → 'Add to Home Screen' → Use like an app!",
         "date_format": "%b %d, %Y",
         "admin_mode": "Admin Mode",
         "guest_mode": "Guest Mode",
         "enter_password": "Enter password to access Admin Mode",
         "submit": "Submit",
-        "drive_to": "Drive Here",
-        "edit_venue": "Edit",
-        "delete_venue": "Delete",
+        "drive_to": "🚗 Drive Here",
+        "edit_venue": "✏️ Edit",
+        "delete_venue": "🗑️ Delete",
         "confirm_delete": "Are you sure you want to delete?",
     },
     "ko": {
-        "title": "칸타타 투어 2025",
+        "title": "🎄 칸타타 투어 2025 🎅",
         "start_city": "출발 도시",
-        "start_btn": "시작",
-        "reset_btn": "전체 초기화",
+        "start_btn": "🚀 시작",
+        "reset_btn": "🔄 전체 초기화",
         "next_city": "다음 도시",
-        "add_btn": "추가",
+        "add_btn": "➕ 추가",
         "current_route": "### 현재 경로",
         "total_distance": "총 거리",
         "total_time": "총 소요시간",
@@ -70,24 +70,24 @@ LANG = {
         "save": "저장",
         "delete": "삭제",
         "tour_map": "투어 지도",
-        "caption": "모바일: 홈 화면에 추가 → 앱처럼 사용!",
+        "caption": "모바일: ⋮ → '홈 화면에 추가' → 앱처럼 사용!",
         "date_format": "%Y년 %m월 %d일",
         "admin_mode": "관리자 모드",
         "guest_mode": "손님 모드",
         "enter_password": "관리자 모드 접근을 위한 비밀번호 입력",
         "submit": "제출",
-        "drive_to": "길찾기",
-        "edit_venue": "편집",
-        "delete_venue": "삭제",
+        "drive_to": "🚗 길찾기",
+        "edit_venue": "✏️ 편집",
+        "delete_venue": "🗑️ 삭제",
         "confirm_delete": "정말 삭제하시겠습니까?",
     },
     "hi": {
-        "title": "कांताता टूर 2025",
+        "title": "🎄 कांताता टूर 2025 🎅",
         "start_city": "प्रारंभिक शहर",
-        "start_btn": "शुरू करें",
-        "reset_btn": "सब रीसेट करें",
+        "start_btn": "🚀 शुरू करें",
+        "reset_btn": "🔄 सब रीसेट करें",
         "next_city": "अगला शहर",
-        "add_btn": "जोड़ें",
+        "add_btn": "➕ जोड़ें",
         "current_route": "### वर्तमान मार्ग",
         "total_distance": "कुल दूरी",
         "total_time": "कुल समय",
@@ -106,21 +106,21 @@ LANG = {
         "save": "सहेजें",
         "delete": "हटाएँ",
         "tour_map": "टूर मैप",
-        "caption": "मोबाइल: होम स्क्रीन पर जोड़ें → ऐप की तरह उपयोग करें!",
+        "caption": "मोबाइल: ⋮ → 'होम स्क्रीन पर जोड़ें' → ऐप की तरह उपयोग करें!",
         "date_format": "%d %b %Y",
         "admin_mode": "एडमिन मोड",
         "guest_mode": "गेस्ट मोड",
         "enter_password": "एडमिन मोड एक्सेस करने के लिए पासवर्ड दर्ज करें",
         "submit": "जमा करें",
-        "drive_to": "यहाँ ड्राइव करें",
-        "edit_venue": "संपादित करें",
-        "delete_venue": "हटाएँ",
+        "drive_to": "🚗 यहाँ ड्राइव करें",
+        "edit_venue": "✏️ संपादित करें",
+        "delete_venue": "🗑️ हटाएँ",
         "confirm_delete": "क्या आप वाकई हटाना चाहते हैं?",
     },
 }
 
 # =============================================
-# 2. 크리스마스 테마 CSS
+# 2. 크리스마스 테마 CSS (노랑 → 초록, 빨강, 흰색)
 # =============================================
 st.markdown("""
 <style>
@@ -158,7 +158,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 눈송이 생성
+# 눈송이 생성 (자연스럽게, 크기/속도 랜덤)
 import random
 snowflakes = ""
 for i in range(80):
@@ -175,18 +175,12 @@ st.markdown(snowflakes, unsafe_allow_html=True)
 st.set_page_config(page_title="Cantata Tour 2025", layout="wide", initial_sidebar_state="collapsed")
 
 with st.sidebar:
-    st.markdown("### Language")
-    # 에러 방지: options 명시 + format_func에서 문자열 반환 보장
-    lang = st.radio(
-        label="Select",
-        options=["en", "hi", "ko"],
-        format_func=lambda x: {"en": "English", "hi": "हिन्दी", "ko": "한국어"}[x],
-        vertical=True
-    )
+    st.markdown("### 🌐 Language")
+    lang = st.radio("Select", ["en", "ko", "hi"], format_func=lambda x: {"en": "English", "ko": "한국어", "hi": "हिन्दी"}[x], horizontal=True)
     _ = LANG[lang]
 
     st.markdown("---")
-    st.markdown("### Admin")
+    st.markdown("### 🔒 Admin")
     if 'admin' not in st.session_state:
         st.session_state.admin = False
     if 'show_pw' not in st.session_state:
@@ -199,7 +193,7 @@ with st.sidebar:
         if st.button(_["guest_mode"]):
             st.session_state.guest_mode = True
             st.session_state.admin = False
-            st.session_state.show_pw = True
+            st.session_state.show_pw = True  # 비밀번호 입력 단계로 복귀
             st.rerun()
     else:
         if st.button(_["admin_mode"]):
@@ -305,7 +299,7 @@ with col2:
     st.session_state.start_city = st.selectbox(_["start_city"], cities, index=cities.index(st.session_state.start_city) if st.session_state.start_city in cities else 0)
 
 # =============================================
-# 7. 경로 관리
+# 7. 경로 관리 + 도시 간 거리/시간 표시
 # =============================================
 if st.session_state.route:
     st.markdown("---")
@@ -358,13 +352,13 @@ if st.session_state.route:
     c2.metric(_["total_time"], f"{total_hrs:.1f} h")
 
     # =============================================
-    # 8. 공연장 관리
+    # 8. 공연장 관리 (모든 기능 정상 표시)
     # =============================================
     st.markdown("---")
     st.subheader(_["venues_dates"])
 
     for city in st.session_state.route:
-        with st.expander(f"**{city}**", expanded=True):
+        with st.expander(f"**{city}**", expanded=True):  # 기본 열림
             # 공연 날짜
             cur = st.session_state.dates.get(city, datetime.now().date())
             new = st.date_input(_["performance_date"], cur, key=f"date_{city}")
@@ -418,13 +412,11 @@ if st.session_state.route:
             if st.session_state.admin or st.session_state.guest_mode:
                 st.markdown("---")
                 io = st.session_state.get(f"io_{city}", _["outdoor"])
-                # 실내/실외 토글 버튼
-                if st.button(f"**{io}**", key=f"io_toggle_{city}"):
+                border_color = "#90EE90" if io == _["indoor"] else "#87CEEB"
+                if st.button(f"**{io}**", key=f"io_btn_{city}"):
                     io = _["indoor"] if io == _["outdoor"] else _["outdoor"]
                     st.session_state[f"io_{city}"] = io
                     st.rerun()
-                # 테두리 색상 표시
-                border_color = "#90EE90" if io == _["indoor"] else "#87CEEB"
                 st.markdown(f"<div style='border:3px solid {border_color}; border-radius:12px; padding:8px; text-align:center; font-weight:bold; background:white;'>{io}</div>", unsafe_allow_html=True)
 
                 with st.form(key=f"add_{city}"):
