@@ -358,5 +358,5 @@ if st.session_state.route:
 st.caption(_["caption"])
 EOF
 git add app.py
-git commit -m "fix: Final removal of shell commands from app.py to resolve SyntaxError (confirmed pure Python code)"
+git commit -m "fix: Final definitive removal of all shell commands from app.py file content to resolve SyntaxError"
 git push
