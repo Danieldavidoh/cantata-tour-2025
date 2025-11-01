@@ -1,5 +1,5 @@
 cd /mount/src/cantata-tour-2025 && \
-cat > app.py << 'EOF'
+cat > app.py << 'EOT'
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
@@ -356,7 +356,7 @@ if st.session_state.route:
         folium.CircleMarker(coords[city], radius=12, color="#2E8B57", fill_color="#90EE90", popup=folium.Popup(popup, max_width=300)).add_to(m)
     folium_static(m, width=700, height=500)
 st.caption(_["caption"])
-EOF
+EOT
 git add app.py
-git commit -m "Final attempt to remove shell commands and resolve SyntaxError"
+git commit -m "Final fix: Removed all trailing shell commands from app.py file content and changed EOF delimiter"
 git push
