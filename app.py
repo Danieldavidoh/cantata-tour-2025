@@ -120,7 +120,7 @@ LANG = {
 }
 
 # =============================================
-# 2. 크리스마스 테마 + 자연스러운 눈송이 애니메이션
+# 2. 크리스마스 테마 CSS (노랑 → 초록, 빨강, 흰색)
 # =============================================
 st.markdown("""
 <style>
@@ -128,24 +128,24 @@ st.markdown("""
         background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e); 
         overflow: hidden;
     }
-    .sidebar .sidebar-content { background: #FFD700; color: #8B0000; }
-    .Widget>label { color: #FFD700; font-weight: bold; }
-    h1, h2, h3 { color: #FFD700; text-shadow: 1px 1px 3px #8B0000; text-align: center; }
+    .sidebar .sidebar-content { background: #228B22; color: white; }
+    .Widget>label { color: #90EE90; font-weight: bold; }
+    h1, h2, h3 { color: #90EE90; text-shadow: 1px 1px 3px #8B0000; text-align: center; }
     .stButton>button { 
-        background: #FFD700; color: #8B0000; border: 2px solid #8B0000; 
+        background: #228B22; color: white; border: 2px solid #8B0000; 
         border-radius: 12px; font-weight: bold; padding: 10px;
     }
-    .stButton>button:hover { background: #8B0000; color: #FFD700; }
-    .stTextInput>label, .stSelectbox>label, .stNumberInput>label { color: #FFD700; }
-    .stMetric { background: rgba(255,215,0,0.2); border: 2px solid #FFD700; border-radius: 12px; padding: 10px; }
-    .stExpander { background: rgba(139,0,0,0.4); border: 1px solid #FFD700; border-radius: 12px; }
-    .stExpander>summary { color: #FFD700; font-weight: bold; }
-    .stMarkdown { color: #FFD700; }
+    .stButton>button:hover { background: #8B0000; color: white; }
+    .stTextInput>label, .stSelectbox>label, .stNumberInput>label { color: #90EE90; }
+    .stMetric { background: rgba(34,139,34,0.3); border: 2px solid #90EE90; border-radius: 12px; padding: 10px; }
+    .stExpander { background: rgba(139,0,0,0.4); border: 1px solid #90EE90; border-radius: 12px; }
+    .stExpander>summary { color: #90EE90; font-weight: bold; }
+    .stMarkdown { color: #90EE90; }
 
     /* 자연스러운 눈송이 */
     .snowflake {
         position: absolute;
-        color: rgba(255, 255, 255, 0.8);
+        color: rgba(255, 255, 255, 0.9);
         font-size: 1.2em;
         pointer-events: none;
         animation: fall linear infinite;
@@ -299,7 +299,7 @@ with col2:
     st.session_state.start_city = st.selectbox(_["start_city"], cities, index=cities.index(st.session_state.start_city) if st.session_state.start_city in cities else 0)
 
 # =============================================
-# 7. 경로 관리
+# 7. 경로 관리 + 도시 간 거리/시간 표시
 # =============================================
 if st.session_state.route:
     st.markdown("---")
@@ -332,7 +332,14 @@ if st.session_state.route:
             st.session_state.next_city_select = st.selectbox(_["next_city"], available, key=select_key)
 
     st.markdown(_["current_route"])
-    st.write(" → ".join(map(str, st.session_state.route)))  # TypeError 수정
+    route_display = []
+    for i, city in enumerate(st.session_state.route):
+        route_display.append(city)
+        if i < len(st.session_state.route) - 1:
+            next_city = st.session_state.route[i+1]
+            km, hrs = st.session_state.distances.get(city, {}).get(next_city, (0, 0))
+            route_display.append(f"({km}km, {hrs}h)")
+    st.write(" → ".join(route_display))
 
     total_km = total_hrs = 0
     for i in range(len(st.session_state.route)-1):
@@ -345,13 +352,14 @@ if st.session_state.route:
     c2.metric(_["total_time"], f"{total_hrs:.1f} h")
 
     # =============================================
-    # 8. 공연장 관리
+    # 8. 공연장 관리 (모든 기능 정상 표시)
     # =============================================
     st.markdown("---")
     st.subheader(_["venues_dates"])
 
     for city in st.session_state.route:
-        with st.expander(f"**{city}**", expanded=False):
+        with st.expander(f"**{city}**", expanded=True):  # 기본 열림
+            # 공연 날짜
             cur = st.session_state.dates.get(city, datetime.now().date())
             new = st.date_input(_["performance_date"], cur, key=f"date_{city}")
             if new != cur:
@@ -359,22 +367,23 @@ if st.session_state.route:
                 st.success("날짜 변경됨")
                 st.rerun()
 
+            # 공연장 목록
             df = st.session_state.admin_venues.get(city, pd.DataFrame()) if st.session_state.admin else st.session_state.venues.get(city, pd.DataFrame(columns=['Venue', 'Seats', 'IndoorOutdoor', 'Google Maps Link']))
 
             if not df.empty:
                 for idx, row in df.iterrows():
-                    st.markdown(f"""
-                    <div style='background:#8B0000; color:#FFD700; padding:15px; border-radius:15px; margin:10px 0; border:2px solid #FFD700;'>
-                        <b>{row['Venue']}</b> ({row['Seats']} {_['seats']})<br>
-                        <span style='color:{"#90EE90" if row['IndoorOutdoor']==_["indoor"] else "#87CEEB"}'>{row['IndoorOutdoor']}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    col_map, col_act = st.columns([1, 3])
-                    with col_map:
+                    col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
+                    with col1:
+                        st.write(f"**{row['Venue']}**")
+                        st.caption(f"{row['Seats']} {_['seats']}")
+                    with col2:
+                        color = "🟢" if row['IndoorOutdoor'] == _["indoor"] else "🔵"
+                        st.write(f"{color} {row['IndoorOutdoor']}")
+                    with col3:
                         if row['Google Maps Link'].startswith("http"):
                             maps_url = f"https://www.google.com/maps/dir/?api=1&destination={row['Google Maps Link']}&travelmode=driving"
                             st.markdown(f"[{_['drive_to']}]({maps_url})", unsafe_allow_html=True)
-                    with col_act:
+                    with col4:
                         if st.session_state.admin or st.session_state.guest_mode:
                             if st.button(_["edit_venue"], key=f"edit_{city}_{idx}"):
                                 st.session_state[f"edit_{city}_{idx}"] = True
@@ -385,6 +394,7 @@ if st.session_state.route:
                                     st.success("삭제 완료")
                                     st.rerun()
 
+                    # 편집 폼
                     if st.session_state.get(f"edit_{city}_{idx}", False):
                         with st.form(key=f"edit_form_{city}_{idx}"):
                             ev = st.text_input("Venue", row['Venue'], key=f"ev_{city}_{idx}")
@@ -429,13 +439,13 @@ st.subheader(_["tour_map"])
 center = coords.get(st.session_state.route[0] if st.session_state.route else 'Mumbai', (19.75, 75.71))
 m = folium.Map(location=center, zoom_start=7, tiles="CartoDB positron")
 if len(st.session_state.route) > 1:
-    folium.PolyLine([coords[c] for c in st.session_state.route], color="#FFD700", weight=4).add_to(m)
+    folium.PolyLine([coords[c] for c in st.session_state.route], color="#90EE90", weight=4).add_to(m)
 for city in st.session_state.route:
     df = st.session_state.admin_venues.get(city, pd.DataFrame()) if st.session_state.admin else st.session_state.venues.get(city, pd.DataFrame())
     link = next((r['Google Maps Link'] for _, r in df.iterrows() if r['Google Maps Link'].startswith('http')), None)
     popup = f"<b style='color:#8B0000'>{city}</b><br>{st.session_state.dates.get(city, 'TBD').strftime(_['date_format'])}"
     if link:
-        popup = f'<a href="{link}" target="_blank" style="color:#FFD700">{popup}<br><i>{_["open_maps"]}</i></a>'
-    folium.CircleMarker(coords[city], radius=15, color="#FFD700", fill_color="#8B0000", popup=folium.Popup(popup, max_width=300)).add_to(m)
+        popup = f'<a href="{link}" target="_blank" style="color:#90EE90">{popup}<br><i>{_["open_maps"]}</i></a>'
+    folium.CircleMarker(coords[city], radius=15, color="#90EE90", fill_color="#8B0000", popup=folium.Popup(popup, max_width=300)).add_to(m)
 folium_static(m, width=700, height=500)
 st.caption(_["caption"])
