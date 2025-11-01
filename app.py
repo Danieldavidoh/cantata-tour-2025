@@ -1,6 +1,5 @@
-mkdir -p /mount/src/cantata-tour-2025 && \
-cd /mount/src/cantata-tour-2025 && \
-git init && \
+mkdir -p ~/cantata-tour && \
+cd ~/cantata-tour && \
 cat > app.py << 'EOF'
 import streamlit as st
 import pandas as pd
