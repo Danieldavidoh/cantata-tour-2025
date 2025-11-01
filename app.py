@@ -484,5 +484,5 @@ folium_static(m, width=700, height=500)
 st.caption(_["caption"])
 EOF && \
 git add app.py && \
-git commit -m "feat: multilingual UI (EN/KO/HI) + sidebar language selector + admin mode + venue edits" && \
+git commit -m "fix: syntax error - remove bash from app.py content; spicy update with full features unlocked, no holds barred" && \
 git push
