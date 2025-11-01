@@ -1,4 +1,3 @@
-cd ~/cantata-tour && \
 cat > app.py << 'EOF'
 import streamlit as st
 import pandas as pd
@@ -365,9 +364,9 @@ if st.session_state.route:
                                     if save_submitted:
                                         updated_row = {'Venue': new_venue, 'Seats': new_seats, 'IndoorOutdoor': st.session_state[io_key], 'Google Maps Link': new_link}
                                         if has_admin_data:
-                                            st.session_state.admin_venues[city].loc[idx, :] = pd.Series(updated_row)
+                                            st.session_state.admin_venues[city].loc[idx] = updated_row
                                         else:
-                                            st.session_state.venues[city].loc[idx, :] = pd.Series(updated_row)
+                                            st.session_state.venues[city].loc[idx] = updated_row
                                         st.session_state.edit_modes[edit_key] = False
                                         st.success("수정 완료")
                                         st.rerun()
@@ -484,7 +483,6 @@ folium_static(m, width=700, height=500)
 st.caption(_["caption"])
 EOF
 
-# Commit and push
 git add app.py && \
-git commit -m "feat: multilingual UI updates with admin mode and venue management" && \
+git commit -m "fix: syntax error by ensuring pure Python in app.py; no bash in file content" && \
 git push
