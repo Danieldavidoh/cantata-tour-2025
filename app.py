@@ -1,3 +1,4 @@
+cd ~/cantata-tour && \
 cat > app.py << 'EOF'
 import streamlit as st
 import pandas as pd
@@ -111,7 +112,7 @@ LANG = {
 }
 
 # =============================================
-# 2. 언어 선택 및 관리자 모드 (사이드바)
+# 2. 언어 선택 (사이드바)
 # =============================================
 st.set_page_config(page_title="Cantata Tour", layout="wide", initial_sidebar_state="collapsed")
 
@@ -124,34 +125,6 @@ with st.sidebar:
         index=0,
         horizontal=True,
     )
-    
-    st.markdown("---")
-    st.markdown("### 🔒 Admin")
-    if 'admin' not in st.session_state:
-        st.session_state.admin = False
-    if 'show_pw' not in st.session_state:
-        st.session_state.show_pw = False
-    if st.session_state.admin:
-        st.success("Admin Mode Active")
-    else:
-        if st.button(_["admin_mode"]):
-            st.session_state.show_pw = True
-        if st.session_state.show_pw:
-            password = st.text_input(_["enter_password"], type="password", key="admin_pw")
-            if st.button(_["submit"]):
-                if password == "0691":
-                    st.session_state.admin = True
-                    st.session_state.show_pw = False
-                    st.success("Admin Mode Activated!")
-                    st.rerun()
-                else:
-                    st.error("Incorrect Password")
-    
-    st.markdown("---")
-    if st.button(_["reset_btn"]):
-        init_session()
-        st.rerun()
-
 # 현재 선택된 언어 텍스트
 _ = LANG[lang]
 
@@ -234,19 +207,23 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# 출발 도시 선택과 시작 버튼 배치
-col_start_btn, col_start_city = st.columns([1, 4])
-with col_start_btn:
+# 출발 도시 선택
+start_city = st.selectbox(_["start_city"], cities,
+                          index=cities.index(st.session_state.start_city) if st.session_state.start_city in cities else 0)
+
+col_start, col_reset = st.columns([1, 4])
+with col_start:
     if st.button(_["start_btn"], use_container_width=True):
         if start_city not in st.session_state.route:
             st.session_state.route = [start_city]
             st.session_state.dates[start_city] = datetime.now().date()
             st.success(f"{_['start_city']} {start_city}에서 투어가 시작되었습니다!")
             st.rerun()
-with col_start_city:
-    start_city = st.selectbox(_["start_city"], cities,
-                              index=cities.index(st.session_state.start_city) if st.session_state.start_city in cities else 0)
 
+with col_reset:
+    if st.button(_["reset_btn"], use_container_width=True):
+        init_session()
+        st.rerun()
 
 # =============================================
 # 6. 경로 관리
@@ -256,8 +233,9 @@ if st.session_state.route:
 
     available = [c for c in cities if c not in st.session_state.route]
     if available:
-        col_add_btn, col_next_city = st.columns([1, 4])
-        with col_add_btn:
+        new_city = st.selectbox(_["next_city"], available, key="next_city")
+        col_add, _ = st.columns([1, 3])
+        with col_add:
             if st.button(_["add_btn"], use_container_width=True):
                 st.session_state.route.append(new_city)
 
@@ -284,8 +262,6 @@ if st.session_state.route:
 
                 st.success(f"{new_city} 추가! ({km}km, {hrs}h)")
                 st.rerun()
-        with col_next_city:
-            new_city = st.selectbox(_["next_city"], available, key="next_city")
 
     # 현재 경로 표시
     st.markdown(_["current_route"])
@@ -322,114 +298,62 @@ if st.session_state.route:
                 st.success(f"{city} 날짜 → {new_date.strftime(_['date_format'])}")
                 st.rerun()
 
-            has_admin_data = not st.session_state.admin_venues[city].empty
-            df = st.session_state.admin_venues[city] if has_admin_data else st.session_state.venues[city]
-
-            editable = st.session_state.admin or not has_admin_data
-
+            df = st.session_state.venues[city]
             if not df.empty:
-                for idx, row in df.iterrows():
-                    st.write(f"{row['Venue']} ({row['Seats']} {_[ 'seats' ]}, {row['IndoorOutdoor']})")
+                st.dataframe(df[['Venue', 'Seats']], use_container_width=True, hide_index=True)
+
+            # 공연장 등록 폼
+            with st.form(key=f"add_{city}"):
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    venue = st.text_input(_["venue_name"], key=f"v_{city}")
+                with col2:
+                    seats = st.number_input(_["seats"], min_value=1, step=50, key=f"s_{city}")
+                link = st.text_input(_["google_link"], placeholder="https://maps.google.com/...", key=f"l_{city}")
+                submitted = st.form_submit_button(_["register"])
+
+            if link and link.startswith("http"):
+                st.markdown(f"[{_['open_maps']}]({link})", unsafe_allow_html=True)
+
+            if submitted and venue:
+                new_row = pd.DataFrame([{'Venue': venue, 'Seats': seats, 'Google Maps Link': link}])
+                st.session_state.venues[city] = pd.concat([df, new_row], ignore_index=True)
+                st.success("등록 완료!")
+                st.rerun()
+
+            # 기존 공연장 편집/삭제
+            for idx, row in df.iterrows():
+                with st.expander(f"{row['Venue']} ({row['Seats']} {_['seats']})", expanded=False):
+                    col_e1, col_e2 = st.columns([2, 1])
+                    with col_e1:
+                        new_venue = st.text_input(_["venue_name"], value=row['Venue'], key=f"ev_{city}_{idx}")
+                    with col_e2:
+                        new_seats = st.number_input(_["seats"], value=int(row['Seats']), min_value=1, key=f"es_{city}_{idx}")
+                    new_link = st.text_input(_["google_link"], value=row['Google Maps Link'], key=f"el_{city}_{idx}")
+
+                    col_save, col_del = st.columns(2)
+                    with col_save:
+                        if st.button(_["save"], key=f"save_{city}_{idx}"):
+                            st.session_state.venues[city].loc[idx] = [new_venue, new_seats, new_link]
+                            st.success("수정 완료")
+                            st.rerun()
+                    with col_del:
+                        if st.button(_["delete"], key=f"del_{city}_{idx}"):
+                            st.session_state.venues[city] = df.drop(idx).reset_index(drop=True)
+                            st.success("삭제 완료")
+                            st.rerun()
+
                     if row['Google Maps Link'] and row['Google Maps Link'].startswith("http"):
                         st.markdown(f"[{_['open_maps']}]({row['Google Maps Link']})", unsafe_allow_html=True)
 
-                    if editable:
-                        edit_key = f"{city}_{idx}"
-                        if edit_key not in st.session_state.edit_modes:
-                            st.session_state.edit_modes[edit_key] = False
-
-                        if st.button(_["edit"], key=f"edit_btn_{edit_key}"):
-                            st.session_state.edit_modes[edit_key] = True
-                            st.rerun()
-
-                        if st.session_state.edit_modes[edit_key]:
-                            with st.form(key=f"edit_form_{edit_key}"):
-                                col1, col2, col3 = st.columns([2, 1, 1])
-                                with col1:
-                                    new_venue = st.text_input(_["venue_name"], value=row['Venue'], key=f"ev_{edit_key}")
-                                with col2:
-                                    new_seats = st.number_input(_["seats"], value=int(row['Seats']), min_value=1, step=50, key=f"es_{edit_key}")
-                                with col3:
-                                    io_key = f"io_edit_{edit_key}"
-                                    if io_key not in st.session_state:
-                                        st.session_state[io_key] = row['IndoorOutdoor']
-                                    if st.button(_["indoor_outdoor"], key=f"toggle_io_{edit_key}"):
-                                        st.session_state[io_key] = _["indoor"] if st.session_state[io_key] == _["outdoor"] else _["outdoor"]
-                                    st.write(st.session_state[io_key])
-                                new_link = st.text_input(_["google_link"], value=row['Google Maps Link'], key=f"el_{edit_key}")
-
-                                col_save, col_del = st.columns(2)
-                                with col_save:
-                                    save_submitted = st.form_submit_button(_["save"])
-                                    if save_submitted:
-                                        updated_row = {'Venue': new_venue, 'Seats': new_seats, 'IndoorOutdoor': st.session_state[io_key], 'Google Maps Link': new_link}
-                                        if has_admin_data:
-                                            st.session_state.admin_venues[city].loc[idx] = updated_row
-                                        else:
-                                            st.session_state.venues[city].loc[idx] = updated_row
-                                        st.session_state.edit_modes[edit_key] = False
-                                        st.success("수정 완료")
-                                        st.rerun()
-                                with col_del:
-                                    delete_submitted = st.form_submit_button(_["delete"])
-                                    if delete_submitted:
-                                        if has_admin_data:
-                                            st.session_state.admin_venues[city] = st.session_state.admin_venues[city].drop(idx).reset_index(drop=True)
-                                        else:
-                                            st.session_state.venues[city] = st.session_state.venues[city].drop(idx).reset_index(drop=True)
-                                        st.session_state.edit_modes[edit_key] = False
-                                        st.success("삭제 완료")
-                                        st.rerun()
-
-            if editable:
-                add_key = f"add_mode_{city}"
-                if add_key not in st.session_state.add_modes:
-                    st.session_state.add_modes[add_key] = False
-
-                if st.button(_["add_venue"], key=f"add_btn_{city}"):
-                    st.session_state.add_modes[add_key] = True
-                    st.rerun()
-
-                if st.session_state.add_modes[add_key]:
-                    with st.form(key=f"add_form_{city}"):
-                        col1, col2, col3 = st.columns([2, 1, 1])
-                        with col1:
-                            venue = st.text_input(_["venue_name"], key=f"v_{city}")
-                        with col2:
-                            seats = st.number_input(_["seats"], min_value=1, step=50, key=f"s_{city}")
-                        with col3:
-                            io_key = f"io_add_{city}"
-                            if io_key not in st.session_state:
-                                st.session_state[io_key] = _["outdoor"]
-                            if st.button(_["indoor_outdoor"], key=f"toggle_io_add_{city}"):
-                                st.session_state[io_key] = _["indoor"] if st.session_state[io_key] == _["outdoor"] else _["outdoor"]
-                            st.write(st.session_state[io_key])
-                        link = st.text_input(_["google_link"], placeholder="https://maps.google.com/...", key=f"l_{city}")
-
-                        col_reg, col_edit = st.columns(2)
-                        with col_reg:
-                            add_submitted = st.form_submit_button(_["register"])
-                        with col_edit:
-                            st.form_submit_button(_["edit"])  # Placeholder for consistency
-
-                        if add_submitted and venue:
-                            new_row = pd.DataFrame([{'Venue': venue, 'Seats': seats, 'IndoorOutdoor': st.session_state[io_key], 'Google Maps Link': link}])
-                            if st.session_state.admin:
-                                st.session_state.admin_venues[city] = pd.concat([df, new_row], ignore_index=True)
-                            else:
-                                st.session_state.venues[city] = pd.concat([df, new_row], ignore_index=True)
-                            st.session_state.add_modes[add_key] = False
-                            st.success("등록 완료!")
-                            st.rerun()
-
-        # 다음 도시까지 거리/시간 표시
-        if i < len(st.session_state.route) - 1:
-            next_c = st.session_state.route[i+1]
-            km, hrs = st.session_state.distances.get(city, {}).get(next_c, (100, 2.0))
-            st.markdown(
-                f"<div style='text-align:center; margin:4px 0; color:#666;'>↓ {km}km | {hrs}h ↓</div>",
-                unsafe_allow_html=True
-            )
+            # 다음 도시까지 거리/시간 표시
+            if i < len(st.session_state.route) - 1:
+                next_c = st.session_state.route[i+1]
+                km, hrs = st.session_state.distances.get(city, {}).get(next_c, (100, 2.0))
+                st.markdown(
+                    f"<div style='text-align:center; margin:4px 0; color:#666;'>↓ {km}km | {hrs}h ↓</div>",
+                    unsafe_allow_html=True
+                )
 
 # =============================================
 # 8. 투어 지도 (클릭 → 구글맵)
@@ -445,8 +369,7 @@ if len(route_coords) > 1:
     folium.PolyLine(route_coords, color="red", weight=4, opacity=0.8, dash_array="5,10").add_to(m)
 
 for city in st.session_state.route:
-    has_admin_data = not st.session_state.admin_venues[city].empty
-    df = st.session_state.admin_venues[city] if has_admin_data else st.session_state.venues[city]
+    df = st.session_state.venues.get(city, pd.DataFrame())
     links = [r['Google Maps Link'] for _, r in df.iterrows() if r['Google Maps Link'] and r['Google Maps Link'].startswith('http')]
 
     if links:
@@ -482,4 +405,4 @@ folium_static(m, width=700, height=500)
 
 st.caption(_["caption"])
 EOF
-git add app.py && git commit -m "fix: resolve syntax error by ensuring clean Python code in app.py" && git push
+git add app.py && git commit -m "feat: multilingual UI (EN/KO/HI) + sidebar language selector" && git push
