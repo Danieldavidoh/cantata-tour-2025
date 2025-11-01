@@ -365,9 +365,9 @@ if st.session_state.route:
                                     if save_submitted:
                                         updated_row = {'Venue': new_venue, 'Seats': new_seats, 'IndoorOutdoor': st.session_state[io_key], 'Google Maps Link': new_link}
                                         if has_admin_data:
-                                            st.session_state.admin_venues[city].loc[idx] = list(updated_row.values())
+                                            st.session_state.admin_venues[city].loc[idx, :] = pd.Series(updated_row)
                                         else:
-                                            st.session_state.venues[city].loc[idx] = list(updated_row.values())
+                                            st.session_state.venues[city].loc[idx, :] = pd.Series(updated_row)
                                         st.session_state.edit_modes[edit_key] = False
                                         st.success("수정 완료")
                                         st.rerun()
@@ -407,16 +407,21 @@ if st.session_state.route:
                             st.write(st.session_state[io_key])
                         link = st.text_input(_["google_link"], placeholder="https://maps.google.com/...", key=f"l_{city}")
 
-                        if st.form_submit_button(_["register"]):
-                            if venue:
-                                new_row = pd.DataFrame([{'Venue': venue, 'Seats': seats, 'IndoorOutdoor': st.session_state[io_key], 'Google Maps Link': link}])
-                                if st.session_state.admin:
-                                    st.session_state.admin_venues[city] = pd.concat([df, new_row], ignore_index=True)
-                                else:
-                                    st.session_state.venues[city] = pd.concat([df, new_row], ignore_index=True)
-                                st.session_state.add_modes[add_key] = False
-                                st.success("등록 완료!")
-                                st.rerun()
+                        col_reg, col_edit = st.columns(2)
+                        with col_reg:
+                            add_submitted = st.form_submit_button(_["register"])
+                        with col_edit:
+                            st.form_submit_button(_["edit"])  # Placeholder for consistency
+
+                        if add_submitted and venue:
+                            new_row = pd.DataFrame([{'Venue': venue, 'Seats': seats, 'IndoorOutdoor': st.session_state[io_key], 'Google Maps Link': link}])
+                            if st.session_state.admin:
+                                st.session_state.admin_venues[city] = pd.concat([df, new_row], ignore_index=True)
+                            else:
+                                st.session_state.venues[city] = pd.concat([df, new_row], ignore_index=True)
+                            st.session_state.add_modes[add_key] = False
+                            st.success("등록 완료!")
+                            st.rerun()
 
         # 다음 도시까지 거리/시간 표시
         if i < len(st.session_state.route) - 1:
@@ -479,7 +484,7 @@ folium_static(m, width=700, height=500)
 st.caption(_["caption"])
 EOF
 
-# 커밋 & 푸시
+# Commit and push
 git add app.py && \
-git commit -m "fix: syntax error with password literal, ensure string quotes; refine venue add/edit forms for cleaner UI" && \
+git commit -m "feat: multilingual UI updates with admin mode and venue management" && \
 git push
