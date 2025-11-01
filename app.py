@@ -1,3 +1,5 @@
+cd /mount/src/cantata-tour-2025 && \
+cat > app.py << 'EOF'
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
@@ -148,11 +150,22 @@ with st.sidebar:
 # =============================================
 if 'route' not in st.session_state:
     st.session_state.route = []
+if 'dates' not in st.session_state:
     st.session_state.dates = {}
+if 'distances' not in st.session_state:
     st.session_state.distances = {}
+if 'venues' not in st.session_state:
     st.session_state.venues = {}
+if 'admin_venues' not in st.session_state:
     st.session_state.admin_venues = {}
+if 'start_city' not in st.session_state:
     st.session_state.start_city = 'Mumbai'
+if 'edit_modes' not in st.session_state:
+    st.session_state.edit_modes = {}
+if 'add_modes' not in st.session_state:
+    st.session_state.add_modes = {}
+if 'next_city_select' not in st.session_state:
+    st.session_state.next_city_select = None
 
 # 도시 목록 및 좌표
 cities = sorted([
@@ -201,7 +214,7 @@ coords = {
 }
 
 # =============================================
-# 4. UI 시작
+# 5. UI 시작
 # =============================================
 st.markdown(f"<h1 style='margin:0; padding:0; font-size:2.2rem;'>{_[ 'title' ]}</h1>", unsafe_allow_html=True)
 
@@ -218,7 +231,7 @@ with col2:
     st.session_state.start_city = st.selectbox(_["start_city"], cities, index=cities.index(st.session_state.start_city) if st.session_state.start_city in cities else 0)
 
 # =============================================
-# 5. 경로 관리
+# 6. 경로 관리
 # =============================================
 if st.session_state.route:
     st.markdown("---")
@@ -247,7 +260,7 @@ if st.session_state.route:
                 st.success(f"{new_city} 추가됨")
                 st.rerun()
         with col_next:
-            st.session_state.next_city_select = st.selectbox(_["next_city"], available, key="next_city_select")
+            st.selectbox(_["next_city"], available, key='next_city_select')
 
     st.markdown(_["current_route"])
     st.write(" → ".join(st.session_state.route))
@@ -263,7 +276,7 @@ if st.session_state.route:
     c2.metric(_["total_time"], f"{total_hrs:.1f} h")
 
     # =============================================
-    # 6. 공연장 관리
+    # 7. 공연장 관리
     # =============================================
     st.markdown("---")
     st.subheader(_["venues_dates"])
@@ -305,7 +318,7 @@ if st.session_state.route:
                         st.rerun()
 
 # =============================================
-# 7. 지도
+# 8. 지도
 # =============================================
 st.markdown("---")
 st.subheader(_["tour_map"])
@@ -314,7 +327,7 @@ m = folium.Map(location=center, zoom_start=7, tiles="CartoDB positron")
 if len(st.session_state.route) > 1:
     folium.PolyLine([coords[c] for c in st.session_state.route], color="red", weight=4).add_to(m)
 for city in st.session_state.route:
-    df = st.session_state.admin_venues.get(city, st.session_state.venues.get(city, pd.DataFrame()))
+    df = st.session_state.admin_venues.get(city, pd.DataFrame()) if st.session_state.admin else st.session_state.venues.get(city, pd.DataFrame())
     link = next((r['Google Maps Link'] for _, r in df.iterrows() if r['Google Maps Link'].startswith('http')), None)
     popup = f"<b>{city}</b><br>{st.session_state.dates.get(city, 'TBD').strftime(_['date_format'])}"
     if link:
@@ -322,3 +335,7 @@ for city in st.session_state.route:
     folium.CircleMarker(coords[city], radius=12, color="#2E8B57", fill_color="#90EE90", popup=folium.Popup(popup, max_width=300)).add_to(m)
 folium_static(m, width=700, height=500)
 st.caption(_["caption"])
+EOF && \
+git add app.py && \
+git commit -m "feat: multilingual UI (EN/KO/HI) + sidebar language selector + admin mode + venue edits" && \
+git push
