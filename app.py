@@ -120,7 +120,7 @@ LANG = {
 }
 
 # =============================================
-# 2. 크리스마스 테마 CSS (노랑 제거, 초록 강조)
+# 2. 크리스마스 테마 CSS
 # =============================================
 st.markdown("""
 <style>
@@ -175,10 +175,10 @@ st.markdown(snowflakes, unsafe_allow_html=True)
 st.set_page_config(page_title="Cantata Tour 2025", layout="wide", initial_sidebar_state="collapsed")
 
 with st.sidebar:
-    st.markdown("### 🌐 Language")
-    # format_func에 문자열 반환 보장
+    st.markdown("### Language")
+    # 에러 방지: options 명시 + format_func에서 문자열 반환 보장
     lang = st.radio(
-        "Select",
+        label="Select",
         options=["en", "hi", "ko"],
         format_func=lambda x: {"en": "English", "hi": "हिन्दी", "ko": "한국어"}[x],
         vertical=True
@@ -186,7 +186,7 @@ with st.sidebar:
     _ = LANG[lang]
 
     st.markdown("---")
-    st.markdown("### 🔒 Admin")
+    st.markdown("### Admin")
     if 'admin' not in st.session_state:
         st.session_state.admin = False
     if 'show_pw' not in st.session_state:
