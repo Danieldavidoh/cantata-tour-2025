@@ -358,5 +358,5 @@ if st.session_state.route:
 st.caption(_["caption"])
 EOF && \
 git add app.py && \
-git commit -m "fix: Removed invalid non-printable character U+00A0 and resolved SyntaxError." && \
+git commit -m "fix: Removed shell command from app.py to resolve SyntaxError" && \
 git push
