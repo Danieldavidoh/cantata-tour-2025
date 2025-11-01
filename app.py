@@ -8,11 +8,11 @@ from streamlit_folium import folium_static
 import math
 
 # =============================================
-# 1. 다국어 사전
+# 1. 다국어 사전 (영어 / 한국어 / 힌디어)
 # =============================================
 LANG = {
     "en": {
-        "title": "🎼 Cantata Tour <span style='font-size:1.1rem; color:#888;'>(Maharashtra)</span>",
+        "title": "🎼 Cantata Tour <span style='font-size:1.1rem; color:#888; font-weight:normal;'>(Maharashtra)</span>",
         "start_city": "Starting City",
         "start_btn": "🚀 Start",
         "reset_btn": "🔄 Reset All",
@@ -37,13 +37,14 @@ LANG = {
         "delete": "Delete",
         "tour_map": "Tour Map",
         "caption": "Mobile: ⋮ → 'Add to Home Screen' → Use like an app!",
-        "date_format": "%b %d, %Y",
+        "date_format": "%b %d, %Y",  # Jan 01, 2025
         "admin_mode": "Admin Mode",
+        "password": "Password",
         "enter_password": "Enter password to access Admin Mode",
         "submit": "Submit",
     },
     "ko": {
-        "title": "🎼 칸타타 투어 <span style='font-size:1.1rem; color:#888;'>(마하라슈트라)</span>",
+        "title": "🎼 칸타타 투어 <span style='font-size:1.1rem; color:#888; font-weight:normal;'>(마하라슈트라)</span>",
         "start_city": "출발 도시",
         "start_btn": "🚀 시작",
         "reset_btn": "🔄 전체 초기화",
@@ -68,13 +69,14 @@ LANG = {
         "delete": "삭제",
         "tour_map": "투어 지도",
         "caption": "모바일: ⋮ → '홈 화면에 추가' → 앱처럼 사용!",
-        "date_format": "%Y년 %m월 %d일",
+        "date_format": "%Y년 %m월 %d일",  # 2025년 01월 01일
         "admin_mode": "관리자 모드",
+        "password": "비밀번호",
         "enter_password": "관리자 모드 접근을 위한 비밀번호 입력",
         "submit": "제출",
     },
     "hi": {
-        "title": "🎼 कांताता टूर <span style='font-size:1.1rem; color:#888;'>(महाराष्ट्र)</span>",
+        "title": "🎼 कांताता टूर <span style='font-size:1.1rem; color:#888; font-weight:normal;'>(महाराष्ट्र)</span>",
         "start_city": "प्रारंभिक शहर",
         "start_btn": "🚀 शुरू करें",
         "reset_btn": "🔄 सब रीसेट करें",
@@ -99,8 +101,9 @@ LANG = {
         "delete": "हटाएँ",
         "tour_map": "टूर मैप",
         "caption": "मोबाइल: ⋮ → 'होम स्क्रीन पर जोड़ें' → ऐप की तरह उपयोग करें!",
-        "date_format": "%d %b %Y",
+        "date_format": "%d %b %Y",  # 01 जनवरी 2025
         "admin_mode": "एडमिन मोड",
+        "password": "पासवर्ड",
         "enter_password": "एडमिन मोड एक्सेस करने के लिए पासवर्ड दर्ज करें",
         "submit": "जमा करें",
     },
@@ -160,14 +163,10 @@ if 'admin_venues' not in st.session_state:
     st.session_state.admin_venues = {}
 if 'start_city' not in st.session_state:
     st.session_state.start_city = 'Mumbai'
-if 'edit_modes' not in st.session_state:
-    st.session_state.edit_modes = {}
-if 'add_modes' not in st.session_state:
-    st.session_state.add_modes = {}
-if 'next_city_select' not in st.session_state:
-    st.session_state.next_city_select = None
 
-# 도시 목록 및 좌표
+# =============================================
+# 4. 도시 목록 및 좌표
+# =============================================
 cities = sorted([
     'Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Thane', 'Aurangabad', 'Solapur', 'Amravati', 'Nanded', 'Kolhapur',
     'Akola', 'Latur', 'Ahmadnagar', 'Jalgaon', 'Dhule', 'Ichalkaranji', 'Malegaon', 'Bhusawal', 'Bhiwandi', 'Bhandara',
@@ -260,7 +259,7 @@ if st.session_state.route:
                 st.success(f"{new_city} 추가됨")
                 st.rerun()
         with col_next:
-            st.selectbox(_["next_city"], available, key='next_city_select')
+            st.session_state['next_city_select'] = st.selectbox(_["next_city"], available)
 
     st.markdown(_["current_route"])
     st.write(" → ".join(st.session_state.route))
