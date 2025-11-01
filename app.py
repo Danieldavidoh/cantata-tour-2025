@@ -97,7 +97,7 @@ LANG = {
         "seats": "सीटें",
         "indoor_outdoor": "इंडोर/आउटडोर",
         "indoor": "इंडोर",
-        "outdoor": "आउटडोर",
+        "outdoor": "आ우टडोर",
         "google_link": "गूगल मैप्स लिंक",
         "register": "रजिस्टर",
         "add_venue": "स्थल जोड़ें",
@@ -142,6 +142,7 @@ st.markdown("""
     .stExpander>summary { color: #90EE90; font-weight: bold; }
     .stMarkdown { color: #90EE90; }
 
+    /* 자연스러운 눈송이 */
     .snowflake {
         position: absolute;
         color: rgba(255, 255, 255, 0.9);
@@ -175,11 +176,12 @@ st.set_page_config(page_title="Cantata Tour 2025", layout="wide", initial_sideba
 
 with st.sidebar:
     st.markdown("### Language")
+    # 에러 방지: label, options 명시 + format_func에서 키 존재 보장
     lang = st.radio(
         label="Select",
         options=["en", "ko", "hi"],
         format_func=lambda x: {"en": "English", "ko": "한국어", "hi": "हिन्दी"}[x],
-        vertical=True
+        horizontal=False
     )
     _ = LANG[lang]
 
