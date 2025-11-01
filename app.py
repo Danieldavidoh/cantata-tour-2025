@@ -6,7 +6,7 @@ from streamlit_folium import folium_static
 import math
 
 # =============================================
-# 1. 다국어 사전 (모든 공백을 일반 스페이스로 통일)
+# 1. 다국어 사전 (모든 공백 일반 스페이스)
 # =============================================
 LANG = {
     "en": {
@@ -120,7 +120,7 @@ LANG = {
 }
 
 # =============================================
-# 2. 크리스마스 테마 CSS (노랑 제거, 초록 강조)
+# 2. 크리스마스 테마 CSS
 # =============================================
 st.markdown("""
 <style>
@@ -142,7 +142,6 @@ st.markdown("""
     .stExpander>summary { color: #90EE90; font-weight: bold; }
     .stMarkdown { color: #90EE90; }
 
-    /* 자연스러운 눈송이 */
     .snowflake {
         position: absolute;
         color: rgba(255, 255, 255, 0.9);
@@ -176,7 +175,6 @@ st.set_page_config(page_title="Cantata Tour 2025", layout="wide", initial_sideba
 
 with st.sidebar:
     st.markdown("### Language")
-    # 에러 방지: label, options 명시 + format_func에서 키 존재 보장
     lang = st.radio(
         label="Select",
         options=["en", "ko", "hi"],
@@ -365,7 +363,6 @@ if st.session_state.route:
 
     for city in st.session_state.route:
         with st.expander(f"**{city}**", expanded=True):
-            # 공연 날짜
             cur = st.session_state.dates.get(city, datetime.now().date())
             new = st.date_input(_["performance_date"], cur, key=f"date_{city}")
             if new != cur:
@@ -373,7 +370,6 @@ if st.session_state.route:
                 st.success("날짜 변경됨")
                 st.rerun()
 
-            # 공연장 목록
             df = st.session_state.admin_venues.get(city, pd.DataFrame()) if st.session_state.admin else st.session_state.venues.get(city, pd.DataFrame(columns=['Venue', 'Seats', 'IndoorOutdoor', 'Google Maps Link']))
 
             if not df.empty:
@@ -400,7 +396,6 @@ if st.session_state.route:
                                     st.success("삭제 완료")
                                     st.rerun()
 
-                    # 편집 폼
                     if st.session_state.get(f"edit_{city}_{idx}", False):
                         with st.form(key=f"edit_form_{city}_{idx}"):
                             ev = st.text_input("Venue", row['Venue'], key=f"ev_{city}_{idx}")
@@ -414,16 +409,13 @@ if st.session_state.route:
                                 st.success("수정 완료")
                                 st.rerun()
 
-            # 공연장 등록
             if st.session_state.admin or st.session_state.guest_mode:
                 st.markdown("---")
                 io = st.session_state.get(f"io_{city}", _["outdoor"])
-                # 실내/실외 토글 버튼
                 if st.button(f"**{io}**", key=f"io_toggle_{city}"):
                     io = _["indoor"] if io == _["outdoor"] else _["outdoor"]
                     st.session_state[f"io_{city}"] = io
                     st.rerun()
-                # 테두리 색상 표시
                 border_color = "#90EE90" if io == _["indoor"] else "#87CEEB"
                 st.markdown(f"<div style='border:3px solid {border_color}; border-radius:12px; padding:8px; text-align:center; font-weight:bold; background:white;'>{io}</div>", unsafe_allow_html=True)
 
@@ -440,7 +432,7 @@ if st.session_state.route:
                         st.rerun()
 
 # =============================================
-# 9. 지도 (루트 색상 빨간색)
+# 9. 지도 (루트 빨간색)
 # =============================================
 st.markdown("---")
 st.subheader(_["tour_map"])
