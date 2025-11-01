@@ -120,7 +120,7 @@ LANG = {
 }
 
 # =============================================
-# 2. 크리스마스 테마 CSS (노랑 → 초록, 빨강, 흰색)
+# 2. 크리스마스 테마 CSS (노랑 제거, 초록 강조)
 # =============================================
 st.markdown("""
 <style>
@@ -158,7 +158,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 눈송이 생성 (자연스럽게, 크기/속도 랜덤)
+# 눈송이 생성
 import random
 snowflakes = ""
 for i in range(80):
@@ -170,13 +170,13 @@ for i in range(80):
 st.markdown(snowflakes, unsafe_allow_html=True)
 
 # =============================================
-# 3. 페이지 설정 + 사이드바
+# 3. 페이지 설정 + 사이드바 (세로 정렬)
 # =============================================
 st.set_page_config(page_title="Cantata Tour 2025", layout="wide", initial_sidebar_state="collapsed")
 
 with st.sidebar:
     st.markdown("### 🌐 Language")
-    lang = st.radio("Select", ["en", "ko", "hi"], format_func=lambda x: {"en": "English", "ko": "한국어", "hi": "हिन्दी"}[x], horizontal=True)
+    lang = st.radio("Select", ["en", "hi", "ko"], format_func=lambda x: {"en": "English", "hi": "हिन्दी", "ko": "한국어"}[x], vertical=True)
     _ = LANG[lang]
 
     st.markdown("---")
@@ -193,7 +193,7 @@ with st.sidebar:
         if st.button(_["guest_mode"]):
             st.session_state.guest_mode = True
             st.session_state.admin = False
-            st.session_state.show_pw = True  # 비밀번호 입력 단계로 복귀
+            st.session_state.show_pw = True
             st.rerun()
     else:
         if st.button(_["admin_mode"]):
@@ -299,7 +299,7 @@ with col2:
     st.session_state.start_city = st.selectbox(_["start_city"], cities, index=cities.index(st.session_state.start_city) if st.session_state.start_city in cities else 0)
 
 # =============================================
-# 7. 경로 관리 + 도시 간 거리/시간 표시
+# 7. 경로 관리
 # =============================================
 if st.session_state.route:
     st.markdown("---")
@@ -352,13 +352,13 @@ if st.session_state.route:
     c2.metric(_["total_time"], f"{total_hrs:.1f} h")
 
     # =============================================
-    # 8. 공연장 관리 (모든 기능 정상 표시)
+    # 8. 공연장 관리
     # =============================================
     st.markdown("---")
     st.subheader(_["venues_dates"])
 
     for city in st.session_state.route:
-        with st.expander(f"**{city}**", expanded=True):  # 기본 열림
+        with st.expander(f"**{city}**", expanded=True):
             # 공연 날짜
             cur = st.session_state.dates.get(city, datetime.now().date())
             new = st.date_input(_["performance_date"], cur, key=f"date_{city}")
@@ -412,11 +412,13 @@ if st.session_state.route:
             if st.session_state.admin or st.session_state.guest_mode:
                 st.markdown("---")
                 io = st.session_state.get(f"io_{city}", _["outdoor"])
-                border_color = "#90EE90" if io == _["indoor"] else "#87CEEB"
-                if st.button(f"**{io}**", key=f"io_btn_{city}"):
+                # 실내/실외 토글 버튼 (키 충돌 방지 + 정상 작동)
+                if st.button(f"**{io}**", key=f"io_toggle_{city}"):
                     io = _["indoor"] if io == _["outdoor"] else _["outdoor"]
                     st.session_state[f"io_{city}"] = io
                     st.rerun()
+                # 테두리 색상 표시
+                border_color = "#90EE90" if io == _["indoor"] else "#87CEEB"
                 st.markdown(f"<div style='border:3px solid {border_color}; border-radius:12px; padding:8px; text-align:center; font-weight:bold; background:white;'>{io}</div>", unsafe_allow_html=True)
 
                 with st.form(key=f"add_{city}"):
