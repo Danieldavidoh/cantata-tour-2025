@@ -1,5 +1,3 @@
-cd /mount/src/cantata-tour-2025 && \
-cat > app.py << 'PURE_PYTHON_END'
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
@@ -37,7 +35,7 @@ LANG = {
         "delete": "Delete",
         "tour_map": "Tour Map",
         "caption": "Mobile: ⋮ → 'Add to Home Screen' → Use like an app!",
-        "date_format": "%b %d, %Y",
+        "date_format": "%b %d, %Y",  # Jan 01, 2025
         "admin_mode": "Admin Mode",
         "password": "Password",
         "enter_password": "Enter password to access Admin Mode",
@@ -69,7 +67,7 @@ LANG = {
         "delete": "삭제",
         "tour_map": "투어 지도",
         "caption": "모바일: ⋮ → '홈 화면에 추가' → 앱처럼 사용!",
-        "date_format": "%Y년 %m월 %d일",
+        "date_format": "%Y년 %m월 %d일",  # 2025년 01월 01일
         "admin_mode": "관리자 모드",
         "password": "비밀번호",
         "enter_password": "관리자 모드 접근을 위한 비밀번호 입력",
@@ -101,7 +99,7 @@ LANG = {
         "delete": "हटाएँ",
         "tour_map": "टूर मैप",
         "caption": "मोबाइल: ⋮ → 'होम स्क्रीन पर जोड़ें' → ऐप की तरह उपयोग करें!",
-        "date_format": "%d %b %Y",
+        "date_format": "%d %b %Y",  # 01 जनवरी 2025
         "admin_mode": "एडमिन मोड",
         "password": "पासवर्ड",
         "enter_password": "एडमिन मोड एक्सेस करने के लिए पासवर्ड दर्ज करें",
@@ -191,30 +189,102 @@ cities = sorted([
 ])
 
 coords = {
-    'Mumbai': (19.07, 72.88), 'Pune': (18.52, 73.86), 'Nagpur': (21.15, 79.08), 'Nashik': (20.00, 73.79),
-    'Thane': (19.22, 72.98), 'Aurangabad': (19.88, 75.34), 'Solapur': (17.67, 75.91), 'Amravati': (20.93, 77.75),
-    'Nanded': (19.16, 77.31), 'Kolhapur': (16.70, 74.24), 'Akola': (20.70, 77.00), 'Latur': (18.40, 76.57),
-    'Ahmadnagar': (19.10, 74.75), 'Jalgaon': (21.00, 75.57), 'Dhule': (20.90, 74.77), 'Ichalkaranji': (16.69, 74.47),
-    'Malegaon': (20.55, 74.53), 'Bhusawal': (21.05, 76.00), 'Bhiwandi': (19.30, 73.06), 'Bhandara': (21.17, 79.65),
-    'Beed': (18.99, 75.76), 'Buldana': (20.54, 76.18), 'Chandrapur': (19.95, 79.30), 'Dharashiv': (18.40, 76.57),
-    'Gondia': (21.46, 80.19), 'Hingoli': (19.72, 77.15), 'Jalna': (19.85, 75.89), 'Mira-Bhayandar': (19.28, 72.87),
-    'Nandurbar': (21.37, 74.22), 'Osmanabad': (18.18, 76.07), 'Palghar': (19.70, 72.77), 'Parbhani': (19.27, 76.77),
-    'Ratnagiri': (16.99, 73.31), 'Sangli': (16.85, 74.57), 'Satara': (17.68, 74.02), 'Sindhudurg': (16.24, 73.42),
-    'Wardha': (20.75, 78.60), 'Washim': (20.11, 77.13), 'Yavatmal': (20.39, 78.12), 'Kalyan-Dombivli': (19.24, 73.13),
-    'Ulhasnagar': (19.22, 73.16), 'Vasai-Virar': (19.37, 72.81), 'Sangli-Miraj-Kupwad': (16.85, 74.57), 'Nanded-Waghala': (19.16, 77.31),
-    'Bandra (Mumbai)': (19.06, 72.84), 'Colaba (Mumbai)': (18.92, 72.82), 'Andheri (Mumbai)': (19.12, 72.84), 'Boric Nagar (Mumbai)': (19.07, 72.88),
-    'Navi Mumbai': (19.03, 73.00), 'Mumbai Suburban': (19.07, 72.88), 'Pimpri-Chinchwad (Pune)': (18.62, 73.80), 'Koregaon Park (Pune)': (18.54, 73.90),
-    'Kothrud (Pune)': (18.50, 73.81), 'Hadapsar (Pune)': (18.51, 73.94), 'Pune Cantonment': (18.50, 73.89), 'Nashik Road': (20.00, 73.79),
-    'Deolali (Nashik)': (19.94, 73.82), 'Satpur (Nashik)': (20.01, 73.79), 'Aurangabad City': (19.88, 75.34), 'Jalgaon City': (21.00, 75.57),
-    'Bhopalwadi (Aurangabad)': (19.88, 75.34), 'Nagpur City': (21.15, 79.08), 'Sitabuldi (Nagpur)': (21.14, 79.08), 'Jaripatka (Nagpur)': (21.12, 79.07),
-    'Solapur City': (17.67, 75.91), 'Hotgi (Solapur)': (17.57, 75.95), 'Pandharpur (Solapur)': (17.66, 75.32), 'Amravati City': (20.93, 77.75),
-    'Badnera (Amravati)': (20.84, 77.73), 'Paratwada (Amravati)': (21.06, 77.21), 'Akola City': (20.70, 77.00), 'Murtizapur (Akola)': (20.73, 77.37),
-    'Washim City': (20.11, 77.13), 'Mangrulpir (Washim)': (20.31, 77.05), 'Yavatmal City': (20.39, 78.12), 'Pusad (Yavatmal)': (19.91, 77.57),
-    'Darwha (Yavatmal)': (20.31, 77.78), 'Wardha City': (20.75, 78.60), 'Sindi (Wardha)': (20.82, 78.09), 'Hinganghat (Wardha)': (20.58, 78.58),
-    'Chandrapur City': (19.95, 79.30), 'Brahmapuri (Chandrapur)': (20.61, 79.89), 'Mul (Chandrapur)': (19.95, 79.06), 'Gadchiroli': (20.09, 80.11),
-    'Aheri (Gadchiroli)': (19.37, 80.18), 'Dhanora (Gadchiroli)': (19.95, 80.15), 'Gondia City': (21.46, 80.19), 'Tiroda (Gondia)': (21.28, 79.68),
-    'Arjuni Morgaon (Gondia)': (21.29, 80.20), 'Bhandara City': (21.17, 79.65), 'Pauni (Bhandara)': (21.07, 79.81), 'Tumsar (Bhandara)': (21.37, 79.75),
-    'Nagbhid (Chandrapur)': (20.29, 79.36), 'Gadhinglaj (Kolhapur)': (16.23, 74.34), 'Kagal (Kolhapur)': (16.57, 74.31), 'Ajra (Kolhapur)': (16.67, 74.22),
+    'Mumbai': (19.07, 72.88),
+    'Pune': (18.52, 73.86),
+    'Nagpur': (21.15, 79.08),
+    'Nashik': (20.00, 73.79),
+    'Thane': (19.22, 72.98),
+    'Aurangabad': (19.88, 75.34),
+    'Solapur': (17.67, 75.91),
+    'Amravati': (20.93, 77.75),
+    'Nanded': (19.16, 77.31),
+    'Kolhapur': (16.70, 74.24),
+    'Akola': (20.70, 77.00),
+    'Latur': (18.40, 76.57),
+    'Ahmadnagar': (19.10, 74.75),
+    'Jalgaon': (21.00, 75.57),
+    'Dhule': (20.90, 74.77),
+    'Ichalkaranji': (16.69, 74.47),
+    'Malegaon': (20.55, 74.53),
+    'Bhusawal': (21.05, 76.00),
+    'Bhiwandi': (19.30, 73.06),
+    'Bhandara': (21.17, 79.65),
+    'Beed': (18.99, 75.76),
+    'Buldana': (20.54, 76.18),
+    'Chandrapur': (19.95, 79.30),
+    'Dharashiv': (18.40, 76.57),
+    'Gondia': (21.46, 80.19),
+    'Hingoli': (19.72, 77.15),
+    'Jalna': (19.85, 75.89),
+    'Mira-Bhayandar': (19.28, 72.87),
+    'Nandurbar': (21.37, 74.22),
+    'Osmanabad': (18.18, 76.07),
+    'Palghar': (19.70, 72.77),
+    'Parbhani': (19.27, 76.77),
+    'Ratnagiri': (16.99, 73.31),
+    'Sangli': (16.85, 74.57),
+    'Satara': (17.68, 74.02),
+    'Sindhudurg': (16.24, 73.42),
+    'Wardha': (20.75, 78.60),
+    'Washim': (20.11, 77.13),
+    'Yavatmal': (20.39, 78.12),
+    'Kalyan-Dombivli': (19.24, 73.13),
+    'Ulhasnagar': (19.22, 73.16),
+    'Vasai-Virar': (19.37, 72.81),
+    'Sangli-Miraj-Kupwad': (16.85, 74.57),
+    'Nanded-Waghala': (19.16, 77.31),
+    'Bandra (Mumbai)': (19.06, 72.84),
+    'Colaba (Mumbai)': (18.92, 72.82),
+    'Andheri (Mumbai)': (19.12, 72.84),
+    'Boric Nagar (Mumbai)': (19.07, 72.88),
+    'Navi Mumbai': (19.03, 73.00),
+    'Mumbai Suburban': (19.07, 72.88),
+    'Pimpri-Chinchwad (Pune)': (18.62, 73.80),
+    'Koregaon Park (Pune)': (18.54, 73.90),
+    'Kothrud (Pune)': (18.50, 73.81),
+    'Hadapsar (Pune)': (18.51, 73.94),
+    'Pune Cantonment': (18.50, 73.89),
+    'Nashik Road': (20.00, 73.79),
+    'Deolali (Nashik)': (19.94, 73.82),
+    'Satpur (Nashik)': (20.01, 73.79),
+    'Aurangabad City': (19.88, 75.34),
+    'Jalgaon City': (21.00, 75.57),
+    'Bhopalwadi (Aurangabad)': (19.88, 75.34),
+    'Nagpur City': (21.15, 79.08),
+    'Sitabuldi (Nagpur)': (21.14, 79.08),
+    'Jaripatka (Nagpur)': (21.12, 79.07),
+    'Solapur City': (17.67, 75.91),
+    'Hotgi (Solapur)': (17.57, 75.95),
+    'Pandharpur (Solapur)': (17.66, 75.32),
+    'Amravati City': (20.93, 77.75),
+    'Badnera (Amravati)': (20.84, 77.73),
+    'Paratwada (Amravati)': (21.06, 77.21),
+    'Akola City': (20.70, 77.00),
+    'Murtizapur (Akola)': (20.73, 77.37),
+    'Washim City': (20.11, 77.13),
+    'Mangrulpir (Washim)': (20.31, 77.05),
+    'Yavatmal City': (20.39, 78.12),
+    'Pusad (Yavatmal)': (19.91, 77.57),
+    'Darwha (Yavatmal)': (20.31, 77.78),
+    'Wardha City': (20.75, 78.60),
+    'Sindi (Wardha)': (20.82, 78.09),
+    'Hinganghat (Wardha)': (20.58, 78.58),
+    'Chandrapur City': (19.95, 79.30),
+    'Brahmapuri (Chandrapur)': (20.61, 79.89),
+    'Mul (Chandrapur)': (19.95, 79.06),
+    'Gadchiroli': (20.09, 80.11),
+    'Aheri (Gadchiroli)': (19.37, 80.18),
+    'Dhanora (Gadchiroli)': (19.95, 80.15),
+    'Gondia City': (21.46, 80.19),
+    'Tiroda (Gondia)': (21.28, 79.68),
+    'Arjuni Morgaon (Gondia)': (21.29, 80.20),
+    'Bhandara City': (21.17, 79.65),
+    'Pauni (Bhandara)': (21.07, 79.81),
+    'Tumsar (Bhandara)': (21.37, 79.75),
+    'Nagbhid (Chandrapur)': (20.29, 79.36),
+    'Gadhinglaj (Kolhapur)': (16.23, 74.34),
+    'Kagal (Kolhapur)': (16.57, 74.31),
+    'Ajra (Kolhapur)': (16.67, 74.22),
     'Shiroli (Kolhapur)': (16.70, 74.24)
 }
 
@@ -299,9 +369,7 @@ if st.session_state.route:
 
             if not df.empty:
                 for idx, row in df.iterrows():
-                    # 언어 설정에 맞게 Indoor/Outdoor 표시
-                    io_display = _[row['IndoorOutdoor'].lower()] if row['IndoorOutdoor'] in ["Indoor", "Outdoor"] else row['IndoorOutdoor']
-                    st.write(f"**{row['Venue']}** ({row['Seats']} {_['seats']}, {io_display})")
+                    st.write(f"{row['Venue']} ({row['Seats']} {_['seats']}, {row['IndoorOutdoor']})")
                     if row['Google Maps Link'].startswith("http"):
                         st.markdown(f"[{_['open_maps']}]({row['Google Maps Link']})")
 
@@ -311,25 +379,13 @@ if st.session_state.route:
                     with c1: v = st.text_input(_["venue_name"], key=f"v_{city}")
                     with c2: s = st.number_input(_["seats"], 1, step=50, key=f"s_{city}")
                     with c3:
-                        # 언어 중립적인 키("Indoor", "Outdoor")를 값으로 사용
-                        io_options = ["Indoor", "Outdoor"] 
-                        io_labels = [_[k.lower()] for k in io_options] # 화면에 표시될 레이블
-                        
-                        # 세션 상태에 저장된 값에 따라 인덱스 결정
-                        current_io = st.session_state.get(f"io_{city}", "Outdoor")
-                        initial_index = io_options.index(current_io) if current_io in io_options else 1
-                        
-                        io_selected_label = st.selectbox(_["indoor_outdoor"], io_labels, index=initial_index, key=f"io_select_{city}")
-                        
-                        # 선택된 레이블을 다시 언어 중립적인 키로 변환하여 저장
-                        io_map = {label: key for label, key in zip(io_labels, io_options)}
-                        io = io_map[io_selected_label]
-                        st.session_state[f"io_{city}"] = io
-
-
+                        io = st.session_state.get(f"io_{city}", _["outdoor"])
+                        if st.button(_["indoor_outdoor"], key=f"io_btn_{city}"):
+                            io = _["indoor"] if io == _["outdoor"] else _["outdoor"]
+                            st.session_state[f"io_{city}"] = io
+                        st.write(io)
                     l = st.text_input(_["google_link"], key=f"l_{city}")
                     if st.form_submit_button(_["register"]) and v:
-                        # 저장 시에는 언어 중립적인 키(io)를 사용
                         new_row = pd.DataFrame([{'Venue': v, 'Seats': s, 'IndoorOutdoor': io, 'Google Maps Link': l}])
                         target = st.session_state.admin_venues if st.session_state.admin else st.session_state.venues
                         target[city] = pd.concat([target.get(city, pd.DataFrame()), new_row], ignore_index=True)
@@ -354,4 +410,7 @@ for city in st.session_state.route:
     folium.CircleMarker(coords[city], radius=12, color="#2E8B57", fill_color="#90EE90", popup=folium.Popup(popup, max_width=300)).add_to(m)
 folium_static(m, width=700, height=500)
 st.caption(_["caption"])
-PURE_PYTHON_END
+EOF
+git add app.py
+git commit -m "fix: button in form error by moving button outside form for indoor/outdoor toggle"
+git push
