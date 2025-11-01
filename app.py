@@ -482,7 +482,4 @@ folium_static(m, width=700, height=500)
 
 st.caption(_["caption"])
 EOF
-
-git add app.py && \
-git commit -m "fix: syntax error by ensuring pure Python in app.py; no bash in file content" && \
-git push
+git add app.py && git commit -m "fix: resolve syntax error by ensuring clean Python code in app.py" && git push
