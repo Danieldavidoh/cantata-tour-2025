@@ -1,3 +1,5 @@
+cd /mount/src/cantata-tour-2025 && \
+cat > app.py << 'PURE_PYTHON_END'
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
@@ -35,7 +37,7 @@ LANG = {
         "delete": "Delete",
         "tour_map": "Tour Map",
         "caption": "Mobile: ⋮ → 'Add to Home Screen' → Use like an app!",
-        "date_format": "%b %d, %Y",  # Jan 01, 2025
+        "date_format": "%b %d, %Y",
         "admin_mode": "Admin Mode",
         "password": "Password",
         "enter_password": "Enter password to access Admin Mode",
@@ -67,7 +69,7 @@ LANG = {
         "delete": "삭제",
         "tour_map": "투어 지도",
         "caption": "모바일: ⋮ → '홈 화면에 추가' → 앱처럼 사용!",
-        "date_format": "%Y년 %m월 %d일",  # 2025년 01월 01일
+        "date_format": "%Y년 %m월 %d일",
         "admin_mode": "관리자 모드",
         "password": "비밀번호",
         "enter_password": "관리자 모드 접근을 위한 비밀번호 입력",
@@ -99,7 +101,7 @@ LANG = {
         "delete": "हटाएँ",
         "tour_map": "टूर मैप",
         "caption": "मोबाइल: ⋮ → 'होम स्क्रीन पर जोड़ें' → ऐप की तरह उपयोग करें!",
-        "date_format": "%d %b %Y",  # 01 जनवरी 2025
+        "date_format": "%d %b %Y",
         "admin_mode": "एडमिन मोड",
         "password": "पासवर्ड",
         "enter_password": "एडमिन मोड एक्सेस करने के लिए पासवर्ड दर्ज करें",
@@ -297,7 +299,9 @@ if st.session_state.route:
 
             if not df.empty:
                 for idx, row in df.iterrows():
-                    st.write(f"{row['Venue']} ({row['Seats']} {_['seats']}, {row['IndoorOutdoor']})")
+                    # 언어 설정에 맞게 Indoor/Outdoor 표시
+                    io_display = _[row['IndoorOutdoor'].lower()] if row['IndoorOutdoor'] in ["Indoor", "Outdoor"] else row['IndoorOutdoor']
+                    st.write(f"**{row['Venue']}** ({row['Seats']} {_['seats']}, {io_display})")
                     if row['Google Maps Link'].startswith("http"):
                         st.markdown(f"[{_['open_maps']}]({row['Google Maps Link']})")
 
@@ -307,10 +311,25 @@ if st.session_state.route:
                     with c1: v = st.text_input(_["venue_name"], key=f"v_{city}")
                     with c2: s = st.number_input(_["seats"], 1, step=50, key=f"s_{city}")
                     with c3:
-                        io_options = [_[ "indoor" ], _["outdoor"]]
-                        io = st.selectbox(_["indoor_outdoor"], io_options, index=0 if st.session_state.get(f"io_{city}", _["outdoor"]) == _["indoor"] else 1, key=f"io_{city}")
+                        # 언어 중립적인 키("Indoor", "Outdoor")를 값으로 사용
+                        io_options = ["Indoor", "Outdoor"] 
+                        io_labels = [_[k.lower()] for k in io_options] # 화면에 표시될 레이블
+                        
+                        # 세션 상태에 저장된 값에 따라 인덱스 결정
+                        current_io = st.session_state.get(f"io_{city}", "Outdoor")
+                        initial_index = io_options.index(current_io) if current_io in io_options else 1
+                        
+                        io_selected_label = st.selectbox(_["indoor_outdoor"], io_labels, index=initial_index, key=f"io_select_{city}")
+                        
+                        # 선택된 레이블을 다시 언어 중립적인 키로 변환하여 저장
+                        io_map = {label: key for label, key in zip(io_labels, io_options)}
+                        io = io_map[io_selected_label]
+                        st.session_state[f"io_{city}"] = io
+
+
                     l = st.text_input(_["google_link"], key=f"l_{city}")
                     if st.form_submit_button(_["register"]) and v:
+                        # 저장 시에는 언어 중립적인 키(io)를 사용
                         new_row = pd.DataFrame([{'Venue': v, 'Seats': s, 'IndoorOutdoor': io, 'Google Maps Link': l}])
                         target = st.session_state.admin_venues if st.session_state.admin else st.session_state.venues
                         target[city] = pd.concat([target.get(city, pd.DataFrame()), new_row], ignore_index=True)
@@ -335,7 +354,4 @@ for city in st.session_state.route:
     folium.CircleMarker(coords[city], radius=12, color="#2E8B57", fill_color="#90EE90", popup=folium.Popup(popup, max_width=300)).add_to(m)
 folium_static(m, width=700, height=500)
 st.caption(_["caption"])
-EOF
-git add app.py
-git commit -m "fix: replace button with selectbox for indoor/outdoor to avoid st.button in st.form error"
-git push
+PURE_PYTHON_END
