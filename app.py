@@ -97,7 +97,7 @@ LANG = {
         "seats": "सीटें",
         "indoor_outdoor": "इंडोर/आउटडोर",
         "indoor": "इंडोर",
-        "outdoor": "आ우टडोर",
+        "outdoor": "आउटडोर",
         "google_link": "गूगल मैप्स लिंक",
         "register": "रजिस्टर",
         "add_venue": "स्थल जोड़ें",
@@ -176,7 +176,6 @@ st.set_page_config(page_title="Cantata Tour 2025", layout="wide", initial_sideba
 
 with st.sidebar:
     st.markdown("### Language")
-    # 에러 방지: label, options 명시 + format_func에서 키 존재 보장
     lang = st.radio(
         label="Select",
         options=["en", "ko", "hi"],
@@ -266,7 +265,7 @@ coords = {
     'Ahmadnagar': (19.10, 74.75), 'Jalgaon': (21.00, 75.57), 'Dhule': (20.90, 74.77), 'Ichalkaranji': (16.69, 74.47),
     'Malegaon': (20.55, 74.53), 'Bhusawal': (21.05, 76.00), 'Bhiwandi': (19.30, 73.06), 'Bhandara': (21.17, 79.65),
     'Beed': (18.99, 75.76), 'Buldana': (20.54, 76.18), 'Chandrapur': (19.95, 79.30), 'Dharashiv': (18.40, 76.57),
-    'Gondia': (21.46, 80.19), 'Hingoli': (19.72, 77.15), 'Jalna': (19.85, 75.89), 'Mira-Bhayandar': (19.28, 72.87),
+    'Gondia': (21.46, 80.19), 'Hingoli': (19.72, 77.15), 'Jalna': (19.85, 75.89), 'Mira-Bhayandar':})): (19.28, 72.87),
     'Nandurbar': (21.37, 74.22), 'Osmanabad': (18.18, 76.07), 'Palghar': (19.70, 72.77), 'Parbhani': (19.27, 76.77),
     'Ratnagiri': (16.99, 73.31), 'Sangli': (16.85, 74.57), 'Satara': (17.68, 74.02), 'Sindhudurg': (16.24, 73.42),
     'Wardha': (20.75, 78.60), 'Washim': (20.11, 77.13), 'Yavatmal': (20.39, 78.12), 'Kalyan-Dombivli': (19.24, 73.13),
@@ -358,13 +357,15 @@ if st.session_state.route:
     c2.metric(_["total_time"], f"{total_hrs:.1f} h")
 
     # =============================================
-    # 8. 공연장 관리
+    # 8. 공연장 관리 (항상 보이도록 expanded=True)
     # =============================================
     st.markdown("---")
     st.subheader(_["venues_dates"])
 
     for city in st.session_state.route:
+        # 항상 열린 상태로 표시
         with st.expander(f"**{city}**", expanded=True):
+            # 공연 날짜
             cur = st.session_state.dates.get(city, datetime.now().date())
             new = st.date_input(_["performance_date"], cur, key=f"date_{city}")
             if new != cur:
@@ -372,6 +373,7 @@ if st.session_state.route:
                 st.success("날짜 변경됨")
                 st.rerun()
 
+            # 공연장 목록
             df = st.session_state.admin_venues.get(city, pd.DataFrame()) if st.session_state.admin else st.session_state.venues.get(city, pd.DataFrame(columns=['Venue', 'Seats', 'IndoorOutdoor', 'Google Maps Link']))
 
             if not df.empty:
@@ -381,7 +383,7 @@ if st.session_state.route:
                         st.write(f"**{row['Venue']}**")
                         st.caption(f"{row['Seats']} {_['seats']}")
                     with col2:
-                        color = "🟢" if row['IndoorOutdoor'] == _["indoor"] else "🔵"
+                        color = "Green" if row['IndoorOutdoor'] == _["indoor"] else "Blue"
                         st.write(f"{color} {row['IndoorOutdoor']}")
                     with col3:
                         if row['Google Maps Link'].startswith("http"):
@@ -398,6 +400,7 @@ if st.session_state.route:
                                     st.success("삭제 완료")
                                     st.rerun()
 
+                    # 편집 폼
                     if st.session_state.get(f"edit_{city}_{idx}", False):
                         with st.form(key=f"edit_form_{city}_{idx}"):
                             ev = st.text_input("Venue", row['Venue'], key=f"ev_{city}_{idx}")
@@ -411,6 +414,7 @@ if st.session_state.route:
                                 st.success("수정 완료")
                                 st.rerun()
 
+            # 공연장 등록 (항상 보임)
             if st.session_state.admin or st.session_state.guest_mode:
                 st.markdown("---")
                 io = st.session_state.get(f"io_{city}", _["outdoor"])
