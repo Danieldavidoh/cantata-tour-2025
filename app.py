@@ -120,7 +120,7 @@ LANG = {
 }
 
 # =============================================
-# 2. 크리스마스 테마 CSS
+# 2. 크리스마스 테마 CSS + 제목 눈 효과
 # =============================================
 st.markdown("""
 <style>
@@ -130,6 +130,41 @@ st.markdown("""
     }
     .sidebar .sidebar-content { background: #228B22; color: white; }
     .Widget>label { color: #90EE90; font-weight: bold; }
+    
+    /* 크리스마스 제목: 빨간색, 크게, 눈 쌓인 효과 */
+    .christmas-title {
+        font-size: 3.5em !important;
+        font-weight: bold;
+        color: #FF0000 !important;
+        text-align: center;
+        text-shadow: 
+            0 0 5px #FFF, 
+            0 0 10px #FFF, 
+            0 0 15px #FFF, 
+            0 0 20px #8B0000, 
+            0 0 35px #8B0000, 
+            0 0 40px #8B0000, 
+            0 0 50px #8B0000, 
+            0 0 75px #8B0000;
+        letter-spacing: 2px;
+        position: relative;
+        margin: 20px 0;
+    }
+    .christmas-title::before {
+        content: "❄️ ❄️ ❄️";
+        position: absolute;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.6em;
+        color: white;
+        animation: snow-fall 3s infinite ease-in-out;
+    }
+    @keyframes snow-fall {
+        0%, 100% { transform: translateX(-50%) translateY(0); }
+        50% { transform: translateX(-50%) translateY(10px); }
+    }
+    
     h1, h2, h3 { color: #90EE90; text-shadow: 1px 1px 3px #8B0000; text-align: center; }
     .stButton>button { 
         background: #228B22; color: white; border: 2px solid #8B0000; 
@@ -239,7 +274,7 @@ if 'start_city' not in st.session_state:
     st.session_state.start_city = 'Mumbai'
 
 # =============================================
-# 5. 도시 목록 및 좌표 (SyntaxError 수정)
+# 5. 도시 목록 및 좌표
 # =============================================
 cities = sorted([
     'Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Thane', 'Aurangabad', 'Solapur', 'Amravati', 'Nanded', 'Kolhapur',
@@ -287,10 +322,17 @@ coords = {
 }
 
 # =============================================
-# 6. UI 시작
+# 6. 크리스마스 제목 (빨강, 크게, 눈 쌓임 효과)
 # =============================================
-st.markdown(f"<h1>{_[ 'title' ]}</h1>", unsafe_allow_html=True)
+title_text = _['title']
+st.markdown(
+    f'<h1 class="christmas-title">{title_text}</h1>',
+    unsafe_allow_html=True
+)
 
+# =============================================
+# 7. UI 시작
+# =============================================
 col1, col2 = st.columns([1, 4])
 with col1:
     if st.button(_["start_btn"], use_container_width=True):
@@ -304,7 +346,7 @@ with col2:
     st.session_state.start_city = st.selectbox(_["start_city"], cities, index=cities.index(st.session_state.start_city) if st.session_state.start_city in cities else 0)
 
 # =============================================
-# 7. 경로 관리
+# 8. 경로 관리
 # =============================================
 if st.session_state.route:
     st.markdown("---")
@@ -357,15 +399,13 @@ if st.session_state.route:
     c2.metric(_["total_time"], f"{total_hrs:.1f} h")
 
     # =============================================
-    # 8. 공연장 관리 (항상 보이도록 expanded=True)
+    # 9. 공연장 관리 (항상 보이도록 expanded=True)
     # =============================================
     st.markdown("---")
     st.subheader(_["venues_dates"])
 
     for city in st.session_state.route:
-        # 항상 열린 상태로 표시
         with st.expander(f"**{city}**", expanded=True):
-            # 공연 날짜
             cur = st.session_state.dates.get(city, datetime.now().date())
             new = st.date_input(_["performance_date"], cur, key=f"date_{city}")
             if new != cur:
@@ -373,7 +413,6 @@ if st.session_state.route:
                 st.success("날짜 변경됨")
                 st.rerun()
 
-            # 공연장 목록
             df = st.session_state.admin_venues.get(city, pd.DataFrame()) if st.session_state.admin else st.session_state.venues.get(city, pd.DataFrame(columns=['Venue', 'Seats', 'IndoorOutdoor', 'Google Maps Link']))
 
             if not df.empty:
@@ -400,7 +439,6 @@ if st.session_state.route:
                                     st.success("삭제 완료")
                                     st.rerun()
 
-                    # 편집 폼
                     if st.session_state.get(f"edit_{city}_{idx}", False):
                         with st.form(key=f"edit_form_{city}_{idx}"):
                             ev = st.text_input("Venue", row['Venue'], key=f"ev_{city}_{idx}")
@@ -414,7 +452,6 @@ if st.session_state.route:
                                 st.success("수정 완료")
                                 st.rerun()
 
-            # 공연장 등록 (항상 보임)
             if st.session_state.admin or st.session_state.guest_mode:
                 st.markdown("---")
                 io = st.session_state.get(f"io_{city}", _["outdoor"])
@@ -438,7 +475,7 @@ if st.session_state.route:
                         st.rerun()
 
 # =============================================
-# 9. 지도 (루트 빨간색)
+# 10. 지도 (루트 빨간색)
 # =============================================
 st.markdown("---")
 st.subheader(_["tour_map"])
