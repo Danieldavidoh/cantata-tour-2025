@@ -322,7 +322,7 @@ with st.sidebar:
         st.rerun()
 
     # 빈 공간 클릭으로 닫기 - 사이드바 확장 상태에서 외부 클릭 시 reruns (Streamlit 한계로 토글 버튼으로 대체, 추가 close 버튼)
-    if st.button(_("close"), key="close_sidebar"):
+    if st.button(_["close"], key="close_sidebar"):
         st.session_state.show_pw = False
         st.rerun()
 
@@ -356,7 +356,7 @@ with st.sidebar:
                 with col_pw:
                     pass
                 with col_close:
-                    if st.button(_("close"), key="close_pw"):
+                    if st.button(_["close"], key="close_pw"):
                         st.session_state.show_pw = False
                         st.rerun()
                 if st.form_submit_button(_["submit"]):
@@ -665,7 +665,7 @@ if st.session_state.route:
                                     es = st.number_input(_["seats"], 1, value=row['Seats'], key=f"es_{city}_{idx}")
                                    
                                     # 실내/실외 드롭다운으로 변경
-                                    eio = st.selectbox(_["indoor_outdoor"], [_[ "indoor" ], _["outdoor"]],
+                                    eio = st.selectbox(_["indoor_outdoor"], [_["indoor"], _["outdoor"]],
                                                        index=0 if row['IndoorOutdoor'] == _["indoor"] else 1,
                                                        key=f"eio_{city}_{idx}")
                                                       
