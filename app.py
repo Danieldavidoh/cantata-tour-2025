@@ -120,11 +120,15 @@ LANG = {
 }
 
 # =============================================
-# 2. 크리스마스 테마 CSS
+# 2. 크리스마스 테마 CSS + 장식
 # =============================================
 st.markdown("""
 <style>
-    .reportview-container { background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e); overflow: hidden; }
+    .reportview-container { 
+        background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e); 
+        overflow: hidden;
+        position: relative;
+    }
     .sidebar .sidebar-content { background: #228B22; color: white; }
     .Widget>label { color: #90EE90; font-weight: bold; }
     
@@ -160,6 +164,28 @@ st.markdown("""
     .stExpander>summary { color: #90EE90; font-weight: bold; }
     .stMarkdown { color: #90EE90; }
 
+    /* 크리스마스 장식 */
+    .christmas-decoration {
+        position: absolute;
+        font-size: 2.5em;
+        pointer-events: none;
+        animation: float 6s infinite ease-in-out;
+        z-index: 10;
+    }
+    .gift { color: #FFD700; top: 10%; left: 5%; animation-delay: 0s; }
+    .candy-cane { color: #FF0000; top: 12%; right: 6%; animation-delay: 1s; transform: rotate(15deg); }
+    .stocking { color: #8B0000; bottom: 18%; left: 4%; animation-delay: 2s; }
+    .bell { color: #FFD700; bottom: 12%; right: 5%; animation-delay: 3s; }
+    .wreath { color: #228B22; top: 45%; left: 2%; animation-delay: 4s; transform: translateY(-50%); }
+    .santa-hat { color: #FF0000; top: 8%; right: 3%; animation-delay: 5s; }
+    .tree { color: #228B22; bottom: 5%; left: 50%; animation-delay: 0.5s; transform: translateX(-50%); }
+    .snowman { color: white; top: 15%; left: 50%; animation-delay: 2.5s; transform: translateX(-50%); }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(5deg); }
+    }
+
     .snowflake {
         position: absolute;
         color: rgba(255, 255, 255, 0.9);
@@ -173,6 +199,18 @@ st.markdown("""
         100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
     }
 </style>
+""", unsafe_allow_html=True)
+
+# 크리스마스 장식 추가
+st.markdown("""
+<div class="christmas-decoration gift">🎁</div>
+<div class="christmas-decoration candy-cane">🍭</div>
+<div class="christmas-decoration stocking">🧦</div>
+<div class="christmas-decoration bell">🔔</div>
+<div class="christmas-decoration wreath">🌿</div>
+<div class="christmas-decoration santa-hat">🎅</div>
+<div class="christmas-decoration tree">🎄</div>
+<div class="christmas-decoration snowman">⛄</div>
 """, unsafe_allow_html=True)
 
 # 눈송이 생성
@@ -380,14 +418,12 @@ if st.session_state.route:
     c2.metric(_["total_time"], f"{total_hrs:.1f} h")
 
     # =============================================
-    # 9. 공연장 & 날짜 (완전한 폼)
+    # 9. 공연장 & 날짜
     # =============================================
     st.markdown("---")
     st.subheader(_["venues_dates"])
-
     for city in st.session_state.route:
         with st.expander(f"**{city}**", expanded=False):
-            # 공연 날짜
             cur = st.session_state.dates.get(city, datetime.now().date())
             new = st.date_input(_["performance_date"], cur, key=f"date_{city}")
             if new != cur:
@@ -395,7 +431,6 @@ if st.session_state.route:
                 st.success("날짜 변경됨")
                 st.rerun()
 
-            # 공연장 등록 폼
             if st.session_state.admin or st.session_state.guest_mode:
                 st.markdown("---")
                 col_left = st.container()
@@ -417,7 +452,6 @@ if st.session_state.route:
                             st.session_state[io_key] = _["indoor"] if st.session_state[io_key] == _["outdoor"] else _["outdoor"]
                             st.rerun()
 
-                # 등록 버튼 (왼쪽 끝)
                 register_label = _["register"]
                 if st.button(f"**{register_label}**", key=f"register_{city}"):
                     if venue_name:
@@ -434,7 +468,6 @@ if st.session_state.route:
                     else:
                         st.error("공연장 이름을 입력하세요.")
 
-            # 공연장 목록
             df = st.session_state.admin_venues.get(city, pd.DataFrame()) if st.session_state.admin else st.session_state.venues.get(city, pd.DataFrame(columns=['Venue', 'Seats', 'IndoorOutdoor', 'Google Maps Link']))
             if not df.empty:
                 for idx, row in df.iterrows():
@@ -474,7 +507,7 @@ if st.session_state.route:
                                 st.rerun()
 
 # =============================================
-# 10. 지도 (빨간색 점선 + 화살표)
+# 10. 지도
 # =============================================
 st.markdown("---")
 st.subheader(_["tour_map"])
@@ -486,14 +519,14 @@ if len(st.session_state.route) > 1:
     for i in range(len(points) - 1):
         start = points[i]
         end = points[i + 1]
-        mid_lat = (start[0] + end[0]) / 2
-        mid_lon = (start[1] + end[1]) / 2
+        arrow_lat = end[0] - (end[0] - start[0]) * 0.05
+        arrow_lon = end[1] - (end[1] - start[1]) * 0.05
         folium.RegularPolygonMarker(
-            location=[mid_lat, mid_lon],
+            location=[arrow_lat, arrow_lon],
             fill_color='red',
             number_of_sides=3,
             rotation=math.degrees(math.atan2(end[1] - start[1], end[0] - start[0])) - 90,
-            radius=8
+            radius=10
         ).add_to(m)
 for city in st.session_state.route:
     df = st.session_state.admin_venues.get(city, pd.DataFrame()) if st.session_state.admin else st.session_state.venues.get(city, pd.DataFrame())
