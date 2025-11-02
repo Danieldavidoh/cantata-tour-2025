@@ -228,8 +228,12 @@ with left:
     avail = [c for c in cities if c not in st.session_state.route]
     if avail:
         c1, c2 = st.columns([2,1])
-        with c1: next_city = st.selectbox(_["select_city"], avail, key="next_city_select_v2")
-        with c2: if st.button(_["add_city_btn"], key="add_city_btn_v2"): st.session_state.route.append(next_city); st.rerun()
+        with c1:
+            next_city = st.selectbox(_["select_city"], avail, key="next_city_select_v2")
+        with c2:
+            if st.button(_["add_city_btn"], key="add_city_btn_v2"):
+                st.session_state.route.append(next_city)
+                st.rerun()
     st.markdown("---")
     if st.session_state.route:
         st.subheader(_["venues_dates"])
