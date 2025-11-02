@@ -124,14 +124,16 @@ LANG = {
 # =============================================
 st.markdown("""
 <style>
-    .reportview-container {
-        background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
+    /* 배경 설정 */
+    .reportview-container { 
+        background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e); 
         overflow: hidden;
         position: relative;
     }
     .sidebar .sidebar-content { background: #228B22; color: white; }
     .Widget>label { color: #90EE90; font-weight: bold; }
-   
+    
+    /* 제목 스타일 및 모바일 반응형 처리 */
     .christmas-title {
         font-size: 3.5em !important;
         font-weight: bold;
@@ -143,6 +145,14 @@ st.markdown("""
     }
     .christmas-title .main { color: #FF0000 !important; }
     .christmas-title .year { color: white !important; text-shadow: 0 0 5px #FFF, 0 0 10px #FFF, 0 0 15px #FFF, 0 0 20px #00BFFF; }
+    
+    /* 모바일에서 한국어 제목 줄바꿈을 위한 클래스 */
+    .mobile-break { display: none; }
+    @media (max-width: 600px) {
+        .christmas-title { font-size: 2.5em !important; }
+        .mobile-break { display: block; height: 0; content: ""; } /* 강제 줄바꿈 */
+    }
+
     .christmas-title::before {
         content: "❄️ ❄️ ❄️";
         position: absolute;
@@ -154,15 +164,32 @@ st.markdown("""
         animation: snow-fall 3s infinite ease-in-out;
     }
     @keyframes snow-fall { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(10px); } }
-   
+    
     h1, h2, h3 { color: #90EE90; text-shadow: 1px 1px 3px #8B0000; text-align: center; }
-    .stButton>button { background: #228B22; color: white; border: 2px solid #8B0000; border-radius: 12px; font-weight: bold; padding: 10px; }
+    .stButton>button { 
+        background: #228B22; 
+        color: white; 
+        border: 2px solid #8B0000; 
+        border-radius: 12px; 
+        font-weight: bold; 
+        padding: 10px; 
+        transition: all 0.2s;
+    }
     .stButton>button:hover { background: #8B0000; color: white; }
-    .stTextInput>label, .stSelectbox>label, .stNumberInput>label { color: #90EE90; }
+    .stTextInput>label, .stSelectbox>label, .stNumberInput>label, .stDateInput>label { color: #90EE90; }
     .stMetric { background: rgba(34,139,34,0.3); border: 2px solid #90EE90; border-radius: 12px; padding: 10px; }
     .stExpander { background: rgba(139,0,0,0.4); border: 1px solid #90EE90; border-radius: 12px; }
     .stExpander>summary { color: #90EE90; font-weight: bold; }
     .stMarkdown { color: #90EE90; }
+
+    /* 실내/실외 버튼 스타일 */
+    /* 실내 버튼 (파란색 계열) */
+    .stButton>button[key*='io_toggle_'] {
+        border: 2px solid #90EE90;
+        background: #3CB371; /* Outdoor default */
+    }
+    /* 이 CSS는 버튼이 클릭될 때 Streamlit 내부적으로 세션 상태를 기반으로 인라인 스타일링을 통해 변경됩니다. */
+
     /* 크리스마스 장식 - 전체 UI에 고르게 배치 */
     .christmas-decoration {
         position: absolute;
@@ -181,10 +208,12 @@ st.markdown("""
     .snowman { color: white; bottom: 20%; right: 10%; animation-delay: 2.5s; }
     .candle { color: #FFA500; top: 65%; left: 8%; animation-delay: 1.5s; }
     .star { color: #FFD700; top: 65%; right: 8%; animation-delay: 3.5s; }
+
     @keyframes float {
         0%, 100% { transform: translateY(0px) rotate(0deg); }
         50% { transform: translateY(-20px) rotate(5deg); }
     }
+
     .snowflake {
         position: absolute;
         color: rgba(255, 255, 255, 0.9);
@@ -196,6 +225,12 @@ st.markdown("""
     @keyframes fall {
         0% { transform: translateY(-100vh) rotate(0deg); opacity: 0.9; }
         100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+    }
+    
+    /* 지도 최대 크기 설정 */
+    .st-emotion-cache-16ffz9n { /* Streamlit main content container selector */
+        max-width: 100% !important;
+        padding: 1rem 1rem !important; /* 모바일에서 맵 크기 확보를 위해 패딩 줄임 */
     }
 </style>
 """, unsafe_allow_html=True)
@@ -233,29 +268,28 @@ st.set_page_config(page_title="Cantata Tour 2025", layout="wide", initial_sideba
 with st.sidebar:
     st.markdown("### Language")
     
-    # 언어 선택 라디오 버튼 (간격 넓힘)
-    st.markdown("""
-    <style>
-        div[data-testid="stRadio"] > label {
-            margin-bottom: 20px !important;
-            padding: 10px 0;
-        }
-        div[data-testid="stRadio"] > label > div {
-            font-size: 1.1em;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-    
+    # 세션 상태에서 언어 불러오기 또는 기본값 설정
+    if 'lang' not in st.session_state:
+        st.session_state.lang = "ko"
+        
     lang = st.radio(
         label="Select",
         options=["en", "ko", "hi"],
         format_func=lambda x: {"en": "English", "ko": "한국어", "hi": "हिन्दी"}[x],
-        horizontal=False
+        horizontal=False,
+        key="language_select"
     )
     _ = LANG[lang]
+    
+    # 언어 변경 시 세션 상태 업데이트 및 새로고침
+    if lang != st.session_state.lang:
+        st.session_state.lang = lang
+        st.rerun()
 
     st.markdown("---")
     st.markdown("### Admin")
+    
+    # 세션 상태 초기화
     if 'admin' not in st.session_state:
         st.session_state.admin = False
     if 'show_pw' not in st.session_state:
@@ -268,29 +302,34 @@ with st.sidebar:
         if st.button(_["guest_mode"]):
             st.session_state.guest_mode = True
             st.session_state.admin = False
-            st.session_state.show_pw = True
+            st.session_state.show_pw = False # Admin -> Guest 시 비밀번호 입력창 닫음
             st.rerun()
     else:
+        # 비밀번호 입력 폼을 토글 버튼 아래에 배치
         if st.button(_["admin_mode"]):
-            st.session_state.show_pw = True
+            st.session_state.show_pw = not st.session_state.show_pw # 토글 기능
+            
         if st.session_state.show_pw:
-            pw = st.text_input(_["enter_password"], type="password")
-            if st.button(_["submit"]):
-                if pw == "0691":
-                    st.session_state.admin = True
-                    st.session_state.show_pw = False
-                    st.session_state.guest_mode = False
-                    st.success("Activated!")
-                    st.rerun()
-                else:
-                    st.error("Incorrect")
+            with st.form("admin_login_form"):
+                pw = st.text_input(_["enter_password"], type="password", key="admin_pw_input")
+                if st.form_submit_button(_["submit"]):
+                    if pw == "0691":
+                        st.session_state.admin = True
+                        st.session_state.show_pw = False
+                        st.session_state.guest_mode = False
+                        st.success("Activated!")
+                        st.rerun()
+                    else:
+                        st.error("Incorrect")
 
     if st.session_state.admin:
         st.markdown("---")
         if st.button(_["reset_btn"]):
             for key in list(st.session_state.keys()):
-                del st.session_state[key]
+                if key not in ['lang']: # 언어 설정은 유지
+                    del st.session_state[key]
             st.rerun()
+            
 
 # =============================================
 # 4. 세션 초기화
@@ -357,12 +396,25 @@ coords = {
 }
 
 # =============================================
-# 6. 제목
+# 6. 제목 (모바일 반응형 적용)
 # =============================================
-title_parts = _['title'].rsplit(' ', 1)
-main_title = title_parts[0]
-year = title_parts[1] if len(title_parts) > 1 else ""
-st.markdown(f'<h1 class="christmas-title"><span class="main">{main_title}</span> <span class="year">{year}</span></h1>', unsafe_allow_html=True)
+title_text = _['title']
+
+if lang == 'ko':
+    # 한국어: "칸타타"와 "투어 2025"를 분리하고, CSS를 사용하여 모바일에서 줄바꿈
+    parts = title_text.split()
+    main_part = parts[0] # 칸타타
+    rest_part = " ".join(parts[1:]) # 투어 2025
+    title_html = f'<span class="main">{main_part}</span><span class="mobile-break"></span> <span class="year">{rest_part}</span>'
+else:
+    # 기타 언어: 기존 로직 사용
+    title_parts = title_text.rsplit(' ', 1)
+    main_title = title_parts[0]
+    year = title_parts[1] if len(title_parts) > 1 else ""
+    title_html = f'<span class="main">{main_title}</span> <span class="year">{year}</span>'
+
+st.markdown(f'<h1 class="christmas-title">{title_html}</h1>', unsafe_allow_html=True)
+
 
 # =============================================
 # 7. UI 시작
@@ -377,7 +429,13 @@ with col1:
             st.success(f"{_['start_city']}: {city}")
             st.rerun()
 with col2:
-    st.session_state.start_city = st.selectbox(_["start_city"], cities, index=cities.index(st.session_state.start_city) if st.session_state.start_city in cities else 0)
+    # st.selectbox는 기본적으로 텍스트 입력 없이 선택만 가능함
+    st.session_state.start_city = st.selectbox(
+        _["start_city"], 
+        cities, 
+        index=cities.index(st.session_state.start_city) if st.session_state.start_city in cities else 0,
+        key="select_start_city"
+    )
 
 # =============================================
 # 8. 경로 관리
@@ -395,20 +453,27 @@ if st.session_state.route:
                     prev = st.session_state.route[-2]
                     lat1, lon1 = coords[prev]
                     lat2, lon2 = coords[new_city]
-                    R = 6371
+                    
+                    # Haversine formula for distance calculation
+                    R = 6371 # Earth radius in km
                     dlat = math.radians(lat2 - lat1)
                     dlon = math.radians(lon2 - lon1)
                     a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
                     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
                     km = round(R * c)
-                    hrs = round(km / 50, 1)
+                    hrs = round(km / 50, 1) # Avg speed 50km/h
+                    
                     st.session_state.distances.setdefault(prev, {})[new_city] = (km, hrs)
                     st.session_state.distances.setdefault(new_city, {})[prev] = (km, hrs)
+                    
+                    # 날짜 계산: 이전 도시 날짜 + 이동 시간 (시간을 날짜로 변환)
                     prev_date = st.session_state.dates.get(prev, datetime.now().date())
                     st.session_state.dates[new_city] = (datetime.combine(prev_date, datetime.min.time()) + timedelta(hours=hrs)).date()
+                
                 st.success(f"{new_city} 추가됨")
                 st.rerun()
         with col_next:
+            # st.selectbox는 기본적으로 텍스트 입력 없이 선택만 가능함
             select_key = f"next_city_{'_'.join(st.session_state.route)}"
             st.session_state.next_city_select = st.selectbox(_["next_city"], available, key=select_key)
 
@@ -433,24 +498,17 @@ if st.session_state.route:
     c2.metric(_["total_time"], f"{total_hrs:.1f} h")
 
     # =============================================
-    # 9. 공연장 & 날짜 (항상 보임 + 날짜는 달력 클릭만 가능)
+    # 9. 공연장 & 날짜 (항상 보임)
     # =============================================
     st.markdown("---")
     st.subheader(_["venues_dates"])
 
     for city in st.session_state.route:
         with st.expander(f"**{city}**", expanded=True):
-            # 공연 날짜 (달력 클릭만 가능, 직접 입력 불가)
+            # 공연 날짜 (직접 입력 불가, 달력 클릭만 가능)
             cur = st.session_state.dates.get(city, datetime.now().date())
-            new = st.date_input(
-                _["performance_date"],
-                cur,
-                key=f"date_{city}",
-                format="YYYY-MM-DD",
-                min_value=datetime(2024, 1, 1).date(),
-                max_value=datetime(2030, 12, 31).date(),
-                help="달력에서 날짜를 클릭하세요. 직접 입력은 불가합니다."
-            )
+            new = st.date_input(_["performance_date"], cur, key=f"date_{city}")
+            
             if new != cur:
                 st.session_state.dates[city] = new
                 st.success("날짜 변경됨")
@@ -459,108 +517,205 @@ if st.session_state.route:
             # 공연장 등록 폼
             if st.session_state.admin or st.session_state.guest_mode:
                 st.markdown("---")
-                col_left = st.container()
-                with col_left:
+                
+                with st.container():
                     col1, col2 = st.columns([3, 1])
                     with col1:
-                        venue_name = st.text_input(_["venue_name"], key=f"v_{city}")
+                        venue_name = st.text_input(_["venue_name"], key=f"v_{city}", label_visibility="visible")
                     with col2:
-                        seats = st.number_input(_["seats"], 1, step=50, key=f"s_{city}")
+                        seats = st.number_input(_["seats"], 1, step=50, key=f"s_{city}", label_visibility="visible")
 
                     col3, col4 = st.columns([3, 1])
                     with col3:
-                        google_link = st.text_input(_["google_link"], placeholder="https://...", key=f"l_{city}")
+                        google_link = st.text_input(_["google_link"], placeholder="https://...", key=f"l_{city}", label_visibility="visible")
+                    
                     with col4:
+                        # 실내/실외 토글 버튼 및 색상 변경 로직
                         io_key = f"io_{city}"
                         if io_key not in st.session_state:
-                            st.session_state[io_key] = _["outdoor"]
-                        if st.button(f"**{st.session_state[io_key]}**", key=f"io_toggle_{city}"):
-                            st.session_state[io_key] = _["indoor"] if st.session_state[io_key] == _["outdoor"] else _["outdoor"]
+                            st.session_state[io_key] = _["outdoor"] # 기본 설정 실외
+
+                        is_indoor = st.session_state[io_key] == _["indoor"]
+                        
+                        # 버튼 클릭 시 상태 토글
+                        # 버튼 스타일을 인라인 CSS로 설정하여 상태에 따라 색상 변경
+                        button_style = ""
+                        if is_indoor:
+                            # 실내 (파란색 계열)
+                            button_style = 'border-color: #00BFFF; background: #1E90FF;' 
+                        else:
+                            # 실외 (초록색 계열)
+                            button_style = 'border-color: #90EE90; background: #3CB371;'
+                            
+                        st.markdown(f"""
+                            <style>
+                                .stButton>button[key*='io_toggle_{city}'] {{
+                                    {button_style}
+                                    color: white;
+                                }}
+                            </style>
+                        """, unsafe_allow_html=True)
+                        
+                        # 버튼 클릭 로직
+                        st.markdown(_["indoor_outdoor"])
+                        if st.button(f"**{st.session_state[io_key]}**", key=f"io_toggle_{city}", use_container_width=True):
+                            st.session_state[io_key] = _["outdoor"] if is_indoor else _["indoor"]
                             st.rerun()
 
-                register_label = _["register"]
-                if st.button(f"**{register_label}**", key=f"register_{city}"):
-                    if venue_name:
-                        new_row = pd.DataFrame([{
-                            'Venue': venue_name,
-                            'Seats': seats,
-                            'IndoorOutdoor': st.session_state[io_key],
-                            'Google Maps Link': google_link
-                        }])
-                        target = st.session_state.admin_venues if st.session_state.admin else st.session_state.venues
-                        target[city] = pd.concat([target.get(city, pd.DataFrame()), new_row], ignore_index=True)
-                        st.success("등록 완료")
-                        st.rerun()
-                    else:
-                        st.error("공연장 이름을 입력하세요.")
+                    register_label = _["register"]
+                    if st.button(f"**{register_label}**", key=f"register_{city}"):
+                        if venue_name:
+                            new_row = pd.DataFrame([{
+                                'Venue': venue_name,
+                                'Seats': seats,
+                                'IndoorOutdoor': st.session_state[io_key],
+                                'Google Maps Link': google_link
+                            }])
+                            target = st.session_state.admin_venues if st.session_state.admin else st.session_state.venues
+                            target[city] = pd.concat([target.get(city, pd.DataFrame(columns=['Venue', 'Seats', 'IndoorOutdoor', 'Google Maps Link'])), new_row], ignore_index=True)
+                            st.success("등록 완료")
+                            st.rerun()
+                        else:
+                            st.error("공연장 이름을 입력하세요.")
 
-            # 공연장 목록
+            # 공연장 목록 출력 및 관리
             df = st.session_state.admin_venues.get(city, pd.DataFrame()) if st.session_state.admin else st.session_state.venues.get(city, pd.DataFrame(columns=['Venue', 'Seats', 'IndoorOutdoor', 'Google Maps Link']))
+            
             if not df.empty:
+                st.markdown("---")
                 for idx, row in df.iterrows():
                     col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
+                    
+                    # 1. 공연장 이름/좌석
                     with col1:
                         st.write(f"**{row['Venue']}**")
                         st.caption(f"{row['Seats']} {_['seats']}")
+                        
+                    # 2. 실내/실외 표시
                     with col2:
-                        color = "🟢" if row['IndoorOutdoor'] == _["indoor"] else "🔵"
+                        color = "🔵" if row['IndoorOutdoor'] == _["indoor"] else "🟢"
                         st.write(f"{color} {row['IndoorOutdoor']}")
+                        
+                    # 3. 구글맵 길찾기 아이콘
                     with col3:
                         if row['Google Maps Link'].startswith("http"):
+                            # 현재 위치에서 목적지까지 길찾기 (travelmode=driving)
                             maps_url = f"https://www.google.com/maps/dir/?api=1&destination={row['Google Maps Link']}&travelmode=driving"
-                            st.markdown(f"[{_['drive_to']}]({maps_url})", unsafe_allow_html=True)
+                            
+                            # 자동차 아이콘으로 링크 생성
+                            st.markdown(f"""
+                                <a href="{maps_url}" target="_blank" style="font-size: 24px; text-decoration: none; color: #FFD700; display: block; text-align: center;" title="{_['drive_to']}">
+                                    🚗
+                                </a>
+                            """, unsafe_allow_html=True)
+                        
+                    # 4. 편집/삭제 버튼
                     with col4:
                         if st.session_state.admin or st.session_state.guest_mode:
-                            if st.button(_["edit_venue"], key=f"edit_{city}_{idx}"):
-                                st.session_state[f"edit_{city}_{idx}"] = True
-                            if st.button(_["delete_venue"], key=f"del_{city}_{idx}"):
-                                if st.checkbox(_["confirm_delete"], key=f"confirm_{city}_{idx}"):
-                                    target = st.session_state.admin_venues if st.session_state.admin else st.session_state.venues
-                                    target[city] = target[city].drop(idx).reset_index(drop=True)
-                                    st.success("삭제 완료")
-                                    st.rerun()
-
-                    if st.session_state.get(f"edit_{city}_{idx}", False):
-                        with st.form(key=f"edit_form_{city}_{idx}"):
-                            ev = st.text_input("Venue", row['Venue'], key=f"ev_{city}_{idx}")
-                            es = st.number_input("Seats", 1, value=row['Seats'], key=f"es_{city}_{idx}")
-                            eio = st.selectbox("Type", [_[ "indoor" ], _["outdoor"]], index=0 if row['IndoorOutdoor'] == _["indoor"] else 1, key=f"eio_{city}_{idx}")
-                            el = st.text_input("Google Link", row['Google Maps Link'], key=f"el_{city}_{idx}")
-                            if st.form_submit_button("Save"):
-                                target = st.session_state.admin_venues if st.session_state.admin else st.session_state.venues
-                                target[city].loc[idx] = [ev, es, eio, el]
-                                del st.session_state[f"edit_{city}_{idx}"]
-                                st.success("수정 완료")
-                                st.rerun()
-
+                            
+                            edit_state_key = f"edit_{city}_{idx}"
+                            
+                            if not st.session_state.get(edit_state_key, False):
+                                c_edit, c_del = st.columns(2)
+                                with c_edit:
+                                    if st.button("✏️", key=f"edit_icon_{city}_{idx}"):
+                                        st.session_state[edit_state_key] = True
+                                        st.rerun()
+                                with c_del:
+                                    if st.button("🗑️", key=f"del_icon_{city}_{idx}"):
+                                        target = st.session_state.admin_venues if st.session_state.admin else st.session_state.venues
+                                        target[city] = target[city].drop(idx).reset_index(drop=True)
+                                        st.success("삭제 완료")
+                                        st.rerun()
+                            
+                            # 편집 폼
+                            if st.session_state.get(edit_state_key, False):
+                                with st.form(key=f"edit_form_{city}_{idx}"):
+                                    st.subheader(_["edit_venue"])
+                                    ev = st.text_input(_["venue_name"], row['Venue'], key=f"ev_{city}_{idx}")
+                                    es = st.number_input(_["seats"], 1, value=row['Seats'], key=f"es_{city}_{idx}")
+                                    
+                                    # 실내/실외 드롭다운으로 변경
+                                    eio = st.selectbox(_["indoor_outdoor"], [_[ "indoor" ], _["outdoor"]], 
+                                                       index=0 if row['IndoorOutdoor'] == _["indoor"] else 1, 
+                                                       key=f"eio_{city}_{idx}")
+                                                       
+                                    el = st.text_input(_["google_link"], row['Google Maps Link'], key=f"el_{city}_{idx}")
+                                    
+                                    if st.form_submit_button(_["save"]):
+                                        target = st.session_state.admin_venues if st.session_state.admin else st.session_state.venues
+                                        target[city].loc[idx] = [ev, es, eio, el]
+                                        del st.session_state[edit_state_key]
+                                        st.success("수정 완료")
+                                        st.rerun()
+                                        
 # =============================================
-# 10. 지도 (점선 + 목적지 앞 화살표)
+# 10. 지도 (점선 + 목적지 앞 화살표) - 최대 크기 적용
 # =============================================
 st.markdown("---")
 st.subheader(_["tour_map"])
-center = coords.get(st.session_state.route[0] if st.session_state.route else 'Mumbai', (19.75, 75.71))
+
+if st.session_state.route:
+    center = coords.get(st.session_state.route[0], (19.75, 75.71))
+else:
+    center = coords.get('Mumbai', (19.75, 75.71))
+    
 m = folium.Map(location=center, zoom_start=7, tiles="CartoDB positron")
+
 if len(st.session_state.route) > 1:
     points = [coords[c] for c in st.session_state.route]
-    folium.PolyLine(points, color="red", weight=4, dash_array="10, 10").add_to(m)
+    # 점선으로 경로 표시
+    folium.PolyLine(points, color="#8B0000", weight=4, dash_array="10, 10").add_to(m)
+    
+    # 경로를 따라 화살표 추가
     for i in range(len(points) - 1):
         start = points[i]
         end = points[i + 1]
-        arrow_lat = end[0] - (end[0] - start[0]) * 0.05
-        arrow_lon = end[1] - (end[1] - start[1]) * 0.05
+        
+        # 선의 90% 지점에 화살표 위치 계산
+        arrow_lat = start[0] + (end[0] - start[0]) * 0.90
+        arrow_lon = start[1] + (end[1] - start[1]) * 0.90
+        
+        # 각도 계산 (y, x) -> atan2(lon_diff, lat_diff)
+        angle = math.degrees(math.atan2(end[1] - start[1], end[0] - start[0]))
+        
         folium.RegularPolygonMarker(
             location=[arrow_lat, arrow_lon],
-            fill_color='red',
+            fill_color='#8B0000', # 짙은 빨간색
+            color='#8B0000',
             number_of_sides=3,
-            rotation=math.degrees(math.atan2(end[1] - start[1], end[0] - start[0])) - 90,
-            radius=10
+            # 화살표가 진행 방향을 향하도록 각도 조정 (-90은 Folium의 기본 방향을 맞추기 위함)
+            rotation=angle - 90, 
+            radius=8
         ).add_to(m)
-for city in st.session_state.route:
+
+# 마커 추가
+for i, city in enumerate(st.session_state.route):
     df = st.session_state.admin_venues.get(city, pd.DataFrame()) if st.session_state.admin else st.session_state.venues.get(city, pd.DataFrame())
+    
+    # 등록된 공연장의 구글맵 링크를 팝업에 포함
     link = next((r['Google Maps Link'] for _, r in df.iterrows() if r['Google Maps Link'].startswith('http')), None)
+    
+    # 팝업 내용 구성
     popup = f"<b style='color:#8B0000'>{city}</b><br>{st.session_state.dates.get(city, 'TBD').strftime(_['date_format'])}"
     if link:
-        popup = f'<a href="{link}" target="_blank" style="color:#90EE90">{popup}<br><i>{_["open_maps"]}</i></a>'
-    folium.CircleMarker(coords[city], radius=15, color="#90EE90", fill_color="#8B0000", popup=folium.Popup(popup, max_width=300)).add_to(m)
-folium_static(m, width=700, height=500)
+        # 길찾기 링크로 변경 (현재 위치 -> 목적지)
+        maps_url = f"https://www.google.com/maps/dir/?api=1&destination={link}&travelmode=driving"
+        popup = f'<a href="{maps_url}" target="_blank" style="color:#90EE90; text-decoration: none;">{popup}<br><i>🚗 {_["drive_to"]}</i></a>'
+    
+    # 시작 도시 마커는 다르게 표시
+    marker_color = "#8B0000" if i == 0 else "#228B22"
+    
+    folium.CircleMarker(
+        coords[city], 
+        radius=12, 
+        color=marker_color, 
+        fill=True, 
+        fill_color=marker_color,
+        fill_opacity=0.8,
+        popup=folium.Popup(popup, max_width=300)
+    ).add_to(m)
+
+# 지도를 가능한 최대 크기로 표시 (width=None이 컨테이너 전체 너비를 사용)
+folium_static(m, height=600)
 st.caption(_["caption"])
