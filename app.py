@@ -7,7 +7,7 @@ import math
 import random
 
 # ----------------------------------------------------------------------
-# 1. 다국어 사전
+# 1. 다국어 사전 (최소화)
 # ----------------------------------------------------------------------
 LANG = {
     "en": {
@@ -36,6 +36,7 @@ st.markdown("""
 <style>
     .reportview-container {background:linear-gradient(to bottom,#0f0c29,#302b63,#24243e);overflow:hidden;position:relative;}
     .sidebar .sidebar-content {background:#228B22;color:white;}
+    .Widget>label {color:#90EE90;font-weight:bold;}
     .christmas-title{font-size:3.5em!important;font-weight:bold;text-align:center;text-shadow:0 0 5px #FFF,0 0 10px #FFF,0 0 15px #FFF,0 0 20px #8B0000,0 0 35px #8B0000;letter-spacing:2px;position:relative;margin:20px 0;}
     .christmas-title .main{color:#FF0000!important;}
     .christmas-title .year{color:white!important;text-shadow:0 0 5px #FFF,0 0 10px #FFF,0 0 15px #FFF,0 0 20px #00BFFF;}
@@ -100,7 +101,8 @@ with st.sidebar:
                 if pw == "0691": st.session_state.update(admin=True, show_pw=False, guest_mode=False); st.success("Activated!"); st.rerun()
                 else: st.error("Incorrect")
     if st.session_state.admin and st.button(_["reset_btn"]):
-        for k in ["route","dates","venues","admin_venues"]: st.session_state.pop(k, None); st.rerun()
+        st.session_state.clear()
+        st.rerun()
 
 # ----------------------------------------------------------------------
 # 5. 제목
@@ -121,7 +123,7 @@ st.subheader(_["tour_map"])
 center = (19.75, 75.71)  # Maharashtra 중심
 m = folium.Map(location=center, zoom_start=7, tiles="CartoDB positron")
 
-# 예시 도시 마커 (필요시 수정)
+# 예시 마커
 example_cities = ["Mumbai", "Pune", "Nagpur", "Nashik"]
 for city in example_cities:
     lat, lon = coords.get(city, center)
