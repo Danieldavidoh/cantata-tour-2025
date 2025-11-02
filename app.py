@@ -356,24 +356,19 @@ coords = {
     'Shiroli (Kolhapur)': (16.70, 74.24)
 }
 # =============================================
-# 7. 제목
-# =============================================
-title_parts = _['title'].rsplit(' ', 1)
-main_title = title_parts[0]
-year = title_parts[1] if len(title_parts) > 1 else ""
-st.markdown(f'<h1 class="christmas-title"><span class="main">{main_title}</span> <span class="year">{year}</span></h1>', unsafe_allow_html=True)
-# =============================================
 # 8. 도시 추가 및 투어 경로 (왼쪽 컬럼)
 # =============================================
 left_col, right_col = st.columns([1, 3])
 with left_col:
-    st.subheader(_["add_city"])
     available = [c for c in cities if c not in st.session_state.route]
     if available:
-        next_city = st.selectbox(_["select_city"], available, key="next_city_select")
-        if st.button(_["add_city_btn"], key="add_city_btn"):
-            st.session_state.route.append(next_city)
-            st.rerun()
+        select_col, btn_col = st.columns([2, 1])
+        with select_col:
+            next_city = st.selectbox(_["select_city"], available, key="next_city_select")
+        with btn_col:
+            if st.button(_["add_city_btn"], key="add_city_btn"):
+                st.session_state.route.append(next_city)
+                st.rerun()
     st.markdown("---")
     if st.session_state.route:
         st.subheader(_["venues_dates"])
@@ -381,15 +376,11 @@ with left_col:
             # 등록된 venue가 있는지 확인 (등록 후에는 요약 표시)
             target = st.session_state.admin_venues if st.session_state.admin else st.session_state.venues
             has_venues = city in target and not target[city].empty
+            date_obj = st.session_state.dates.get(city)
+            date_str = date_obj.strftime(_['date_format']) if date_obj else 'TBD'
             if not has_venues:
-                # venue 없음: 폼 표시, expanded=False (기본 닫힘)
-                with st.expander(f"**{city}** - {_['add_venue']}", expanded=False):
-                    # 도시 클릭 선택: 도시명을 링크처럼 만들어 클릭 시 Google Maps 열기 또는 선택 (여기서는 drive_to 버튼으로 구현)
-                    if st.button(f"{_['drive_to']}: {city}", key=f"select_drive_{city}"):
-                        st.session_state.active_expander = city # 선택 상태 저장 (추가 로직 필요 시 사용)
-                        st.success(f"Selected: {city}")
-                        st.rerun()
-                   
+                expander_label = f"**{city}** - {date_str}"
+                with st.expander(expander_label, expanded=False):
                     # 공연 날짜
                     cur = st.session_state.dates.get(city, datetime.now().date())
                     new = st.date_input(_["performance_date"], cur, key=f"date_{city}")
@@ -438,12 +429,15 @@ with left_col:
                                 st.error(_["enter_venue_name"])
             else:
                 # venue 있음: 닫힌 상태에서 도시명 + 날짜 표시, 펼치면 venue 목록
-                date_obj = st.session_state.dates.get(city)
-                date_str = date_obj.strftime(_['date_format']) if date_obj else 'TBD'
                 expander_label = f"**{city}** - {date_str} ({len(target[city])} venues)"
                 with st.expander(expander_label, expanded=False):
-                    # 펼쳐진 상태: 도시 클릭 선택
-                    st.markdown(f'<span class="city-link" onclick="this.innerHTML=\'Selected: {city}\';">{_["drive_to"]} {city}</span>', unsafe_allow_html=True)
+                    # 공연 날짜
+                    cur = st.session_state.dates.get(city, datetime.now().date())
+                    new = st.date_input(_["performance_date"], cur, key=f"date_{city}")
+                    if new != cur:
+                        st.session_state.dates[city] = new
+                        st.success(_["date_changed"])
+                        st.rerun()
                    
                     # venue 목록 표시
                     for idx, row in target[city].iterrows():
