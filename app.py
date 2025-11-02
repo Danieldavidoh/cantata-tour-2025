@@ -14,8 +14,8 @@ LANG = {
         "title": "Cantata Tour 2025", "add_city": "Add City", "select_city": "Select City",
         "add_city_btn": "Add City", "tour_route": "Tour Route", "remove": "Remove",
         "reset_btn": "Reset All", "venues_dates": "Tour Route", "performance_date": "Performance Date",
-        "venue_name": "Venue Name", "seats": "Seats", "indoor_outdoor": "Indoor/Outdoor",
-        "indoor": "Indoor", "outdoor": "Outdoor", "google_link": "Google Maps Link",
+        "venue_name": "Venue Name", "seats": "Seats", "indoor_outdoor": "Type",
+        "indoor": "Indoor", "outdoor": "Outdoor", "google_link": "Google Maps Link (Venue Address)",
         "special_notes": "Special Notes", "register": "Register", "add_venue": "Add Venue",
         "edit": "Edit", "open_maps": "Open in Google Maps", "navigate": "Navigate",
         "save": "Save", "delete": "Delete", "tour_map": "Tour Map",
@@ -27,13 +27,14 @@ LANG = {
         "venue_updated": "Venue updated successfully", "enter_venue_name": "Please enter a venue name",
         "edit_venue_label": "Venue Name", "edit_seats_label": "Seats", "edit_type_label": "Type",
         "edit_google_label": "Google Maps Link", "edit_notes_label": "Special Notes",
+        "registered_venue_info": "Registered Venue Information",
     },
     "ko": {
         "title": "칸타타 투어 2025", "add_city": "도시 추가", "select_city": "도시 선택",
         "add_city_btn": "도시 추가", "tour_route": "투어 경로", "remove": "삭제",
         "reset_btn": "전체 초기화", "venues_dates": "투어 경로", "performance_date": "공연 날짜",
-        "venue_name": "공연장 이름", "seats": "좌석 수", "indoor_outdoor": "실내/실외",
-        "indoor": "실내", "outdoor": "실외", "google_link": "구글 지도 링크",
+        "venue_name": "공연장 이름", "seats": "좌석 수", "indoor_outdoor": "유형",
+        "indoor": "실내", "outdoor": "실외", "google_link": "구글 지도 링크 (공연장 주소)",
         "special_notes": "특이사항", "register": "등록", "add_venue": "공연장 추가",
         "edit": "편집", "open_maps": "구글 지도 열기", "navigate": "길찾기",
         "save": "저장", "delete": "삭제", "tour_map": "투어 지도",
@@ -45,13 +46,14 @@ LANG = {
         "venue_updated": "수정 완료", "enter_venue_name": "공연장 이름을 입력하세요.",
         "edit_venue_label": "공연장 이름", "edit_seats_label": "좌석 수", "edit_type_label": "유형",
         "edit_google_label": "구글 지도 링크", "edit_notes_label": "특이사항",
+        "registered_venue_info": "등록된 공연장 정보",
     },
     "hi": {
         "title": "कांताता टूर 2025", "add_city": "शहर जोड़ें", "select_city": "शहर चुनें",
         "add_city_btn": "शहर जोड़ें", "tour_route": "टूर मार्ग", "remove": "हटाएं",
         "reset_btn": "सब रीसेट करें", "venues_dates": "टूर मार्ग", "performance_date": "प्रदर्शन तिथि",
-        "venue_name": "स्थल का नाम", "seats": "सीटें", "indoor_outdoor": "इंडोर/आउटडोर",
-        "indoor": "इंडोर", "outdoor": "आउटडोर", "google_link": "गूगल मैप्स लिंक",
+        "venue_name": "स्थल का नाम", "seats": "सीटें", "indoor_outdoor": "प्रकार",
+        "indoor": "इंडोर", "outdoor": "आउटडोर", "google_link": "गूगल मैप्स लिंक (स्थल का पता)",
         "special_notes": "विशेष टिप्पणियाँ", "register": "रजिस्टर", "add_venue": "स्थल जोड़ें",
         "edit": "संपादित करें", "open_maps": "गूगल मैप्स में खोलें", "navigate": "नेविगेट करें",
         "save": "सहेजें", "delete": "हटाएँ", "tour_map": "टूर मैप",
@@ -63,6 +65,7 @@ LANG = {
         "venue_updated": "स्थल अपडेट किया गया", "enter_venue_name": "कृपया स्थल का नाम दर्ज करें",
         "edit_venue_label": "स्थल का नाम", "edit_seats_label": "सीटें", "edit_type_label": "प्रकार",
         "edit_google_label": "गूगल मैप्स लिंक", "edit_notes_label": "विशेष टिप्पणियाँ",
+        "registered_venue_info": "पंजीकृत स्थल की जानकारी",
     },
 }
 
@@ -76,22 +79,30 @@ st.set_page_config(page_title="Cantata Tour 2025", layout="wide", initial_sideba
 # ----------------------------------------------------------------------
 st.markdown("""
 <style>
+    /* Dark background with Christmas/Festive colors (Red, Green, Gold/Light Green) */
     .reportview-container {background:linear-gradient(to bottom,#0f0c29,#302b63,#24243e);overflow:hidden;position:relative;}
     .sidebar .sidebar-content {background:#228B22;color:white;}
     .Widget>label {color:#90EE90;font-weight:bold;}
+    /* Title Styling - Neon/Glow Effect */
     .christmas-title{font-size:3.5em!important;font-weight:bold;text-align:center;text-shadow:0 0 5px #FFF,0 0 10px #FFF,0 0 15px #FFF,0 0 20px #8B0000,0 0 35px #8B0000;letter-spacing:2px;position:relative;margin:20px 0;}
     .christmas-title .main{color:#FF0000!important;}
     .christmas-title .year{color:white!important;text-shadow:0 0 5px #FFF,0 0 10px #FFF,0 0 15px #FFF,0 0 20px #00BFFF;}
     .christmas-title::before{content:"❄️ ❄️ ❄️";position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:0.6em;color:white;animation:snow-fall 3s infinite ease-in-out;}
     @keyframes snow-fall{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(10px);}}
     h1,h2,h3{color:#90EE90;text-shadow:1px 1px 3px #8B0000;text-align:center;}
+    /* Button Styling */
     .stButton>button{background:#228B22;color:white;border:2px solid #8B0000;border-radius:12px;font-weight:bold;padding:10px;}
     .stButton>button:hover{background:#8B0000;color:white;}
+    /* Input/Selectbox Labels */
     .stTextInput>label,.stSelectbox>label,.stNumberInput>label{color:#90EE90;}
-    .stExpander{background:rgba(139,0,0,0.4);border:1px solid #90EE90;border-radius:12px;}
+    /* Expander Styling */
+    .stExpander{background:rgba(139,0,0,0.4);border:1px solid #90EE90;border-radius:12px;margin-bottom:10px;}
+    /* Expander Header */
     .stExpander>summary{color:#90EE90;font-weight:bold;font-size:1.5em!important;}
+    /* Expander Content Labels */
     .stExpander>div>div>label{font-size:1.2em!important;}
     .stMarkdown{color:#90EE90;}
+    /* Decoration Animation */
     .christmas-decoration{position:absolute;font-size:2.5em;pointer-events:none;animation:float 6s infinite ease-in-out;z-index:10;}
     .gift{color:#FFD700;top:8%;left:5%;animation-delay:0s;}
     .candy-cane{color:#FF0000;top:8%;right:5%;animation-delay:1s;transform:rotate(15deg);}
@@ -104,8 +115,12 @@ st.markdown("""
     .candle{color:#FFA500;top:65%;left:8%;animation-delay:1.5s;}
     .star{color:#FFD700;top:65%;right:8%;animation-delay:3.5s;}
     @keyframes float{0%,100%{transform:translateY(0) rotate(0deg);}50%{transform:translateY(-20px) rotate(5deg);}}
+    /* Snowflakes */
     .snowflake{position:absolute;color:rgba(255,255,255,0.9);font-size:1.2em;pointer-events:none;animation:fall linear infinite;opacity:0.9;}
     @keyframes fall{0%{transform:translateY(-100vh) rotate(0deg);opacity:0.9;}100%{transform:translateY(100vh) rotate(360deg);opacity:0;}}
+    /* Added to improve Expander header alignment/look */
+    .stExpander>summary .stMarkdown{display:inline-block;width:100%;}
+    .stExpander>summary .stMarkdown span{display:inline-block;width:calc(100% - 30px);} 
 </style>
 """, unsafe_allow_html=True)
 
@@ -121,6 +136,7 @@ deco = """
 <div class="christmas-decoration candle">🕯️</div>
 <div class="christmas-decoration star">⭐</div>
 """
+# Generate snowflakes for background effect
 snow = "".join(
     f'<div class="snowflake" style="left:{random.randint(0,100)}%;font-size:{random.choice(["0.8em","1em","1.2em","1.4em"])};animation-duration:{random.uniform(8,20):.1f}s;animation-delay:{random.uniform(0,5):.1f}s;">❄️</div>'
     for _ in range(80)
@@ -136,6 +152,7 @@ with st.sidebar:
     _ = LANG[lang]
     st.markdown("---")
     st.markdown("### Admin")
+    # Initialize session states for admin mode
     for k in ["admin","show_pw","guest_mode"]: st.session_state.setdefault(k, False)
     if st.session_state.admin:
         st.success("Admin Mode Active")
@@ -145,17 +162,23 @@ with st.sidebar:
         if st.session_state.show_pw:
             pw = st.text_input(_["enter_password"], type="password")
             if st.button(_["submit"]):
+                # The existing password is "0691"
                 if pw == "0691": st.session_state.update(admin=True, show_pw=False, guest_mode=False); st.success("Activated!"); st.rerun()
                 else: st.error("Incorrect")
+    # Reset button for admin
     if st.session_state.admin and st.button(_["reset_btn"]):
-        for k in ["route","dates","venues","admin_venues"]: st.session_state.pop(k, None); st.rerun()
+        for k in ["route","dates","venues","admin_venues"]: st.session_state.pop(k, None)
+        st.rerun()
 
 # ----------------------------------------------------------------------
 # 5. 세션 + 도시/좌표
 # ----------------------------------------------------------------------
+# DataFrame columns for venue information
 cols = ["Venue","Seats","IndoorOutdoor","Google Maps Link","Special Notes"]
+# Initialize session state for data storage
 for k in ["route","dates","venues","admin_venues"]: st.session_state.setdefault(k, [] if k=="route" else {})
 
+# City list (Maharashtra, India)
 cities = sorted([
     "Mumbai","Pune","Nagpur","Nashik","Thane","Aurangabad","Solapur","Amravati","Nanded","Kolhapur",
     "Akola","Latur","Ahmadnagar","Jalgaon","Dhule","Ichalkaranji","Malegaon","Bhusawal","Bhiwandi","Bhandara",
@@ -173,6 +196,7 @@ cities = sorted([
     "Kagal (Kolhapur)","Ajra (Kolhapur)","Shiroli (Kolhapur)",
 ])
 
+# Coordinates (Simplified/Mock for Maharashtra)
 coords = {
     "Mumbai": (19.07, 72.88), "Pune": (18.52, 73.86), "Nagpur": (21.15, 79.08), "Nashik": (20.00, 73.79),
     "Thane": (19.22, 72.98), "Aurangabad": (19.88, 75.34), "Solapur": (17.67, 75.91), "Amravati": (20.93, 77.75),
@@ -205,6 +229,7 @@ coords = {
 # 6. 제목
 # ----------------------------------------------------------------------
 title_text = _["title"]
+# Logic to split the title for Christmas styling
 if lang == "ko":
     parts = title_text.split()
     title_html = f'<span class="main">{parts[0]}</span> <span class="year">{" ".join(parts[1:])}</span>'
@@ -216,15 +241,32 @@ st.markdown(f'<h1 class="christmas-title">{title_html}</h1>', unsafe_allow_html=
 # ----------------------------------------------------------------------
 # 7. 헬퍼
 # ----------------------------------------------------------------------
-def target(): return st.session_state.admin_venues if st.session_state.admin else st.session_state.venues
-def date_str(c): d = st.session_state.dates.get(c); return d.strftime(_["date_format"]) if d else "TBD"
-def nav(url): return f"https://www.google.com/maps/dir/?api=1&destination={url}&travelmode=driving" if url and url.startswith("http") else ""
+def target(): 
+    """Returns the correct venue storage dictionary based on admin status."""
+    return st.session_state.admin_venues if st.session_state.admin else st.session_state.venues
+def date_str(c): 
+    """Formats the performance date for a given city."""
+    d = st.session_state.dates.get(c)
+    return d.strftime(_["date_format"]) if d else "TBD"
+def nav(url): 
+    """Generates a Google Maps navigation URL from a link."""
+    # This URL template directs from current location to the destination URL
+    return f"https://www.google.com/maps/dir/?api=1&destination={url}&travelmode=driving" if url and url.startswith("http") else ""
+
+def toggle_indoor_outdoor(city):
+    """Toggles the Indoor/Outdoor state for the current venue registration form."""
+    key = f"io_{city}_v2"
+    if st.session_state[key] == _["outdoor"]:
+        st.session_state[key] = _["indoor"]
+    else:
+        st.session_state[key] = _["outdoor"]
 
 # ----------------------------------------------------------------------
 # 8. 왼쪽 컬럼 - 투어 경로
 # ----------------------------------------------------------------------
 left, right = st.columns([1,3])
 with left:
+    # City Selection
     avail = [c for c in cities if c not in st.session_state.route]
     if avail:
         c1, c2 = st.columns([2,1])
@@ -235,22 +277,33 @@ with left:
                 st.session_state.route.append(next_city)
                 st.rerun()
     st.markdown("---")
+
+    # Tour Route Display and Registration
     if st.session_state.route:
         st.subheader(_["venues_dates"])
         for city in st.session_state.route:
             t = target()
             has = city in t and not t.get(city, pd.DataFrame()).empty
-            # 등록된 경우: 자동차 아이콘 (오른쪽 끝)
+            
+            # 1. Car Icon logic for closed expander (Navigation Link)
             car_icon = ""
             if has:
+                # Find the first valid Google Maps Link for navigation
                 first_link = t[city].iloc[0]["Google Maps Link"]
                 if first_link and first_link.startswith("http"):
                     nav_url = nav(first_link)
+                    # The style float:right pushes the icon to the end of the expander summary line
                     car_icon = f'<span style="float:right">[🚗]({nav_url})</span>'
+                    
+            # Expander Label: City Name - Date [🚗]
             expander_label = f"**{city}** – {date_str(city)}{car_icon}"
-            with st.expander(expander_label, expanded=not has):  # 등록 후 자동 닫힘
-                # 공연 날짜 (달력 클릭만, 키보드 X)
+            
+            # The expander is expanded=True if no venue is registered, auto-closing after registration.
+            with st.expander(expander_label, expanded=not has): 
+                
+                # Performance Date Input
                 cur = st.session_state.dates.get(city, datetime.now().date())
+                # Streamlit's date_input inherently uses a picker/calendar and prevents manual text input on some browsers.
                 new = st.date_input(
                     _["performance_date"],
                     cur,
@@ -261,27 +314,35 @@ with left:
                     st.session_state.dates[city] = new
                     st.success(_["date_changed"])
                     st.rerun()
-
-                # 등록 폼 (관리자/손님만)
+                
+                # --- VENUE REGISTRATION FORM ---
                 if (st.session_state.admin or st.session_state.guest_mode) and not has:
                     st.markdown("---")
-                    # 공연장 + 좌석
+                    
+                    # Initialize default type if not set
+                    io_key = f"io_{city}_v2"
+                    st.session_state.setdefault(io_key, _["outdoor"])
+
+                    # Row 1: Venue Name + Seats
                     col1, col2 = st.columns([3,1])
                     with col1: venue_name = st.text_input(_["venue_name"], key=f"v_{city}_v2")
                     with col2: seats = st.number_input(_["seats"], 1, step=50, key=f"s_{city}_v2")
-                    # 구글 링크 + 실내/실외
+                    
+                    # Row 2: Google Link + Indoor/Outdoor Toggle
                     col3, col4 = st.columns([3,1])
                     with col3: google_link = st.text_input(_["google_link"], placeholder="https://...", key=f"l_{city}_v2")
                     with col4:
-                        io_key = f"io_{city}_v2"
-                        st.session_state.setdefault(io_key, _["outdoor"])
-                        if st.button(f"**{st.session_state[io_key]}**", key=f"io_{city}_v2"):
-                            st.session_state[io_key] = _["indoor"] if st.session_state[io_key] == _["outdoor"] else _["outdoor"]
-                            st.rerun()
-                    # 특이사항 + 등록 버튼 (오른쪽)
+                        st.markdown(f"**{_['indoor_outdoor']}**") # Display Type label above button
+                        # Toggle button logic (uses a callback function for clean state update)
+                        if st.button(st.session_state[io_key], key=f"io_btn_{city}_v2", on_click=toggle_indoor_outdoor, args=(city,)):
+                            pass
+                        
+                    # Row 3: Special Notes + Register Button
                     sn_col, btn_col = st.columns([4,1])
                     with sn_col: special_notes = st.text_area(_["special_notes"], key=f"sn_{city}_v2")
                     with btn_col:
+                        # Add a vertical space to align the register button at the bottom right
+                        st.markdown("<div style='height: 48px;'></div>", unsafe_allow_html=True)
                         if st.button(_["register"], key=f"reg_{city}_v2"):
                             if not venue_name:
                                 st.error(_["enter_venue_name"])
@@ -289,39 +350,53 @@ with left:
                                 new_row = pd.DataFrame([{
                                     "Venue": venue_name,
                                     "Seats": seats,
-                                    "IndoorOutdoor": st.session_state[io_key],
+                                    "IndoorOutdoor": st.session_state[io_key], # Use the current state
                                     "Google Maps Link": google_link,
                                     "Special Notes": special_notes
                                 }])
                                 t[city] = pd.concat([t.get(city, pd.DataFrame(columns=cols)), new_row], ignore_index=True)
                                 st.success(_["venue_registered"])
-                                # 입력 필드 초기화
+                                # Clear form inputs
                                 for k in [f"v_{city}_v2", f"s_{city}_v2", f"l_{city}_v2", f"sn_{city}_v2"]:
                                     st.session_state.pop(k, None)
                                 st.rerun()
 
-                # 등록된 공연장 목록
+                # --- REGISTERED VENUE LIST DISPLAY ---
                 if has:
+                    st.markdown("---")
+                    st.caption(f"**{_['registered_venue_info']}**")
                     for idx, row in t[city].iterrows():
-                        col1, col2, col3, col4 = st.columns([3,1,1,1])
+                        # Display venue details clearly in columns
+                        col1, col2, col3 = st.columns([3, 1, 1])
+                        
+                        # Column 1: Venue Name, Seats, Notes
                         with col1:
-                            st.write(f"**{row['Venue']}**")
-                            st.caption(f"{row['Seats']} {_['seats']} | {row.get('Special Notes','')}")
+                            st.markdown(f"**{row['Venue']}**")
+                            st.caption(f"Seats: **{row['Seats']}** | Notes: {row.get('Special Notes','')}")
+                        
+                        # Column 2: Indoor/Outdoor Type
                         with col2:
                             color = "🟢" if row["IndoorOutdoor"] == _["indoor"] else "🔵"
                             st.write(f"{color} {row['IndoorOutdoor']}")
+                        
+                        # Column 3: Navigation Link + Delete Button
                         with col3:
-                            if row["Google Maps Link"].startswith("http"):
-                                nav_url = nav(row["Google Maps Link"])
-                                st.markdown(f'<div style="text-align:right">[🚗]({nav_url})</div>', unsafe_allow_html=True)
-                        with col4:
+                            nav_link = row["Google Maps Link"]
+                            # Navigation button
+                            if nav_link and nav_link.startswith("http"):
+                                nav_url = nav(nav_link)
+                                st.link_button(_["navigate"], url=nav_url, help=_["navigate"], use_container_width=True)
+                            
+                            # Delete button (Admin/Guest only)
                             if st.session_state.admin or st.session_state.guest_mode:
-                                if st.button("삭제", key=f"del_{city}_{idx}_v2"):
-                                    if st.checkbox("확인", key=f"confirm_{city}_{idx}_v2"):
-                                        t[city] = t[city].drop(idx).reset_index(drop=True)
-                                        if t[city].empty: t.pop(city, None)
-                                        st.success(_["venue_deleted"])
-                                        st.rerun()
+                                if st.button(_["delete_venue"], key=f"del_{city}_{idx}_v2", type="secondary", use_container_width=True):
+                                    # Perform deletion immediately (simplifying confirmation dialog in Streamlit)
+                                    t[city] = t[city].drop(idx).reset_index(drop=True)
+                                    if t[city].empty: 
+                                        t.pop(city, None)
+                                    st.success(_["venue_deleted"])
+                                    st.rerun()
+                        st.markdown("---") # Separator between venues
 
 # ----------------------------------------------------------------------
 # 9. 오른쪽 컬럼 – 지도
@@ -329,27 +404,62 @@ with left:
 with right:
     st.markdown("---")
     st.subheader(_["tour_map"])
+    # Determine center of the map
     center = coords.get(st.session_state.route[0] if st.session_state.route else "Mumbai", (19.75, 75.71))
     m = folium.Map(location=center, zoom_start=7, tiles="CartoDB positron")
+
+    # Draw route lines if more than one city is selected
     if len(st.session_state.route) > 1:
-        points = [coords[c] for c in st.session_state.route]
-        folium.PolyLine(points, color="red", weight=4, dash_array="10,10").add_to(m)
-        for i in range(len(points) - 1):
-            start, end = points[i], points[i + 1]
-            arrow_lat = end[0] - (end[0] - start[0]) * 0.05
-            arrow_lon = end[1] - (end[1] - start[1]) * 0.05
-            folium.RegularPolygonMarker(
-                location=[arrow_lat, arrow_lon],
-                fill_color="red",
-                number_of_sides=3,
-                rotation=math.degrees(math.atan2(end[1] - start[1], end[0] - start[0])) - 90,
-                radius=10
-            ).add_to(m)
+        points = [coords[c] for c in st.session_state.route if c in coords]
+        if len(points) > 1:
+            folium.PolyLine(points, color="red", weight=4, dash_array="10,10").add_to(m)
+            # Add arrows to polyline
+            for i in range(len(points) - 1):
+                start, end = points[i], points[i + 1]
+                # Calculate intermediate point for arrow (95% of the way)
+                arrow_lat = end[0] - (end[0] - start[0]) * 0.05
+                arrow_lon = end[1] - (end[1] - start[1]) * 0.05
+                
+                # Calculate rotation for the triangle/arrowhead
+                # atan2 returns angle in radians; math.degrees converts to degrees
+                # -90 is added to align the triangle point in the direction of travel
+                rotation_deg = math.degrees(math.atan2(end[1] - start[1], end[0] - start[0])) - 90
+                
+                folium.RegularPolygonMarker(
+                    location=[arrow_lat, arrow_lon],
+                    fill_color="red",
+                    number_of_sides=3,
+                    rotation=rotation_deg,
+                    radius=10,
+                    color="#8B0000"
+                ).add_to(m)
+            
+    # Add markers for each city in the route
     for city in st.session_state.route:
+        if city not in coords: continue # Skip if coordinates not found
+
         df = target().get(city, pd.DataFrame(columns=cols))
+        
+        # Check if there is a registered venue with a link for the popup
         link = next((r["Google Maps Link"] for _, r in df.iterrows() if r["Google Maps Link"].startswith("http")), None)
+        
+        # Base popup content
         popup_html = f"<b style='color:#8B0000'>{city}</b><br>{date_str(city)}"
-        if link: popup_html = f'<a href="{nav(link)}" target="_blank" style="color:#90EE90">{popup_html}<br><i>{_["navigate"]}</i></a>'
-        folium.CircleMarker(location=coords[city], radius=15, color="#90EE90", fill_color="#8B0000", popup=folium.Popup(popup_html, max_width=300)).add_to(m)
+        
+        # If a link exists, make the popup content a clickable navigation link
+        if link: 
+            popup_html = f'<a href="{nav(link)}" target="_blank" style="color:#000000;">{popup_html}<br><i>{_["navigate"]}</i></a>'
+
+        folium.CircleMarker(
+            location=coords[city], 
+            radius=15, 
+            color="#90EE90", # Light Green border
+            weight=2,
+            fill=True,
+            fill_color="#8B0000", # Dark Red fill
+            fill_opacity=0.9,
+            popup=folium.Popup(popup_html, max_width=300)
+        ).add_to(m)
+        
     st_folium(m, width=700, height=500)
     st.caption(_["caption"])
