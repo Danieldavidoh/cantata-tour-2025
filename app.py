@@ -7,7 +7,7 @@ import math
 import random
 
 # ----------------------------------------------------------------------
-# 1. 다국어 사전 (완전한 LANG)
+# 1. 다국어 사전 (완전)
 # ----------------------------------------------------------------------
 LANG = {
     "en": {
@@ -72,20 +72,17 @@ LANG = {
 st.set_page_config(page_title="Cantata Tour 2025", layout="wide", initial_sidebar_state="collapsed")
 
 # ----------------------------------------------------------------------
-# 3. 크리스마스 테마 CSS + 장식
+# 3. 테마 + 장식
 # ----------------------------------------------------------------------
 st.markdown("""
 <style>
     .reportview-container {background:linear-gradient(to bottom,#0f0c29,#302b63,#24243e);overflow:hidden;position:relative;}
     .sidebar .sidebar-content {background:#228B22;color:white;}
     .Widget>label {color:#90EE90;font-weight:bold;}
-    .christmas-title{font-size:3.5em!important;font-weight:bold;text-align:center;
-        text-shadow:0 0 5px #FFF,0 0 10px #FFF,0 0 15px #FFF,0 0 20px #8B0000,0 0 35px #8B0000;
-        letter-spacing:2px;position:relative;margin:20px 0;}
+    .christmas-title{font-size:3.5em!important;font-weight:bold;text-align:center;text-shadow:0 0 5px #FFF,0 0 10px #FFF,0 0 15px #FFF,0 0 20px #8B0000,0 0 35px #8B0000;letter-spacing:2px;position:relative;margin:20px 0;}
     .christmas-title .main{color:#FF0000!important;}
     .christmas-title .year{color:white!important;text-shadow:0 0 5px #FFF,0 0 10px #FFF,0 0 15px #FFF,0 0 20px #00BFFF;}
-    .christmas-title::before{content:"❄️ ❄️ ❄️";position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:0.6em;color:white;
-        animation:snow-fall 3s infinite ease-in-out;}
+    .christmas-title::before{content:"❄️ ❄️ ❄️";position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:0.6em;color:white;animation:snow-fall 3s infinite ease-in-out;}
     @keyframes snow-fall{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(10px);}}
     h1,h2,h3{color:#90EE90;text-shadow:1px 1px 3px #8B0000;text-align:center;}
     .stButton>button{background:#228B22;color:white;border:2px solid #8B0000;border-radius:12px;font-weight:bold;padding:10px;}
@@ -112,7 +109,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 장식 + 눈송이
 deco = """
 <div class="christmas-decoration gift">🎁</div>
 <div class="christmas-decoration candy-cane">🍭</div>
@@ -126,14 +122,13 @@ deco = """
 <div class="christmas-decoration star">⭐</div>
 """
 snow = "".join(
-    f'<div class="snowflake" style="left:{random.randint(0,100)}%;font-size:{random.choice(["0.8em","1em","1.2em","1.4em"])};'
-    f'animation-duration:{random.uniform(8,20):.1f}s;animation-delay:{random.uniform(0,5):.1f}s;">❄️</div>'
+    f'<div class="snowflake" style="left:{random.randint(0,100)}%;font-size:{random.choice(["0.8em","1em","1.2em","1.4em"])};animation-duration:{random.uniform(8,20):.1f}s;animation-delay:{random.uniform(0,5):.1f}s;">❄️</div>'
     for _ in range(80)
 )
 st.markdown(deco + snow, unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------
-# 4. 사이드바 (언어 + 관리자)
+# 4. 사이드바
 # ----------------------------------------------------------------------
 with st.sidebar:
     st.markdown("### Language")
@@ -144,30 +139,22 @@ with st.sidebar:
     for k in ["admin","show_pw","guest_mode"]: st.session_state.setdefault(k, False)
     if st.session_state.admin:
         st.success("Admin Mode Active")
-        if st.button(_["guest_mode"]):
-            st.session_state.update(admin=False, guest_mode=True, show_pw=True)
-            st.rerun()
+        if st.button(_["guest_mode"]): st.session_state.update(admin=False, guest_mode=True, show_pw=True); st.rerun()
     else:
         if st.button(_["admin_mode"]): st.session_state.show_pw = True
         if st.session_state.show_pw:
             pw = st.text_input(_["enter_password"], type="password")
             if st.button(_["submit"]):
-                if pw == "0691":
-                    st.session_state.update(admin=True, show_pw=False, guest_mode=False)
-                    st.success("Activated!")
-                    st.rerun()
-                else:
-                    st.error("Incorrect")
+                if pw == "0691": st.session_state.update(admin=True, show_pw=False, guest_mode=False); st.success("Activated!"); st.rerun()
+                else: st.error("Incorrect")
     if st.session_state.admin and st.button(_["reset_btn"]):
-        for k in ["route","dates","venues","admin_venues"]: st.session_state.pop(k, None)
-        st.rerun()
+        for k in ["route","dates","venues","admin_venues"]: st.session_state.pop(k, None); st.rerun()
 
 # ----------------------------------------------------------------------
-# 5. 세션 초기화 + 도시/좌표
+# 5. 세션 + 도시/좌표
 # ----------------------------------------------------------------------
 cols = ["Venue","Seats","IndoorOutdoor","Google Maps Link","Special Notes"]
-for k in ["route","dates","venues","admin_venues"]:
-    st.session_state.setdefault(k, [] if k=="route" else {})
+for k in ["route","dates","venues","admin_venues"]: st.session_state.setdefault(k, [] if k=="route" else {})
 
 cities = sorted([
     "Mumbai","Pune","Nagpur","Nashik","Thane","Aurangabad","Solapur","Amravati","Nanded","Kolhapur",
@@ -234,82 +221,100 @@ def date_str(c): d = st.session_state.dates.get(c); return d.strftime(_["date_fo
 def nav(url): return f"https://www.google.com/maps/dir/?api=1&destination={url}&travelmode=driving" if url and url.startswith("http") else ""
 
 # ----------------------------------------------------------------------
-# 8. 좌측: 도시 + 공연장
+# 8. 왼쪽 컬럼
 # ----------------------------------------------------------------------
 left, right = st.columns([1,3])
 with left:
     avail = [c for c in cities if c not in st.session_state.route]
     if avail:
-        c1,c2 = st.columns([2,1])
-        with c1: city = st.selectbox(_["select_city"], avail)
-        with c2: st.button(_["add_city_btn"], on_click=lambda: st.session_state.route.append(city) or st.rerun())
+        c1, c2 = st.columns([2,1])
+        with c1: next_city = st.selectbox(_["select_city"], avail, key="next_city_select_v2")
+        with c2: if st.button(_["add_city_btn"], key="add_city_btn_v2"): st.session_state.route.append(next_city); st.rerun()
+    st.markdown("---")
     if st.session_state.route:
         st.subheader(_["venues_dates"])
         for city in st.session_state.route:
             t = target()
-            has = city in t and not t[city].empty
-            icon = f' [🗺️]({nav(t[city].iloc[0]["Google Maps Link"])})' if has else ""
-            with st.expander(f"**{city}** – {date_str(city)} ({len(t[city]) if has else 0} venues){icon}"):
+            has = city in t and not t.get(city, pd.DataFrame()).empty
+            icon = f' [🗺️]({nav(t[city].iloc[0]["Google Maps Link"] if has else "")})' if has else ""
+            with st.expander(f"**{city}** – {date_str(city)} ({len(t[city]) if has else 0} venues){icon}", expanded=False):
                 cur = st.session_state.dates.get(city, datetime.now().date())
-                if st.date_input(_["performance_date"], cur, key=f"d_{city}") != cur:
-                    st.session_state.dates[city] = _; st.success(_["date_changed"]); st.rerun()
+                new = st.date_input(_["performance_date"], cur, key=f"date_{city}_v2")
+                if new != cur: st.session_state.dates[city] = new; st.success(_["date_changed"]); st.rerun()
                 if (st.session_state.admin or st.session_state.guest_mode) and not has:
-                    v = st.text_input(_["venue_name"], key=f"v_{city}")
-                    s = st.number_input(_["seats"], 1, step=50, key=f"s_{city}")
-                    l = st.text_input(_["google_link"], key=f"l_{city}")
-                    io = st.session_state[f"io_{city}"] = st.session_state.get(f"io_{city}", _["outdoor"])
-                    if st.button(f"**{io}**", key=f"io_{city}"):
-                        st.session_state[f"io_{city}"] = _["indoor"] if io==_["outdoor"] else _["outdoor"]
-                        st.rerun()
-                    n = st.text_area(_["special_notes"], key=f"n_{city}")
-                    if st.button(_["register"], key=f"reg_{city}"):
-                        if not v: st.error(_["enter_venue_name"])
-                        else:
-                            row = {"Venue":v,"Seats":s,"IndoorOutdoor":io,"Google Maps Link":l,"Special Notes":n}
-                            t[city] = pd.concat([t.get(city, pd.DataFrame(columns=cols)), pd.DataFrame([row])], ignore_index=True)
-                            for k in [f"v_{city}",f"s_{city}",f"l_{city}",f"n_{city}"]: st.session_state.pop(k,None)
-                            st.success(_["venue_registered"]); st.rerun()
+                    st.markdown("---")
+                    col1, col2 = st.columns([3,1])
+                    with col1: venue_name = st.text_input(_["venue_name"], key=f"v_{city}_v2")
+                    with col2: seats = st.number_input(_["seats"], 1, step=50, key=f"s_{city}_v2")
+                    col3, col4 = st.columns([3,1])
+                    with col3: google_link = st.text_input(_["google_link"], placeholder="https://...", key=f"l_{city}_v2")
+                    with col4:
+                        io_key = f"io_{city}_v2"
+                        st.session_state.setdefault(io_key, _["outdoor"])
+                        if st.button(f"**{st.session_state[io_key]}**", key=f"io_toggle_{city}_v2"):
+                            st.session_state[io_key] = _["indoor"] if st.session_state[io_key] == _["outdoor"] else _["outdoor"]
+                            st.rerun()
+                    sn_col, btn_col = st.columns([4,1])
+                    with sn_col: special_notes = st.text_area(_["special_notes"], key=f"sn_{city}_v2")
+                    with btn_col:
+                        if st.button(_["register"], key=f"register_{city}_v2"):
+                            if not venue_name: st.error(_["enter_venue_name"])
+                            else:
+                                new_row = pd.DataFrame([{"Venue": venue_name, "Seats": seats, "IndoorOutdoor": st.session_state[io_key], "Google Maps Link": google_link, "Special Notes": special_notes}])
+                                t[city] = pd.concat([t.get(city, pd.DataFrame(columns=cols)), new_row], ignore_index=True)
+                                st.success(_["venue_registered"])
+                                for k in [f"v_{city}_v2", f"s_{city}_v2", f"l_{city}_v2", f"sn_{city}_v2"]: st.session_state.pop(k, None)
+                                st.rerun()
                 if has:
-                    for i,row in t[city].iterrows():
-                        c1,c2,c3,c4 = st.columns([3,1,1,1])
-                        with c1: st.write(f"**{row.Venue}**"); st.caption(f"{row.Seats} seats | {row['Special Notes']}")
-                        with c2: st.write(f"{'🟢' if row.IndoorOutdoor==_['indoor'] else '🔵'} {row.IndoorOutdoor}")
-                        with c3: st.markdown(f"[🗺️ {_['navigate']}]({nav(row['Google Maps Link'])})", unsafe_allow_html=True)
-                        with c4:
+                    for idx, row in t[city].iterrows():
+                        col1, col2, col3, col4 = st.columns([3,1,1,1])
+                        with col1: st.write(f"**{row['Venue']}**"); st.caption(f"{row['Seats']} {_['seats']} | {row.get('Special Notes','')}")
+                        with col2: color = "🟢" if row["IndoorOutdoor"] == _["indoor"] else "🔵"; st.write(f"{color} {row['IndoorOutdoor']}")
+                        with col3: if row["Google Maps Link"].startswith("http"): st.markdown(f"[🗺️ {_['navigate']}]({nav(row['Google Maps Link'])})", unsafe_allow_html=True)
+                        with col4:
                             if st.session_state.admin or st.session_state.guest_mode:
-                                ek = f"e_{city}_{i}"
-                                if st.button("Edit", key=f"eb_{city}_{i}"): st.session_state[ek]=True
-                                if st.button("Del", key=f"db_{city}_{i}") and st.checkbox("Sure?", key=f"dc_{city}_{i}"):
-                                    t[city].drop(i, inplace=True); t[city].reset_index(drop=True, inplace=True)
-                                    if t[city].empty: t.pop(city,None); st.success(_["venue_deleted"]); st.rerun()
-                        if st.session_state.get(ek):
-                            with st.form(key=f"f_{city}_{i}"):
-                                ev = st.text_input("Name", row.Venue, key=f"ev_{city}_{i}")
-                                es = st.number_input("Seats", 1, value=row.Seats, key=f"es_{city}_{i}")
-                                eio = st.selectbox("Type", [_["indoor"],_["outdoor"]], index=0 if row.IndoorOutdoor==_["indoor"] else 1, key=f"eio_{city}_{i}")
-                                el = st.text_input("Link", row["Google Maps Link"], key=f"el_{city}_{i}")
-                                en = st.text_area("Notes", row["Special Notes"], key=f"en_{city}_{i}")
-                                if st.form_submit_button("Save"):
-                                    t[city].loc[i] = [ev,es,eio,el,en]; st.session_state.pop(ek,None); st.success(_["venue_updated"]); st.rerun()
+                                edit_key = f"edit_{city}_{idx}_v2"
+                                if st.button(_["edit_venue"], key=f"edit_btn_{city}_{idx}_v2"): st.session_state[edit_key] = True
+                                if st.button(_["delete_venue"], key=f"del_btn_{city}_{idx}_v2"):
+                                    if st.checkbox(_["confirm_delete"], key=f"confirm_{city}_{idx}_v2"):
+                                        t[city] = t[city].drop(idx).reset_index(drop=True)
+                                        if t[city].empty: t.pop(city, None)
+                                        st.success(_["venue_deleted"])
+                                        st.rerun()
+                        if st.session_state.get(edit_key, False):
+                            with st.form(key=f"edit_form_{city}_{idx}_v2"):
+                                ev = st.text_input(_["edit_venue_label"], row["Venue"], key=f"ev_{city}_{idx}_v2")
+                                es = st.number_input(_["edit_seats_label"], 1, value=row["Seats"], key=f"es_{city}_{idx}_v2")
+                                eio = st.selectbox(_["edit_type_label"], [_["indoor"], _["outdoor"]], index=0 if row["IndoorOutdoor"] == _["indoor"] else 1, key=f"eio_{city}_{idx}_v2")
+                                el = st.text_input(_["edit_google_label"], row["Google Maps Link"], key=f"el_{city}_{idx}_v2")
+                                esn = st.text_area(_["edit_notes_label"], row.get("Special Notes", ""), key=f"esn_{city}_{idx}_v2")
+                                if st.form_submit_button(_["save"]):
+                                    t[city].loc[idx] = [ev, es, eio, el, esn]
+                                    st.session_state.pop(edit_key, None)
+                                    st.success(_["venue_updated"])
+                                    st.rerun()
 
 # ----------------------------------------------------------------------
-# 9. 우측: 지도
+# 9. 오른쪽 컬럼 – 지도
 # ----------------------------------------------------------------------
 with right:
+    st.markdown("---")
     st.subheader(_["tour_map"])
-    m = folium.Map(location=coords.get(st.session_state.route[0] if st.session_state.route else "Mumbai", (19.75,75.71)), zoom_start=7, tiles="CartoDB positron")
-    if len(st.session_state.route)>1:
-        pts = [coords[c] for c in st.session_state.route]
-        folium.PolyLine(pts, color="red", weight=4, dash_array="10,10").add_to(m)
-        for a,b in zip(pts, pts[1:]):
-            arrow = (b[0]-(b[0]-a[0])*0.05, b[1]-(b[1]-a[1])*0.05)
-            folium.RegularPolygonMarker(arrow, fill_color="red", number_of_sides=3,
-                rotation=math.degrees(math.atan2(b[1]-a[1], b[0]-a[0]))-90, radius=10).add_to(m)
+    center = coords.get(st.session_state.route[0] if st.session_state.route else "Mumbai", (19.75, 75.71))
+    m = folium.Map(location=center, zoom_start=7, tiles="CartoDB positron")
+    if len(st.session_state.route) > 1:
+        points = [coords[c] for c in st.session_state.route]
+        folium.PolyLine(points, color="red", weight=4, dash_array="10,10").add_to(m)
+        for i in range(len(points) - 1):
+            start, end = points[i], points[i + 1]
+            arrow_lat = end[0] - (end[0] - start[0]) * 0.05
+            arrow_lon = end[1] - (end[1] - start[1]) * 0.05
+            folium.RegularPolygonMarker(location=[arrow_lat, arrow_lon], fill_color="red", number_of_sides=3, rotation=math.degrees(math.atan2(end[1] - start[1], end[0] - start[0])) - 90, radius=10).add_to(m)
     for city in st.session_state.route:
-        df = target().get(city, pd.DataFrame())
-        link = next((r["Google Maps Link"] for _,r in df.iterrows() if r["Google Maps Link"].startswith("http")), None)
-        popup = f"<b style='color:#8B0000'>{city}</b><br>{date_str(city)}"
-        if link: popup = f'<a href="{nav(link)}" target="_blank" style="color:#90EE90">{popup}<br><i>{_["navigate"]}</i></a>'
-        folium.CircleMarker(coords[city], radius=15, color="#90EE90", fill_color="#8B0000", popup=folium.Popup(popup, max_width=300)).add_to(m)
+        df = target().get(city, pd.DataFrame(columns=cols))
+        link = next((r["Google Maps Link"] for _, r in df.iterrows() if r["Google Maps Link"].startswith("http")), None)
+        popup_html = f"<b style='color:#8B0000'>{city}</b><br>{date_str(city)}"
+        if link: popup_html = f'<a href="{nav(link)}" target="_blank" style="color:#90EE90">{popup_html}<br><i>{_["navigate"]}</i></a>'
+        folium.CircleMarker(location=coords[city], radius=15, color="#90EE90", fill_color="#8B0000", popup=folium.Popup(popup_html, max_width=300)).add_to(m)
     st_folium(m, width=700, height=500)
     st.caption(_["caption"])
