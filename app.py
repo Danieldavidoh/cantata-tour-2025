@@ -213,15 +213,20 @@ with left:
         if has:
             link = t[city].iloc[0]["Google Maps Link"]
             if link and link.startswith("http"):
-                car_icon = f'<span style="float:right">[차량]({nav(link)})</span>'
+                car_icon = f'<span style="float:right">[🚗]({nav(link)})</span>'
         with st.expander(f"**{city}**{car_icon}", expanded=False):
             # 등록 폼
             if (st.session_state.admin or st.session_state.get("guest_mode")) and not has:
                 st.markdown("---")
+                # 공연장소
                 venue_name = st.text_input(_["venue_name"], key=f"v_{city}")
+                # 좌석수
                 seats = st.number_input(_["seats"], 1, step=50, key=f"s_{city}")
+                # 구글맵
                 google_link = st.text_input(_["google_link"], placeholder="https://...", key=f"l_{city}")
+                # 특이사항
                 special_notes = st.text_area(_["special_notes"], key=f"sn_{city}")
+                # 등록 버튼 (오른쪽)
                 _, btn = st.columns([4,1])
                 with btn:
                     if st.button(_["register"], key=f"reg_{city}"):
@@ -243,13 +248,13 @@ with left:
             # 등록된 공연장
             if has:
                 for idx, row in t[city].iterrows():
-                    c1, c2, c3, c4 = st.columns([3,1,1,1])
+                    c1, c2, c3 = st.columns([3,1,1])
                     with c1:
                         st.write(f"**{row['Venue']}**")
                         st.caption(f"{row['Seats']} {_['seats']} | {row.get('Special Notes','')}")
                     with c3:
                         if row["Google Maps Link"].startswith("http"):
-                            st.markdown(f'<div style="text-align:right">[차량]({nav(row["Google Maps Link"])})</div>', unsafe_allow_html=True)
+                            st.markdown(f'<div style="text-align:right">[🚗]({nav(row["Google Maps Link"])})</div>', unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------
 # 9. 오른쪽 컬럼 – 지도
