@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import folium
-from streamlit_folium import folium_static
+from streamlit_folium import st_folium
 import math
 import random # Top으로 이동
 # =============================================
@@ -11,14 +11,8 @@ import random # Top으로 이동
 LANG = {
     "en": {
         "title": "Cantata Tour 2025",
-        "start_city": "Starting City",
-        "start_btn": "Start",
+        "tour_cities": "Tour Cities",
         "reset_btn": "Reset All",
-        "next_city": "Next City",
-        "add_btn": "Add",
-        "current_route": "### Current Route",
-        "total_distance": "Total Distance",
-        "total_time": "Total Time",
         "venues_dates": "Venues & Dates",
         "performance_date": "Performance Date",
         "venue_name": "Venue Name",
@@ -57,14 +51,8 @@ LANG = {
     },
     "ko": {
         "title": "칸타타 투어 2025",
-        "start_city": "출발 도시",
-        "start_btn": "시작",
+        "tour_cities": "투어 도시",
         "reset_btn": "전체 초기화",
-        "next_city": "다음 도시",
-        "add_btn": "추가",
-        "current_route": "### 현재 경로",
-        "total_distance": "총 거리",
-        "total_time": "총 소요시간",
         "venues_dates": "공연장 & 날짜",
         "performance_date": "공연 날짜",
         "venue_name": "공연장 이름",
@@ -103,14 +91,8 @@ LANG = {
     },
     "hi": {
         "title": "कांताता टूर 2025",
-        "start_city": "प्रारंभिक शहर",
-        "start_btn": "शुरू करें",
+        "tour_cities": "टूर शहर",
         "reset_btn": "सब रीसेट करें",
-        "next_city": "अगला शहर",
-        "add_btn": "जोड़ें",
-        "current_route": "### वर्तमान मार्ग",
-        "total_distance": "कुल दूरी",
-        "total_time": "कुल समय",
         "venues_dates": "स्थल और तिथियाँ",
         "performance_date": "प्रदर्शन तिथि",
         "venue_name": "स्थल का नाम",
@@ -262,8 +244,7 @@ with st.sidebar:
     lang = st.radio(
         label="Select",
         options=["en", "ko", "hi"],
-        format_func=lambda x: {"en": "English", "ko": "한국어", "hi": "हिन्दी"}[x],
-        horizontal=False
+        format_func=lambda x: {"en": "English", "ko": "한국어", "hi": "हिन्दी"}[x]
     )
     _ = LANG[lang]
     st.markdown("---")
@@ -299,7 +280,7 @@ with st.sidebar:
         st.markdown("---")
         if st.button(_["reset_btn"]):
             # 특정 키만 삭제 (안전하게)
-            for key in ['route', 'dates', 'distances', 'venues', 'admin_venues', 'start_city']:
+            for key in ['route', 'dates', 'venues', 'admin_venues']:
                 if key in st.session_state:
                     del st.session_state[key]
             st.rerun()
@@ -307,17 +288,13 @@ with st.sidebar:
 # 5. 세션 초기화 (venues/admin_venues에 columns 있는 빈 DF로)
 # =============================================
 if 'route' not in st.session_state:
-    st.session_state.route = []
+    st.session_state.route = ['Mumbai']
 if 'dates' not in st.session_state:
     st.session_state.dates = {}
-if 'distances' not in st.session_state:
-    st.session_state.distances = {}
 if 'venues' not in st.session_state:
     st.session_state.venues = {city: pd.DataFrame(columns=['Venue', 'Seats', 'IndoorOutdoor', 'Google Maps Link']) for city in []} # 빈 리스트로 시작
 if 'admin_venues' not in st.session_state:
     st.session_state.admin_venues = {city: pd.DataFrame(columns=['Venue', 'Seats', 'IndoorOutdoor', 'Google Maps Link']) for city in []}
-if 'start_city' not in st.session_state:
-    st.session_state.start_city = 'Mumbai'
 if 'active_expander' not in st.session_state:
     st.session_state.active_expander = None
 # =============================================
@@ -378,6 +355,8 @@ st.markdown(f'<h1 class="christmas-title"><span class="main">{main_title}</span>
 # =============================================
 left_col, right_col = st.columns([1, 3])  # venues 블럭을 왼쪽에 항상 붙임
 with left_col:
+    selected = st.multiselect(_["tour_cities"], cities, key="tour_cities_key", default=st.session_state.get('route', ['Mumbai']))
+    st.session_state.route = selected
     if st.session_state.route:
         st.markdown("---")
         st.subheader(_["venues_dates"])
@@ -385,7 +364,6 @@ with left_col:
             # 등록된 venue가 있는지 확인 (등록 후에는 요약 표시)
             target = st.session_state.admin_venues if st.session_state.admin else st.session_state.venues
             has_venues = city in target and not target[city].empty
-            expander_key = f"expander_{city}"
             if not has_venues:
                 # venue 없음: 폼 표시, expanded=False (기본 닫힘)
                 with st.expander(f"**{city}** - {_['add_venue']}", expanded=False):
@@ -485,105 +463,40 @@ with left_col:
                                     st.success(_["venue_updated"])
                                     st.rerun()
 # =============================================
-# 9. UI 시작 (venues 블럭 아래로 이동)
+# 9. 지도 (점선 + 목적지 앞 화살표, TBD strftime 에러 수정)
 # =============================================
 with right_col:  # 오른쪽에 나머지 UI 배치
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        if st.button(_["start_btn"], use_container_width=True):
-            city = st.session_state.start_city
-            if city not in st.session_state.route:
-                st.session_state.route = [city]
-                st.session_state.dates[city] = datetime.now().date()
-                st.success(f"{_['start_city']}: {city}")
-                st.rerun()
-    with col2:
-        st.session_state.start_city = st.selectbox(_["start_city"], cities, index=cities.index(st.session_state.start_city) if st.session_state.start_city in cities else 0)
-    
     # =============================================
-    # 10. 경로 관리 (selectbox 위치 조정 + default 통일)
+    # 11. 지도 (점선 + 목적지 앞 화살표, TBD strftime 에러 수정)
     # =============================================
-    if st.session_state.route:
-        st.markdown("---")
-        available = [c for c in cities if c not in st.session_state.route]
-        if available:
-            # selectbox 먼저 (로직 수정)
-            select_key = f"next_city_{'_'.join(st.session_state.route)}"
-            st.session_state.next_city_select = st.selectbox(_["next_city"], available, key=select_key)
-            col_add, col_next = st.columns([1, 4])
-            with col_add:
-                if st.button(_["add_btn"], use_container_width=True):
-                    new_city = st.session_state.get('next_city_select', available[0])
-                    st.session_state.route.append(new_city)
-                    if len(st.session_state.route) > 1:
-                        prev = st.session_state.route[-2]
-                        lat1, lon1 = coords[prev]
-                        lat2, lon2 = coords[new_city]
-                        R = 6371
-                        dlat = math.radians(lat2 - lat1)
-                        dlon = math.radians(lon2 - lon1)
-                        a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
-                        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-                        km = round(R * c)
-                        hrs = round(km / 50, 1)
-                        st.session_state.distances.setdefault(prev, {})[new_city] = (km, hrs)
-                        st.session_state.distances.setdefault(new_city, {})[prev] = (km, hrs)
-                        prev_date = st.session_state.dates.get(prev, datetime.now().date())
-                        st.session_state.dates[new_city] = (datetime.combine(prev_date, datetime.min.time()) + timedelta(hours=hrs)).date()
-                    st.success(f"{new_city} 추가됨")
-                    st.rerun()
-            with col_next:
-                st.empty() # 더미, selectbox 이미 위에
-        st.markdown(_["current_route"])
-        route_display = []
-        for i, city in enumerate(st.session_state.route):
-            route_display.append(city)
-            if i < len(st.session_state.route) - 1:
-                next_city = st.session_state.route[i+1]
-                km, hrs = st.session_state.distances.get(city, {}).get(next_city, (0, 0)) # default (0,0) 통일
-                route_display.append(f"({km}km, {hrs}h)")
-        st.write(" -> ".join(route_display))
-        total_km = total_hrs = 0
-        for i in range(len(st.session_state.route)-1):
-            a, b = st.session_state.route[i], st.session_state.route[i+1]
-            km, hrs = st.session_state.distances.get(a, {}).get(b, (0, 0)) # default (0,0) 통일
-            total_km += km
-            total_hrs += hrs
-        c1, c2 = st.columns(2)
-        c1.metric(_["total_distance"], f"{total_km:,} km")
-        c2.metric(_["total_time"], f"{total_hrs:.1f} h")
-        
-        # =============================================
-        # 11. 지도 (점선 + 목적지 앞 화살표, TBD strftime 에러 수정)
-        # =============================================
-        st.markdown("---")
-        st.subheader(_["tour_map"])
-        center = coords.get(st.session_state.route[0] if st.session_state.route else 'Mumbai', (19.75, 75.71))
-        m = folium.Map(location=center, zoom_start=7, tiles="CartoDB positron")
-        if len(st.session_state.route) > 1:
-            points = [coords[c] for c in st.session_state.route]
-            folium.PolyLine(points, color="red", weight=4, dash_array="10, 10").add_to(m)
-            for i in range(len(points) - 1):
-                start = points[i]
-                end = points[i + 1]
-                arrow_lat = end[0] - (end[0] - start[0]) * 0.05
-                arrow_lon = end[1] - (end[1] - start[1]) * 0.05
-                folium.RegularPolygonMarker(
-                    location=[arrow_lat, arrow_lon],
-                    fill_color='red',
-                    number_of_sides=3,
-                    rotation=math.degrees(math.atan2(end[1] - start[1], end[0] - start[0])) - 90,
-                    radius=10
-                ).add_to(m)
-        for city in st.session_state.route:
-            target = st.session_state.admin_venues if st.session_state.admin else st.session_state.venues
-            df = target.get(city, pd.DataFrame(columns=['Venue', 'Seats', 'IndoorOutdoor', 'Google Maps Link']))
-            link = next((r['Google Maps Link'] for _, r in df.iterrows() if r['Google Maps Link'].startswith('http')), None)
-            date_obj = st.session_state.dates.get(city)
-            date_str = date_obj.strftime(_['date_format']) if date_obj else 'TBD' # strftime 에러 수정
-            popup = f"<b style='color:#8B0000'>{city}</b><br>{date_str}"
-            if link:
-                popup = f'<a href="{link}" target="_blank" style="color:#90EE90">{popup}<br><i>{_["open_maps"]}</i></a>'
-            folium.CircleMarker(coords[city], radius=15, color="#90EE90", fill_color="#8B0000", popup=folium.Popup(popup, max_width=300)).add_to(m)
-        folium_static(m, width=700, height=500)
-        st.caption(_["caption"])
+    st.markdown("---")
+    st.subheader(_["tour_map"])
+    center = coords.get(st.session_state.route[0] if st.session_state.route else 'Mumbai', (19.75, 75.71))
+    m = folium.Map(location=center, zoom_start=7, tiles="CartoDB positron")
+    if len(st.session_state.route) > 1:
+        points = [coords[c] for c in st.session_state.route]
+        folium.PolyLine(points, color="red", weight=4, dash_array="10, 10").add_to(m)
+        for i in range(len(points) - 1):
+            start = points[i]
+            end = points[i + 1]
+            arrow_lat = end[0] - (end[0] - start[0]) * 0.05
+            arrow_lon = end[1] - (end[1] - start[1]) * 0.05
+            folium.RegularPolygonMarker(
+                location=[arrow_lat, arrow_lon],
+                fill_color='red',
+                number_of_sides=3,
+                rotation=math.degrees(math.atan2(end[1] - start[1], end[0] - start[0])) - 90,
+                radius=10
+            ).add_to(m)
+    for city in st.session_state.route:
+        target = st.session_state.admin_venues if st.session_state.admin else st.session_state.venues
+        df = target.get(city, pd.DataFrame(columns=['Venue', 'Seats', 'IndoorOutdoor', 'Google Maps Link']))
+        link = next((r['Google Maps Link'] for _, r in df.iterrows() if r['Google Maps Link'].startswith('http')), None)
+        date_obj = st.session_state.dates.get(city)
+        date_str = date_obj.strftime(_['date_format']) if date_obj else 'TBD' # strftime 에러 수정
+        popup = f"<b style='color:#8B0000'>{city}</b><br>{date_str}"
+        if link:
+            popup = f'<a href="{link}" target="_blank" style="color:#90EE90">{popup}<br><i>{_["open_maps"]}</i></a>'
+        folium.CircleMarker(coords[city], radius=15, color="#90EE90", fill_color="#8B0000", popup=folium.Popup(popup, max_width=300)).add_to(m)
+    st_folium(m, width=700, height=500)
+    st.caption(_["caption"])
