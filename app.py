@@ -11,7 +11,11 @@ import random # Top으로 이동
 LANG = {
     "en": {
         "title": "Cantata Tour 2025",
-        "tour_cities": "Tour Cities",
+        "add_city": "Add City",
+        "select_city": "Select City",
+        "add_city_btn": "Add City",
+        "tour_route": "Tour Route",
+        "remove": "Remove",
         "reset_btn": "Reset All",
         "venues_dates": "Venues & Dates",
         "performance_date": "Performance Date",
@@ -51,7 +55,11 @@ LANG = {
     },
     "ko": {
         "title": "칸타타 투어 2025",
-        "tour_cities": "투어 도시",
+        "add_city": "도시 추가",
+        "select_city": "도시 선택",
+        "add_city_btn": "도시 추가",
+        "tour_route": "투어 경로",
+        "remove": "삭제",
         "reset_btn": "전체 초기화",
         "venues_dates": "공연장 & 날짜",
         "performance_date": "공연 날짜",
@@ -91,7 +99,11 @@ LANG = {
     },
     "hi": {
         "title": "कांताता टूर 2025",
-        "tour_cities": "टूर शहर",
+        "add_city": "शहर जोड़ें",
+        "select_city": "शहर चुनें",
+        "add_city_btn": "शहर जोड़ें",
+        "tour_route": "टूर मार्ग",
+        "remove": "हटाएं",
         "reset_btn": "सब रीसेट करें",
         "venues_dates": "स्थल और तिथियाँ",
         "performance_date": "प्रदर्शन तिथि",
@@ -288,7 +300,7 @@ with st.sidebar:
 # 5. 세션 초기화 (venues/admin_venues에 columns 있는 빈 DF로)
 # =============================================
 if 'route' not in st.session_state:
-    st.session_state.route = ['Mumbai']
+    st.session_state.route = []
 if 'dates' not in st.session_state:
     st.session_state.dates = {}
 if 'venues' not in st.session_state:
@@ -351,12 +363,27 @@ main_title = title_parts[0]
 year = title_parts[1] if len(title_parts) > 1 else ""
 st.markdown(f'<h1 class="christmas-title"><span class="main">{main_title}</span> <span class="year">{year}</span></h1>', unsafe_allow_html=True)
 # =============================================
-# 8. 공연장 & 날짜 블럭 (제목 바로 아래로 이동, 왼쪽 컬럼에 고정)
+# 8. 도시 추가 및 투어 경로 (왼쪽 컬럼)
 # =============================================
-left_col, right_col = st.columns([1, 3])  # venues 블럭을 왼쪽에 항상 붙임
+left_col, right_col = st.columns([1, 3])
 with left_col:
-    selected = st.multiselect(_["tour_cities"], cities, key="tour_cities_key", default=st.session_state.get('route', ['Mumbai']))
-    st.session_state.route = selected
+    st.subheader(_["add_city"])
+    available = [c for c in cities if c not in st.session_state.route]
+    if available:
+        next_city = st.selectbox(_["select_city"], available, key="next_city_select")
+        if st.button(_["add_city_btn"], key="add_city_btn"):
+            st.session_state.route.append(next_city)
+            st.rerun()
+    st.markdown("---")
+    st.subheader(_["tour_route"])
+    for i, city in enumerate(st.session_state.route):
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.write(f"**{city}**")
+        with col2:
+            if st.button(_["remove"], key=f"remove_{i}"):
+                del st.session_state.route[i]
+                st.rerun()
     if st.session_state.route:
         st.markdown("---")
         st.subheader(_["venues_dates"])
