@@ -120,7 +120,7 @@ LANG = {
 }
 
 # =============================================
-# 2. 크리스마스 테마 CSS + 장식
+# 2. 크리스마스 테마 CSS + 장식 (전체 UI에 고르게 배치)
 # =============================================
 st.markdown("""
 <style>
@@ -164,7 +164,7 @@ st.markdown("""
     .stExpander>summary { color: #90EE90; font-weight: bold; }
     .stMarkdown { color: #90EE90; }
 
-    /* 크리스마스 장식 */
+    /* 크리스마스 장식 - 전체 UI에 고르게 배치 */
     .christmas-decoration {
         position: absolute;
         font-size: 2.5em;
@@ -172,14 +172,16 @@ st.markdown("""
         animation: float 6s infinite ease-in-out;
         z-index: 10;
     }
-    .gift { color: #FFD700; top: 10%; left: 5%; animation-delay: 0s; }
-    .candy-cane { color: #FF0000; top: 12%; right: 6%; animation-delay: 1s; transform: rotate(15deg); }
-    .stocking { color: #8B0000; bottom: 18%; left: 4%; animation-delay: 2s; }
-    .bell { color: #FFD700; bottom: 12%; right: 5%; animation-delay: 3s; }
-    .wreath { color: #228B22; top: 45%; left: 2%; animation-delay: 4s; transform: translateY(-50%); }
-    .santa-hat { color: #FF0000; top: 8%; right: 3%; animation-delay: 5s; }
-    .tree { color: #228B22; bottom: 5%; left: 50%; animation-delay: 0.5s; transform: translateX(-50%); }
-    .snowman { color: white; top: 15%; left: 50%; animation-delay: 2.5s; transform: translateX(-50%); }
+    .gift { color: #FFD700; top: 8%; left: 5%; animation-delay: 0s; }
+    .candy-cane { color: #FF0000; top: 8%; right: 5%; animation-delay: 1s; transform: rotate(15deg); }
+    .stocking { color: #8B0000; top: 25%; left: 3%; animation-delay: 2s; }
+    .bell { color: #FFD700; top: 25%; right: 3%; animation-delay: 3s; }
+    .wreath { color: #228B22; top: 45%; left: 2%; animation-delay: 4s; }
+    .santa-hat { color: #FF0000; top: 45%; right: 2%; animation-delay: 5s; }
+    .tree { color: #228B22; bottom: 20%; left: 10%; animation-delay: 0.5s; }
+    .snowman { color: white; bottom: 20%; right: 10%; animation-delay: 2.5s; }
+    .candle { color: #FFA500; top: 65%; left: 8%; animation-delay: 1.5s; }
+    .star { color: #FFD700; top: 65%; right: 8%; animation-delay: 3.5s; }
 
     @keyframes float {
         0%, 100% { transform: translateY(0px) rotate(0deg); }
@@ -201,7 +203,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 크리스마스 장식 추가
+# 크리스마스 장식 추가 (전체 UI에 고르게 배치)
 st.markdown("""
 <div class="christmas-decoration gift">🎁</div>
 <div class="christmas-decoration candy-cane">🍭</div>
@@ -211,6 +213,8 @@ st.markdown("""
 <div class="christmas-decoration santa-hat">🎅</div>
 <div class="christmas-decoration tree">🎄</div>
 <div class="christmas-decoration snowman">⛄</div>
+<div class="christmas-decoration candle">🕯️</div>
+<div class="christmas-decoration star">⭐</div>
 """, unsafe_allow_html=True)
 
 # 눈송이 생성
@@ -418,12 +422,14 @@ if st.session_state.route:
     c2.metric(_["total_time"], f"{total_hrs:.1f} h")
 
     # =============================================
-    # 9. 공연장 & 날짜
+    # 9. 공연장 & 날짜 (항상 보임)
     # =============================================
     st.markdown("---")
     st.subheader(_["venues_dates"])
+
     for city in st.session_state.route:
-        with st.expander(f"**{city}**", expanded=False):
+        with st.expander(f"**{city}**", expanded=True):
+            # 공연 날짜
             cur = st.session_state.dates.get(city, datetime.now().date())
             new = st.date_input(_["performance_date"], cur, key=f"date_{city}")
             if new != cur:
@@ -431,6 +437,7 @@ if st.session_state.route:
                 st.success("날짜 변경됨")
                 st.rerun()
 
+            # 공연장 등록 폼
             if st.session_state.admin or st.session_state.guest_mode:
                 st.markdown("---")
                 col_left = st.container()
@@ -468,6 +475,7 @@ if st.session_state.route:
                     else:
                         st.error("공연장 이름을 입력하세요.")
 
+            # 공연장 목록
             df = st.session_state.admin_venues.get(city, pd.DataFrame()) if st.session_state.admin else st.session_state.venues.get(city, pd.DataFrame(columns=['Venue', 'Seats', 'IndoorOutdoor', 'Google Maps Link']))
             if not df.empty:
                 for idx, row in df.iterrows():
@@ -507,7 +515,7 @@ if st.session_state.route:
                                 st.rerun()
 
 # =============================================
-# 10. 지도
+# 10. 지도 (점선 + 목적지 앞 화살표)
 # =============================================
 st.markdown("---")
 st.subheader(_["tour_map"])
