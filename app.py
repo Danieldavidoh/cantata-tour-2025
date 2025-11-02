@@ -124,14 +124,14 @@ LANG = {
 # =============================================
 st.markdown("""
 <style>
-    .reportview-container { 
-        background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e); 
+    .reportview-container {
+        background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
         overflow: hidden;
         position: relative;
     }
     .sidebar .sidebar-content { background: #228B22; color: white; }
     .Widget>label { color: #90EE90; font-weight: bold; }
-    
+   
     .christmas-title {
         font-size: 3.5em !important;
         font-weight: bold;
@@ -154,7 +154,7 @@ st.markdown("""
         animation: snow-fall 3s infinite ease-in-out;
     }
     @keyframes snow-fall { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(10px); } }
-    
+   
     h1, h2, h3 { color: #90EE90; text-shadow: 1px 1px 3px #8B0000; text-align: center; }
     .stButton>button { background: #228B22; color: white; border: 2px solid #8B0000; border-radius: 12px; font-weight: bold; padding: 10px; }
     .stButton>button:hover { background: #8B0000; color: white; }
@@ -163,7 +163,6 @@ st.markdown("""
     .stExpander { background: rgba(139,0,0,0.4); border: 1px solid #90EE90; border-radius: 12px; }
     .stExpander>summary { color: #90EE90; font-weight: bold; }
     .stMarkdown { color: #90EE90; }
-
     /* 크리스마스 장식 - 전체 UI에 고르게 배치 */
     .christmas-decoration {
         position: absolute;
@@ -182,12 +181,10 @@ st.markdown("""
     .snowman { color: white; bottom: 20%; right: 10%; animation-delay: 2.5s; }
     .candle { color: #FFA500; top: 65%; left: 8%; animation-delay: 1.5s; }
     .star { color: #FFD700; top: 65%; right: 8%; animation-delay: 3.5s; }
-
     @keyframes float {
         0%, 100% { transform: translateY(0px) rotate(0deg); }
         50% { transform: translateY(-20px) rotate(5deg); }
     }
-
     .snowflake {
         position: absolute;
         color: rgba(255, 255, 255, 0.9);
@@ -235,6 +232,20 @@ st.set_page_config(page_title="Cantata Tour 2025", layout="wide", initial_sideba
 
 with st.sidebar:
     st.markdown("### Language")
+    
+    # 언어 선택 라디오 버튼 (간격 넓힘)
+    st.markdown("""
+    <style>
+        div[data-testid="stRadio"] > label {
+            margin-bottom: 20px !important;
+            padding: 10px 0;
+        }
+        div[data-testid="stRadio"] > label > div {
+            font-size: 1.1em;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
     lang = st.radio(
         label="Select",
         options=["en", "ko", "hi"],
@@ -422,16 +433,24 @@ if st.session_state.route:
     c2.metric(_["total_time"], f"{total_hrs:.1f} h")
 
     # =============================================
-    # 9. 공연장 & 날짜 (항상 보임)
+    # 9. 공연장 & 날짜 (항상 보임 + 날짜는 달력 클릭만 가능)
     # =============================================
     st.markdown("---")
     st.subheader(_["venues_dates"])
 
     for city in st.session_state.route:
         with st.expander(f"**{city}**", expanded=True):
-            # 공연 날짜
+            # 공연 날짜 (달력 클릭만 가능, 직접 입력 불가)
             cur = st.session_state.dates.get(city, datetime.now().date())
-            new = st.date_input(_["performance_date"], cur, key=f"date_{city}")
+            new = st.date_input(
+                _["performance_date"],
+                cur,
+                key=f"date_{city}",
+                format="YYYY-MM-DD",
+                min_value=datetime(2024, 1, 1).date(),
+                max_value=datetime(2030, 12, 31).date(),
+                help="달력에서 날짜를 클릭하세요. 직접 입력은 불가합니다."
+            )
             if new != cur:
                 st.session_state.dates[city] = new
                 st.success("날짜 변경됨")
