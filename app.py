@@ -1,41 +1,36 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 import folium
 from streamlit_folium import st_folium
-import math
 import random
 
 # ----------------------------------------------------------------------
-# 1. 다국어 사전 (완전)
+# 1. 다국어 사전
 # ----------------------------------------------------------------------
 LANG = {
     "en": {
         "title": "Cantata Tour 2025", "add_city": "Add City", "select_city": "Select City",
-        "add_city_btn": "Add City", "tour_route": "Tour Route", "remove": "Remove",
-        "reset_btn": "Reset All", "performance_date": "Performance Date",
-        "venue_name": "Venue Name", "seats": "Seats", "google_link": "Google Maps Link",
-        "special_notes": "Special Notes", "register": "Register", "navigate": "Navigate",
-        "admin_mode": "Admin Mode", "guest_mode": "Guest Mode", "enter_password": "Enter password",
-        "submit": "Submit", "venue_registered": "Registered", "enter_venue_name": "Enter venue name"
+        "add_city_btn": "Add City", "tour_route": "Tour Route", "venue_name": "Venue Name",
+        "seats": "Seats", "google_link": "Google Maps Link", "special_notes": "Special Notes",
+        "register": "Register", "navigate": "Navigate", "admin_mode": "Admin Mode",
+        "guest_mode": "Guest Mode", "enter_password": "Enter password", "submit": "Submit",
+        "reset_btn": "Reset All", "venue_registered": "Registered", "enter_venue_name": "Enter venue name"
     },
     "ko": {
         "title": "칸타타 투어 2025", "add_city": "도시 추가", "select_city": "도시 선택",
-        "add_city_btn": "도시 추가", "tour_route": "투어 경로", "remove": "삭제",
-        "reset_btn": "전체 초기화", "performance_date": "공연 날짜",
-        "venue_name": "공연장 이름", "seats": "좌석 수", "google_link": "구글 지도 링크",
-        "special_notes": "특이사항", "register": "등록", "navigate": "길찾기",
-        "admin_mode": "관리자 모드", "guest_mode": "손님 모드", "enter_password": "비밀번호 입력",
-        "submit": "제출", "venue_registered": "등록 완료", "enter_venue_name": "공연장 이름 입력"
+        "add_city_btn": "도시 추가", "tour_route": "투어 경로", "venue_name": "공연장 이름",
+        "seats": "좌석 수", "google_link": "구글 지도 링크", "special_notes": "특이사항",
+        "register": "등록", "navigate": "길찾기", "admin_mode": "관리자 모드",
+        "guest_mode": "손님 모드", "enter_password": "비밀번호 입력", "submit": "제출",
+        "reset_btn": "전체 초기화", "venue_registered": "등록 완료", "enter_venue_name": "공연장 이름 입력"
     },
     "hi": {
         "title": "कांताता टूर 2025", "add_city": "शहर जोड़ें", "select_city": "शहर चुनें",
-        "add_city_btn": "शहर जोड़ें", "tour_route": "टूर मार्ग", "remove": "हटाएं",
-        "reset_btn": "सब रीसेट करें", "performance_date": "प्रदर्शन तिथि",
-        "venue_name": "स्थल का नाम", "seats": "सीटें", "google_link": "गूगल मैप्स लिंक",
-        "special_notes": "विशेष टिप्पणियाँ", "register": "रजिस्टर", "navigate": "नेविगेट करें",
-        "admin_mode": "एडमिन मोड", "guest_mode": "गेस्ट मोड", "enter_password": "पासवर्ड दर्ज करें",
-        "submit": "जमा करें", "venue_registered": "पंजीकरण सफल", "enter_venue_name": "स्थल का नाम दर्ज करें"
+        "add_city_btn": "शहर जोड़ें", "tour_route": "टूर मार्ग", "venue_name": "स्थल का नाम",
+        "seats": "सीटें", "google_link": "गूगल मैप्स लिंक", "special_notes": "विशेष टिप्पणियाँ",
+        "register": "रजिस्टर", "navigate": "नेविगेट करें", "admin_mode": "एडमिन मोड",
+        "guest_mode": "गेस्ट मोड", "enter_password": "पासवर्ड दर्ज करें", "submit": "जमा करें",
+        "reset_btn": "सब रीसेट करें", "venue_registered": "पंजीकरण सफल", "enter_venue_name": "स्थल का नाम दर्ज करें"
     },
 }
 
@@ -121,13 +116,13 @@ with st.sidebar:
                 if pw == "0691": st.session_state.update(admin=True, show_pw=False, guest_mode=False); st.success("Activated!"); st.rerun()
                 else: st.error("Incorrect")
     if st.session_state.admin and st.button(_["reset_btn"]):
-        for k in ["route","dates","venues"]: st.session_state.pop(k, None); st.rerun()
+        for k in ["route","venues"]: st.session_state.pop(k, None); st.rerun()
 
 # ----------------------------------------------------------------------
 # 5. 세션 + 도시/좌표
 # ----------------------------------------------------------------------
 cols = ["Venue","Seats","Google Maps Link","Special Notes"]
-for k in ["route","dates","venues"]: st.session_state.setdefault(k, [] if k=="route" else {})
+for k in ["route","venues"]: st.session_state.setdefault(k, [] if k=="route" else {})
 
 cities = sorted([
     "Mumbai","Pune","Nagpur","Nashik","Thane","Aurangabad","Solapur","Amravati","Nanded","Kolhapur",
@@ -210,7 +205,7 @@ with left:
     st.markdown("---")
     st.subheader(_["tour_route"])
 
-    # 투어 경로 섹션
+    # 투어 경로 섹션 (공연날짜 제거)
     for city in st.session_state.route:
         t = st.session_state.venues
         has = city in t and not t.get(city, pd.DataFrame()).empty
@@ -218,28 +213,15 @@ with left:
         if has:
             link = t[city].iloc[0]["Google Maps Link"]
             if link and link.startswith("http"):
-                car_icon = f'<span style="float:right">[🚗]({nav(link)})</span>'
+                car_icon = f'<span style="float:right">[차량]({nav(link)})</span>'
         with st.expander(f"**{city}**{car_icon}", expanded=False):
-            # 1. 공연 날짜
-            cur = st.session_state.dates.get(city, datetime.now().date())
-            new = st.date_input(_["performance_date"], cur, key=f"date_{city}", format="YYYY-MM-DD")
-            if new != cur:
-                st.session_state.dates[city] = new
-                st.success("날짜 변경됨")
-                st.rerun()
-
-            # 등록 폼 (관리자/손님만)
+            # 등록 폼
             if (st.session_state.admin or st.session_state.get("guest_mode")) and not has:
                 st.markdown("---")
-                # 2. 공연장소
                 venue_name = st.text_input(_["venue_name"], key=f"v_{city}")
-                # 3. 좌석수
                 seats = st.number_input(_["seats"], 1, step=50, key=f"s_{city}")
-                # 4. 구글맵
                 google_link = st.text_input(_["google_link"], placeholder="https://...", key=f"l_{city}")
-                # 5. 특이사항
                 special_notes = st.text_area(_["special_notes"], key=f"sn_{city}")
-                # 등록 버튼 (오른쪽)
                 _, btn = st.columns([4,1])
                 with btn:
                     if st.button(_["register"], key=f"reg_{city}"):
@@ -267,7 +249,7 @@ with left:
                         st.caption(f"{row['Seats']} {_['seats']} | {row.get('Special Notes','')}")
                     with c3:
                         if row["Google Maps Link"].startswith("http"):
-                            st.markdown(f'<div style="text-align:right">[🚗]({nav(row["Google Maps Link"])})</div>', unsafe_allow_html=True)
+                            st.markdown(f'<div style="text-align:right">[차량]({nav(row["Google Maps Link"])})</div>', unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------
 # 9. 오른쪽 컬럼 – 지도
@@ -279,11 +261,6 @@ with right:
     if len(st.session_state.route) > 1:
         points = [coords[c] for c in st.session_state.route]
         folium.PolyLine(points, color="red", weight=4, dash_array="10,10").add_to(m)
-        for i in range(len(points) - 1):
-            start, end = points[i], points[i + 1]
-            arrow_lat = end[0] - (end[0] - start[0]) * 0.05
-            arrow_lon = end[1] - (end[1] - start[1]) * 0.05
-            folium.RegularPolygonMarker(location=[arrow_lat, arrow_lon], fill_color="red", number_of_sides=3, rotation=math.degrees(math.atan2(end[1] - start[1], end[0] - start[0])) - 90, radius=10).add_to(m)
     for city in st.session_state.route:
         df = st.session_state.venues.get(city, pd.DataFrame(columns=cols))
         link = next((r["Google Maps Link"] for _, r in df.iterrows() if r["Google Maps Link"].startswith("http")), None)
