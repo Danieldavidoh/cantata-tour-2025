@@ -274,7 +274,9 @@ with left:
                         col1, col2, col3, col4 = st.columns([3,1,1,1])
                         with col1: st.write(f"**{row['Venue']}**"); st.caption(f"{row['Seats']} {_['seats']} | {row.get('Special Notes','')}")
                         with col2: color = "🟢" if row["IndoorOutdoor"] == _["indoor"] else "🔵"; st.write(f"{color} {row['IndoorOutdoor']}")
-                        with col3: if row["Google Maps Link"].startswith("http"): st.markdown(f"[🗺️ {_['navigate']}]({nav(row['Google Maps Link'])})", unsafe_allow_html=True)
+                        with col3:
+                            if row["Google Maps Link"].startswith("http"):
+                                st.markdown(f"[🗺️ {_[ 'navigate' ]}]({nav(row['Google Maps Link'])})", unsafe_allow_html=True)
                         with col4:
                             if st.session_state.admin or st.session_state.guest_mode:
                                 edit_key = f"edit_{city}_{idx}_v2"
