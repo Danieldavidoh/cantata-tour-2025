@@ -23,12 +23,10 @@ LANG = {
         "performance_date": "Performance Date",
         "venue_name": "Venue Name",
         "seats": "Seats",
-        "indoor_outdoor": "Indoor/Outdoor",
-        "indoor": "Indoor",
-        "outdoor": "Outdoor",
         "google_link": "Google Maps Link",
         "special_notes": "Special Notes",
         "register": "Register",
+        "venues": "Venues",
         "add_venue": "Add Venue",
         "edit": "Edit",
         "open_maps": "Open in Google Maps",
@@ -54,7 +52,6 @@ LANG = {
         "enter_venue_name": "Please enter a venue name",
         "edit_venue_label": "Venue Name",
         "edit_seats_label": "Seats",
-        "edit_type_label": "Type",
         "edit_google_label": "Google Maps Link",
         "edit_notes_label": "Special Notes",
     },
@@ -70,12 +67,10 @@ LANG = {
         "performance_date": "공연 날짜",
         "venue_name": "공연장 이름",
         "seats": "좌석 수",
-        "indoor_outdoor": "실내/실외",
-        "indoor": "실내",
-        "outdoor": "실외",
         "google_link": "구글 지도 링크",
         "special_notes": "특이사항",
         "register": "등록",
+        "venues": "공연장",
         "add_venue": "공연장 추가",
         "edit": "편집",
         "open_maps": "구글 지도 열기",
@@ -101,7 +96,6 @@ LANG = {
         "enter_venue_name": "공연장 이름을 입력하세요.",
         "edit_venue_label": "공연장 이름",
         "edit_seats_label": "좌석 수",
-        "edit_type_label": "유형",
         "edit_google_label": "구글 지도 링크",
         "edit_notes_label": "특이사항",
     },
@@ -117,12 +111,10 @@ LANG = {
         "performance_date": "प्रदर्शन तिथि",
         "venue_name": "स्थल का नाम",
         "seats": "सीटें",
-        "indoor_outdoor": "इंडोर/आउटडोर",
-        "indoor": "इंडोर",
-        "outdoor": "आउटडोर",
         "google_link": "गूगल मैप्स लिंक",
         "special_notes": "विशेष टिप्पणियाँ",
         "register": "रजिस्टर",
+        "venues": "स्थल",
         "add_venue": "स्थल जोड़ें",
         "edit": "संपादित करें",
         "open_maps": "गूगल मैप्स में खोलें",
@@ -148,7 +140,6 @@ LANG = {
         "enter_venue_name": "कृपया स्थल का नाम दर्ज करें",
         "edit_venue_label": "स्थल का नाम",
         "edit_seats_label": "सीटें",
-        "edit_type_label": "प्रकार",
         "edit_google_label": "गूगल मैप्स लिंक",
         "edit_notes_label": "विशेष टिप्पणियाँ",
     },
@@ -315,9 +306,9 @@ if 'route' not in st.session_state:
 if 'dates' not in st.session_state:
     st.session_state.dates = {}
 if 'venues' not in st.session_state:
-    st.session_state.venues = {city: pd.DataFrame(columns=['Venue', 'Seats', 'IndoorOutdoor', 'Google Maps Link', 'Special Notes']) for city in []} # 빈 리스트로 시작
+    st.session_state.venues = {city: pd.DataFrame(columns=['Venue', 'Seats', 'Google Maps Link', 'Special Notes']) for city in []} # 빈 리스트로 시작
 if 'admin_venues' not in st.session_state:
-    st.session_state.admin_venues = {city: pd.DataFrame(columns=['Venue', 'Seats', 'IndoorOutdoor', 'Google Maps Link', 'Special Notes']) for city in []}
+    st.session_state.admin_venues = {city: pd.DataFrame(columns=['Venue', 'Seats', 'Google Maps Link', 'Special Notes']) for city in []}
 if 'active_expander' not in st.session_state:
     st.session_state.active_expander = None
 # =============================================
@@ -391,62 +382,47 @@ with left_col:
     if st.session_state.route:
         st.subheader(_["venues_dates"])
         for city in st.session_state.route:
-            # 등록된 venue가 있는지 확인 (등록 후에는 요약 표시)
+            # 공연 날짜 항상 표시
+            city_col, date_col = st.columns([3, 2])
+            with city_col:
+                st.write(f"**{city}**")
+            with date_col:
+                cur = st.session_state.dates.get(city, datetime.now().date())
+                new = st.date_input(_["performance_date"], cur, key=f"date_{city}")
+                if new != cur:
+                    st.session_state.dates[city] = new
+                    st.success(_["date_changed"])
+                    st.rerun()
+            
+            # 등록된 venue가 있는지 확인
             target = st.session_state.admin_venues if st.session_state.admin else st.session_state.venues
             has_venues = city in target and not target[city].empty
-            date_obj = st.session_state.dates.get(city)
-            date_str = date_obj.strftime(_['date_format']) if date_obj else 'TBD'
+            
             if not has_venues:
-                expander_label = f"**{city}** - {date_str}"
-                with st.expander(expander_label, expanded=False):
-                    # 공연 날짜
-                    cur = st.session_state.dates.get(city, datetime.now().date())
-                    new = st.date_input(_["performance_date"], cur, key=f"date_{city}")
-                    if new != cur:
-                        st.session_state.dates[city] = new
-                        st.success(_["date_changed"])
-                        st.rerun()
-                  
+                # venue 없음: Add Venue expander
+                with st.expander(_["add_venue"], expanded=False):
                     # 공연장 등록 폼
                     if st.session_state.admin or st.session_state.guest_mode:
-                        st.markdown("---")
-                        col1, col2 = st.columns([3, 1])
-                        with col1:
-                            venue_name = st.text_input(_["venue_name"], key=f"v_{city}")
-                        with col2:
-                            seats = st.number_input(_["seats"], 1, step=50, key=f"s_{city}")
-                        col3, col4 = st.columns([3, 1])
-                        with col3:
-                            google_link = st.text_input(_["google_link"], placeholder="https://...", key=f"l_{city}")
-                        with col4:
-                            special_notes = st.text_area(_["special_notes"], key=f"sn_{city}")
-                        io_col1, io_col2 = st.columns([3, 1])
-                        with io_col1:
-                            st.empty()  # Empty for alignment
-                        with io_col2:
-                            io_key = f"io_{city}"
-                            if io_key not in st.session_state:
-                                st.session_state[io_key] = _["outdoor"]
-                            if st.button(f"**{st.session_state[io_key]}**", key=f"io_toggle_{city}"):
-                                st.session_state[io_key] = _["indoor"] if st.session_state[io_key] == _["outdoor"] else _["outdoor"]
-                                st.rerun()
-                      
-                        st.markdown("---")
-                        left_col, right_col = st.columns([3, 1])
-                        with left_col:
+                        venue_name = st.text_input(_["venue_name"], key=f"v_{city}")
+                        seats = st.number_input(_["seats"], 1, step=50, key=f"s_{city}")
+                        google_link = st.text_input(_["google_link"], placeholder="https://...", key=f"l_{city}")
+                        special_notes = st.text_area(_["special_notes"], key=f"sn_{city}")
+                        
+                        # 등록 버튼 (오른쪽 아래)
+                        col_left, col_right = st.columns([3, 1])
+                        with col_left:
                             st.empty()
-                        with right_col:
+                        with col_right:
                             if st.button(f"**{_['register']}**", key=f"register_{city}"):
                                 if venue_name:
                                     new_row = pd.DataFrame([{
                                         'Venue': venue_name,
                                         'Seats': seats,
-                                        'IndoorOutdoor': st.session_state[io_key],
                                         'Google Maps Link': google_link,
                                         'Special Notes': special_notes
                                     }])
                                     if city not in target:
-                                        target[city] = pd.DataFrame(columns=['Venue', 'Seats', 'IndoorOutdoor', 'Google Maps Link', 'Special Notes'])
+                                        target[city] = pd.DataFrame(columns=['Venue', 'Seats', 'Google Maps Link', 'Special Notes'])
                                     target[city] = pd.concat([target[city], new_row], ignore_index=True)
                                     st.success(_["venue_registered"])
                                     # 등록 후 입력 필드 클리어 및 expander 재렌더링 (닫힘 상태 유지)
@@ -457,31 +433,23 @@ with left_col:
                                 else:
                                     st.error(_["enter_venue_name"])
             else:
-                # venue 있음: 닫힌 상태에서 도시명 + 날짜 표시 + 아이콘, 펼치면 venue 목록
-                first_link = target[city].iloc[0]['Google Maps Link'] if not target[city].empty and target[city].iloc[0]['Google Maps Link'].startswith('http') else ''
+                # venue 있음: Venues expander with icon in label
+                first_row = target[city].iloc[0]
+                first_link = first_row['Google Maps Link'] if first_row['Google Maps Link'].startswith('http') else ''
                 icon_part = ''
                 if first_link:
                     nav_url = f"https://www.google.com/maps/dir/?api=1&destination={first_link}&travelmode=driving"
                     icon_part = f' [🗺️]({nav_url})'
-                expander_label = f"**{city}** - {date_str} ({len(target[city])} venues){icon_part}"
+                expander_label = f"{_['venues']} ({len(target[city])}){icon_part}"
                 with st.expander(expander_label, expanded=False):
-                    # 공연 날짜
-                    cur = st.session_state.dates.get(city, datetime.now().date())
-                    new = st.date_input(_["performance_date"], cur, key=f"date_{city}")
-                    if new != cur:
-                        st.session_state.dates[city] = new
-                        st.success(_["date_changed"])
-                        st.rerun()
-                  
                     # venue 목록 표시
                     for idx, row in target[city].iterrows():
-                        col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
+                        col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
                         with col1:
                             st.write(f"**{row['Venue']}**")
-                            st.caption(f"{row['Seats']} {_['seats']} | Notes: {row['Special Notes']}")
+                            st.caption(f"{row['Seats']} {_['seats']} | {row['Special Notes']}")
                         with col2:
-                            color = "🟢" if row['IndoorOutdoor'] == _["indoor"] else "🔵"
-                            st.write(f"{color} {row['IndoorOutdoor']}")
+                            st.empty()
                         with col3:
                             if row['Google Maps Link'].startswith("http"):
                                 nav_url = f"https://www.google.com/maps/dir/?api=1&destination={row['Google Maps Link']}&travelmode=driving"
@@ -501,11 +469,10 @@ with left_col:
                             with st.form(key=f"edit_form_{city}_{idx}"):
                                 ev = st.text_input(_["edit_venue_label"], row['Venue'], key=f"ev_{city}_{idx}")
                                 es = st.number_input(_["edit_seats_label"], 1, value=row['Seats'], key=f"es_{city}_{idx}")
-                                eio = st.selectbox(_["edit_type_label"], [_["indoor"], _["outdoor"]], index=0 if row['IndoorOutdoor'] == _["indoor"] else 1, key=f"eio_{city}_{idx}")
                                 el = st.text_input(_["edit_google_label"], row['Google Maps Link'], key=f"el_{city}_{idx}")
                                 esn = st.text_area(_["edit_notes_label"], row['Special Notes'], key=f"esn_{city}_{idx}")
                                 if st.form_submit_button(_["save"]):
-                                    target[city].loc[idx] = [ev, es, eio, el, esn]
+                                    target[city].loc[idx] = [ev, es, el, esn]
                                     del st.session_state[f"edit_{city}_{idx}"]
                                     st.success(_["venue_updated"])
                                     st.rerun()
@@ -535,16 +502,4 @@ with right_col: # 오른쪽에 나머지 UI 배치
                 rotation=math.degrees(math.atan2(end[1] - start[1], end[0] - start[0])) - 90,
                 radius=10
             ).add_to(m)
-    for city in st.session_state.route:
-        target = st.session_state.admin_venues if st.session_state.admin else st.session_state.venues
-        df = target.get(city, pd.DataFrame(columns=['Venue', 'Seats', 'IndoorOutdoor', 'Google Maps Link', 'Special Notes']))
-        link = next((r['Google Maps Link'] for _, r in df.iterrows() if r['Google Maps Link'].startswith('http')), None)
-        date_obj = st.session_state.dates.get(city)
-        date_str = date_obj.strftime(_['date_format']) if date_obj else 'TBD' # strftime 에러 수정
-        popup = f"<b style='color:#8B0000'>{city}</b><br>{date_str}"
-        if link:
-            nav_url = f"https://www.google.com/maps/dir/?api=1&destination={link}&travelmode=driving"
-            popup = f'<a href="{nav_url}" target="_blank" style="color:#90EE90">{popup}<br><i>{_["navigate"]}</i></a>'
-        folium.CircleMarker(coords[city], radius=15, color="#90EE90", fill_color="#8B0000", popup=folium.Popup(popup, max_width=300)).add_to(m)
-    st_folium(m, width=700, height=500)
-    st.caption(_["caption"])
+    for city in st.session_state.route
