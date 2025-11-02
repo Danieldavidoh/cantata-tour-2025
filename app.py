@@ -388,7 +388,7 @@ with left_col:
             expander_key = f"expander_{city}"
             if not has_venues:
                 # venue 없음: 폼 표시, expanded=False (기본 닫힘)
-                with st.expander(f"**{city}** - {_['add_venue']}", expanded=False, key=expander_key):
+                with st.expander(f"**{city}** - {_['add_venue']}", expanded=False):
                     # 도시 클릭 선택: 도시명을 링크처럼 만들어 클릭 시 Google Maps 열기 또는 선택 (여기서는 drive_to 버튼으로 구현)
                     if st.button(f"{_['drive_to']} {_['start_city']}: {city}", key=f"select_drive_{city}"):
                         st.session_state.active_expander = city  # 선택 상태 저장 (추가 로직 필요 시 사용)
@@ -446,7 +446,7 @@ with left_col:
                 date_obj = st.session_state.dates.get(city)
                 date_str = date_obj.strftime(_['date_format']) if date_obj else 'TBD'
                 expander_label = f"**{city}** - {date_str} ({len(target[city])} venues)"
-                with st.expander(expander_label, expanded=False, key=expander_key):
+                with st.expander(expander_label, expanded=False):
                     # 펼쳐진 상태: 도시 클릭 선택
                     st.markdown(f'<span class="city-link" onclick="this.innerHTML=\'Selected: {city}\';">{_["drive_to"]} {city}</span>', unsafe_allow_html=True)
                     
