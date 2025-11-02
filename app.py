@@ -109,7 +109,7 @@ LANG = {
         "caption": "मोबाइल: होम स्क्रीन पर जोड़ें -> ऐप की तरह उपयोग करें!",
         "date_format": "%d %b %Y",
         "admin_mode": "एडमिन मोड",
-        "guest_mode": "गेस्ट मोड",
+        "guest_mode": "गेस्ट मो드",
         "enter_password": "एडमिन मोड एक्सेस करने के लिए पासवर्ड दर्ज करें",
         "submit": "जमा करें",
         "drive_to": "यहाँ ड्राइव करें",
@@ -131,7 +131,7 @@ st.markdown("""
     .sidebar .sidebar-content { background: #228B22; color: white; }
     .Widget>label { color: #90EE90; font-weight: bold; }
     
-    /* 크리스마스 제목: Cantata Tour 빨강, 2025 하얀색, 크게, 눈 쌓인 효과 */
+    /* 크리스마스 제목: 칸타타 투어 빨강, 2025 하얀색, 크게, 눈 쌓인 효과 */
     .christmas-title {
         font-size: 3.5em !important;
         font-weight: bold;
@@ -148,6 +148,9 @@ st.markdown("""
         letter-spacing: 2px;
         position: relative;
         margin: 20px 0;
+    }
+    .christmas-title .main {
+        color: #FF0000 !important;
     }
     .christmas-title .year {
         color: white !important;
@@ -331,14 +334,14 @@ coords = {
 }
 
 # =============================================
-# 6. 크리스마스 제목 (Cantata Tour 빨강, 2025 하얀색)
+# 6. 크리스마스 제목 (칸타타 투어 빨강, 2025 하얀색)
 # =============================================
-title_parts = _['title'].rsplit(' ', 1)  # 마지막 공백 기준으로 분리
-main_title = title_parts[0]  # "Cantata Tour" 또는 "칸타타 투어"
+title_parts = _['title'].rsplit(' ', 1)
+main_title = title_parts[0]  # "칸타타 투어"
 year = title_parts[1] if len(title_parts) > 1 else ""  # "2025"
 
 st.markdown(
-    f'<h1 class="christmas-title">{main_title} <span class="year">{year}</span></h1>',
+    f'<h1 class="christmas-title"><span class="main">{main_title}</span> <span class="year">{year}</span></h1>',
     unsafe_allow_html=True
 )
 
@@ -417,7 +420,6 @@ if st.session_state.route:
     st.subheader(_["venues_dates"])
 
     for city in st.session_state.route:
-        # 터치하면 펼쳐짐 (기본 닫힘)
         with st.expander(f"**{city}**", expanded=False):
             # 공연 날짜
             cur = st.session_state.dates.get(city, datetime.now().date())
@@ -492,14 +494,39 @@ if st.session_state.route:
                         st.rerun()
 
 # =============================================
-# 10. 지도 (루트 빨간색)
+# 10. 지도 (빨간색 점선 + 도착 도시 전에 화살표)
 # =============================================
 st.markdown("---")
 st.subheader(_["tour_map"])
 center = coords.get(st.session_state.route[0] if st.session_state.route else 'Mumbai', (19.75, 75.71))
 m = folium.Map(location=center, zoom_start=7, tiles="CartoDB positron")
+
 if len(st.session_state.route) > 1:
-    folium.PolyLine([coords[c] for c in st.session_state.route], color="red", weight=4).add_to(m)
+    # 빨간색 점선 + 화살표
+    points = [coords[c] for c in st.session_state.route]
+    folium.PolyLine(
+        points,
+        color="red",
+        weight=4,
+        dash_array="10, 10",  # 점선
+        tooltip="Route"
+    ).add_to(m)
+    
+    # 도착 도시 전에 화살표 추가
+    for i in range(len(points) - 1):
+        start = points[i]
+        end = points[i + 1]
+        # 중간 지점에 화살표
+        mid_lat = (start[0] + end[0]) / 2
+        mid_lon = (start[1] + end[1]) / 2
+        folium.RegularPolygonMarker(
+            location=[mid_lat, mid_lon],
+            fill_color='red',
+            number_of_sides=3,
+            rotation=math.degrees(math.atan2(end[1] - start[1], end[0] - start[0])) - 90,
+            radius=8
+        ).add_to(m)
+
 for city in st.session_state.route:
     df = st.session_state.admin_venues.get(city, pd.DataFrame()) if st.session_state.admin else st.session_state.venues.get(city, pd.DataFrame())
     link = next((r['Google Maps Link'] for _, r in df.iterrows() if r['Google Maps Link'].startswith('http')), None)
@@ -507,5 +534,6 @@ for city in st.session_state.route:
     if link:
         popup = f'<a href="{link}" target="_blank" style="color:#90EE90">{popup}<br><i>{_["open_maps"]}</i></a>'
     folium.CircleMarker(coords[city], radius=15, color="#90EE90", fill_color="#8B0000", popup=folium.Popup(popup, max_width=300)).add_to(m)
+
 folium_static(m, width=700, height=500)
 st.caption(_["caption"])
