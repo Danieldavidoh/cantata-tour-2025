@@ -338,4 +338,18 @@ with right:
             start, end = points[i], points[i + 1]
             arrow_lat = end[0] - (end[0] - start[0]) * 0.05
             arrow_lon = end[1] - (end[1] - start[1]) * 0.05
-            folium.RegularPolygonMarker(location=
+            folium.RegularPolygonMarker(
+                location=[arrow_lat, arrow_lon],
+                fill_color="red",
+                number_of_sides=3,
+                rotation=math.degrees(math.atan2(end[1] - start[1], end[0] - start[0])) - 90,
+                radius=10
+            ).add_to(m)
+    for city in st.session_state.route:
+        df = target().get(city, pd.DataFrame(columns=cols))
+        link = next((r["Google Maps Link"] for _, r in df.iterrows() if r["Google Maps Link"].startswith("http")), None)
+        popup_html = f"<b style='color:#8B0000'>{city}</b><br>{date_str(city)}"
+        if link: popup_html = f'<a href="{nav(link)}" target="_blank" style="color:#90EE90">{popup_html}<br><i>{_["navigate"]}</i></a>'
+        folium.CircleMarker(location=coords[city], radius=15, color="#90EE90", fill_color="#8B0000", popup=folium.Popup(popup_html, max_width=300)).add_to(m)
+    st_folium(m, width=700, height=500)
+    st.caption(_["caption"])
