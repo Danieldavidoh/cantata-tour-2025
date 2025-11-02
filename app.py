@@ -200,7 +200,6 @@ coords = {
     "Nagbhid (Chandrapur)": (20.29, 79.36), "Gadhinglaj (Kolhapur)": (16.23, 74.34), "Kagal (Kolhapur)": (16.57, 74.31), "Ajra (Kolhapur)": (16.67, 74.22),
     "Shiroli (Kolhapur)": (16.70, 74.24),
 }
-
 # ----------------------------------------------------------------------
 # 6. 제목
 # ----------------------------------------------------------------------
@@ -212,14 +211,12 @@ else:
     parts = title_text.rsplit(" ", 1)
     title_html = f'<span class="main">{parts[0]}</span> <span class="year">{parts[1] if len(parts)>1 else ""}</span>'
 st.markdown(f'<h1 class="christmas-title">{title_html}</h1>', unsafe_allow_html=True)
-
 # ----------------------------------------------------------------------
 # 7. 헬퍼
 # ----------------------------------------------------------------------
 def target(): return st.session_state.admin_venues if st.session_state.admin else st.session_state.venues
 def date_str(c): d = st.session_state.dates.get(c); return d.strftime(_["date_format"]) if d else "TBD"
 def nav(url): return f"https://www.google.com/maps/dir/?api=1&destination={url}&travelmode=driving" if url and url.startswith("http") else ""
-
 # ----------------------------------------------------------------------
 # 8. 왼쪽 컬럼
 # ----------------------------------------------------------------------
@@ -299,7 +296,6 @@ with left:
                                     st.session_state.pop(edit_key, None)
                                     st.success(_["venue_updated"])
                                     st.rerun()
-
 # ----------------------------------------------------------------------
 # 9. 오른쪽 컬럼 – 지도
 # ----------------------------------------------------------------------
