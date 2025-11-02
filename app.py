@@ -422,7 +422,7 @@ with left_col:
                                 st.session_state[io_key] = _["indoor"] if st.session_state[io_key] == _["outdoor"] else _["outdoor"]
                                 st.rerun()
                         
-                        if st.button(f"**{_[\"register']}**", key=f"register_{city}"):
+                        if st.button(f"**{_['register']}**", key=f"register_{city}"):
                             if venue_name:
                                 new_row = pd.DataFrame([{
                                     'Venue': venue_name,
