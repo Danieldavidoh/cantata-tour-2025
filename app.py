@@ -17,7 +17,7 @@ LANG = {
         "tour_route": "Tour Route",
         "remove": "Remove",
         "reset_btn": "Reset All",
-        "venues_dates": "Venues & Dates",
+        "venues_dates": "Tour Route",
         "performance_date": "Performance Date",
         "venue_name": "Venue Name",
         "seats": "Seats",
@@ -61,7 +61,7 @@ LANG = {
         "tour_route": "투어 경로",
         "remove": "삭제",
         "reset_btn": "전체 초기화",
-        "venues_dates": "공연장 & 날짜",
+        "venues_dates": "투어 경로",
         "performance_date": "공연 날짜",
         "venue_name": "공연장 이름",
         "seats": "좌석 수",
@@ -105,7 +105,7 @@ LANG = {
         "tour_route": "टूर मार्ग",
         "remove": "हटाएं",
         "reset_btn": "सब रीसेट करें",
-        "venues_dates": "स्थल और तिथियाँ",
+        "venues_dates": "टूर मार्ग",
         "performance_date": "प्रदर्शन तिथि",
         "venue_name": "स्थल का नाम",
         "seats": "सीटें",
@@ -375,17 +375,7 @@ with left_col:
             st.session_state.route.append(next_city)
             st.rerun()
     st.markdown("---")
-    st.subheader(_["tour_route"])
-    for i, city in enumerate(st.session_state.route):
-        col1, col2 = st.columns([4, 1])
-        with col1:
-            st.write(f"**{city}**")
-        with col2:
-            if st.button(_["remove"], key=f"remove_{i}"):
-                del st.session_state.route[i]
-                st.rerun()
     if st.session_state.route:
-        st.markdown("---")
         st.subheader(_["venues_dates"])
         for city in st.session_state.route:
             # 등록된 venue가 있는지 확인 (등록 후에는 요약 표시)
@@ -396,10 +386,10 @@ with left_col:
                 with st.expander(f"**{city}** - {_['add_venue']}", expanded=False):
                     # 도시 클릭 선택: 도시명을 링크처럼 만들어 클릭 시 Google Maps 열기 또는 선택 (여기서는 drive_to 버튼으로 구현)
                     if st.button(f"{_['drive_to']}: {city}", key=f"select_drive_{city}"):
-                        st.session_state.active_expander = city  # 선택 상태 저장 (추가 로직 필요 시 사용)
+                        st.session_state.active_expander = city # 선택 상태 저장 (추가 로직 필요 시 사용)
                         st.success(f"Selected: {city}")
                         st.rerun()
-                    
+                   
                     # 공연 날짜
                     cur = st.session_state.dates.get(city, datetime.now().date())
                     new = st.date_input(_["performance_date"], cur, key=f"date_{city}")
@@ -407,7 +397,7 @@ with left_col:
                         st.session_state.dates[city] = new
                         st.success(_["date_changed"])
                         st.rerun()
-                    
+                   
                     # 공연장 등록 폼
                     if st.session_state.admin or st.session_state.guest_mode:
                         st.markdown("---")
@@ -426,7 +416,7 @@ with left_col:
                             if st.button(f"**{st.session_state[io_key]}**", key=f"io_toggle_{city}"):
                                 st.session_state[io_key] = _["indoor"] if st.session_state[io_key] == _["outdoor"] else _["outdoor"]
                                 st.rerun()
-                        
+                       
                         if st.button(f"**{_['register']}**", key=f"register_{city}"):
                             if venue_name:
                                 new_row = pd.DataFrame([{
@@ -454,7 +444,7 @@ with left_col:
                 with st.expander(expander_label, expanded=False):
                     # 펼쳐진 상태: 도시 클릭 선택
                     st.markdown(f'<span class="city-link" onclick="this.innerHTML=\'Selected: {city}\';">{_["drive_to"]} {city}</span>', unsafe_allow_html=True)
-                    
+                   
                     # venue 목록 표시
                     for idx, row in target[city].iterrows():
                         col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
@@ -475,7 +465,7 @@ with left_col:
                                     if st.checkbox(_["confirm_delete"], key=f"confirm_{city}_{idx}"):
                                         target[city] = target[city].drop(idx).reset_index(drop=True)
                                         if target[city].empty:
-                                            del target[city]  # 빈 경우 삭제하여 폼 모드로 전환
+                                            del target[city] # 빈 경우 삭제하여 폼 모드로 전환
                                         st.success(_["venue_deleted"])
                                         st.rerun()
                         if st.session_state.get(f"edit_{city}_{idx}", False):
@@ -492,7 +482,7 @@ with left_col:
 # =============================================
 # 9. 지도 (점선 + 목적지 앞 화살표, TBD strftime 에러 수정)
 # =============================================
-with right_col:  # 오른쪽에 나머지 UI 배치
+with right_col: # 오른쪽에 나머지 UI 배치
     # =============================================
     # 11. 지도 (점선 + 목적지 앞 화살표, TBD strftime 에러 수정)
     # =============================================
