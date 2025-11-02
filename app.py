@@ -246,8 +246,8 @@ with left:
                 first_link = t[city].iloc[0]["Google Maps Link"]
                 if first_link and first_link.startswith("http"):
                     nav_url = nav(first_link)
-                    car_icon = f'<span style="float:right">[차량]({nav_url})</span>'
-            expander_label = f"**{city}** – {date_str(city)} ({len(t[city]) if has else 0} venues){car_icon}"
+                    car_icon = f'<span style="float:right">[🚗]({nav_url})</span>'
+            expander_label = f"**{city}** – {date_str(city)}{car_icon}"
             with st.expander(expander_label, expanded=not has):  # 등록 후 자동 닫힘
                 # 공연 날짜 (달력 클릭만, 키보드 X)
                 cur = st.session_state.dates.get(city, datetime.now().date())
@@ -308,12 +308,12 @@ with left:
                             st.write(f"**{row['Venue']}**")
                             st.caption(f"{row['Seats']} {_['seats']} | {row.get('Special Notes','')}")
                         with col2:
-                            color = "실내" if row["IndoorOutdoor"] == _["indoor"] else "실외"
+                            color = "🟢" if row["IndoorOutdoor"] == _["indoor"] else "🔵"
                             st.write(f"{color} {row['IndoorOutdoor']}")
                         with col3:
                             if row["Google Maps Link"].startswith("http"):
                                 nav_url = nav(row["Google Maps Link"])
-                                st.markdown(f'<div style="text-align:right">[차량]({nav_url})</div>', unsafe_allow_html=True)
+                                st.markdown(f'<div style="text-align:right">[🚗]({nav_url})</div>', unsafe_allow_html=True)
                         with col4:
                             if st.session_state.admin or st.session_state.guest_mode:
                                 if st.button("삭제", key=f"del_{city}_{idx}_v2"):
@@ -338,12 +338,4 @@ with right:
             start, end = points[i], points[i + 1]
             arrow_lat = end[0] - (end[0] - start[0]) * 0.05
             arrow_lon = end[1] - (end[1] - start[1]) * 0.05
-            folium.RegularPolygonMarker(location=[arrow_lat, arrow_lon], fill_color="red", number_of_sides=3, rotation=math.degrees(math.atan2(end[1] - start[1], end[0] - start[0])) - 90, radius=10).add_to(m)
-    for city in st.session_state.route:
-        df = target().get(city, pd.DataFrame(columns=cols))
-        link = next((r["Google Maps Link"] for _, r in df.iterrows() if r["Google Maps Link"].startswith("http")), None)
-        popup_html = f"<b style='color:#8B0000'>{city}</b><br>{date_str(city)}"
-        if link: popup_html = f'<a href="{nav(link)}" target="_blank" style="color:#90EE90">{popup_html}<br><i>{_["navigate"]}</i></a>'
-        folium.CircleMarker(location=coords[city], radius=15, color="#90EE90", fill_color="#8B0000", popup=folium.Popup(popup_html, max_width=300)).add_to(m)
-    st_folium(m, width=700, height=500)
-    st.caption(_["caption"])
+            folium.RegularPolygonMarker(location=
