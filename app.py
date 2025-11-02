@@ -260,7 +260,7 @@ if 'start_city' not in st.session_state:
 # =============================================
 cities = sorted([
     'Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Thane', 'Aurangabad', 'Solapur', 'Amravati', 'Nanded', 'Kolhapur',
-    'Akola', 'Latur', 'Ahmadnagar', 'Jalgaon', 'Dhule', 'Ichalkaranji', 'Malegaon', 'Bhusawal', 'Bhiwindi', 'Bhandara',
+    'Akola', 'Latur', 'Ahmadnagar', 'Jalgaon', 'Dhule', 'Ichalkaranji', 'Malegaon', 'Bhusawal', 'Bhiwandi', 'Bhandara',
     'Beed', 'Buldana', 'Chandrapur', 'Dharashiv', 'Gondia', 'Hingoli', 'Jalna', 'Mira-Bhayandar', 'Nandurbar', 'Osmanabad',
     'Palghar', 'Parbhani', 'Ratnagiri', 'Sangli', 'Satara', 'Sindhudurg', 'Wardha', 'Washim', 'Yavatmal', 'Kalyan-Dombivli',
     'Ulhasnagar', 'Vasai-Virar', 'Sangli-Miraj-Kupwad', 'Nanded-Waghala', 'Bandra (Mumbai)', 'Colaba (Mumbai)', 'Andheri (Mumbai)',
@@ -418,7 +418,8 @@ if st.session_state.route:
                             st.rerun()
 
                 # 등록 버튼 (왼쪽 끝)
-                if st.button(f"**{_[\"register\"]}**", key=f"register_{city}"):
+                register_label = _["register"]
+                if st.button(f"**{register_label}**", key=f"register_{city}"):
                     if venue_name:
                         new_row = pd.DataFrame([{
                             'Venue': venue_name,
