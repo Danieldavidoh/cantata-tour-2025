@@ -131,11 +131,10 @@ st.markdown("""
     .sidebar .sidebar-content { background: #228B22; color: white; }
     .Widget>label { color: #90EE90; font-weight: bold; }
     
-    /* 크리스마스 제목: 빨간색, 크게, 눈 쌓인 효과 */
+    /* 크리스마스 제목: Cantata Tour 빨강, 2025 하얀색, 크게, 눈 쌓인 효과 */
     .christmas-title {
         font-size: 3.5em !important;
         font-weight: bold;
-        color: #FF0000 !important;
         text-align: center;
         text-shadow: 
             0 0 5px #FFF, 
@@ -149,6 +148,16 @@ st.markdown("""
         letter-spacing: 2px;
         position: relative;
         margin: 20px 0;
+    }
+    .christmas-title .year {
+        color: white !important;
+        text-shadow: 
+            0 0 5px #FFF, 
+            0 0 10px #FFF, 
+            0 0 15px #FFF, 
+            0 0 20px #00BFFF, 
+            0 0 35px #00BFFF, 
+            0 0 40px #00BFFF;
     }
     .christmas-title::before {
         content: "❄️ ❄️ ❄️";
@@ -322,11 +331,14 @@ coords = {
 }
 
 # =============================================
-# 6. 크리스마스 제목 (빨강, 크게, 눈 쌓임 효과)
+# 6. 크리스마스 제목 (Cantata Tour 빨강, 2025 하얀색)
 # =============================================
-title_text = _['title']
+title_parts = _['title'].rsplit(' ', 1)  # 마지막 공백 기준으로 분리
+main_title = title_parts[0]  # "Cantata Tour" 또는 "칸타타 투어"
+year = title_parts[1] if len(title_parts) > 1 else ""  # "2025"
+
 st.markdown(
-    f'<h1 class="christmas-title">{title_text}</h1>',
+    f'<h1 class="christmas-title">{main_title} <span class="year">{year}</span></h1>',
     unsafe_allow_html=True
 )
 
@@ -399,13 +411,15 @@ if st.session_state.route:
     c2.metric(_["total_time"], f"{total_hrs:.1f} h")
 
     # =============================================
-    # 9. 공연장 관리 (항상 보이도록 expanded=True)
+    # 9. 공연장 관리 (터치 시 펼쳐짐, 내용 정상 표시)
     # =============================================
     st.markdown("---")
     st.subheader(_["venues_dates"])
 
     for city in st.session_state.route:
-        with st.expander(f"**{city}**", expanded=True):
+        # 터치하면 펼쳐짐 (기본 닫힘)
+        with st.expander(f"**{city}**", expanded=False):
+            # 공연 날짜
             cur = st.session_state.dates.get(city, datetime.now().date())
             new = st.date_input(_["performance_date"], cur, key=f"date_{city}")
             if new != cur:
@@ -413,6 +427,7 @@ if st.session_state.route:
                 st.success("날짜 변경됨")
                 st.rerun()
 
+            # 공연장 목록
             df = st.session_state.admin_venues.get(city, pd.DataFrame()) if st.session_state.admin else st.session_state.venues.get(city, pd.DataFrame(columns=['Venue', 'Seats', 'IndoorOutdoor', 'Google Maps Link']))
 
             if not df.empty:
@@ -422,7 +437,7 @@ if st.session_state.route:
                         st.write(f"**{row['Venue']}**")
                         st.caption(f"{row['Seats']} {_['seats']}")
                     with col2:
-                        color = "Green" if row['IndoorOutdoor'] == _["indoor"] else "Blue"
+                        color = "🟢" if row['IndoorOutdoor'] == _["indoor"] else "🔵"
                         st.write(f"{color} {row['IndoorOutdoor']}")
                     with col3:
                         if row['Google Maps Link'].startswith("http"):
@@ -439,6 +454,7 @@ if st.session_state.route:
                                     st.success("삭제 완료")
                                     st.rerun()
 
+                    # 편집 폼
                     if st.session_state.get(f"edit_{city}_{idx}", False):
                         with st.form(key=f"edit_form_{city}_{idx}"):
                             ev = st.text_input("Venue", row['Venue'], key=f"ev_{city}_{idx}")
@@ -452,6 +468,7 @@ if st.session_state.route:
                                 st.success("수정 완료")
                                 st.rerun()
 
+            # 공연장 등록
             if st.session_state.admin or st.session_state.guest_mode:
                 st.markdown("---")
                 io = st.session_state.get(f"io_{city}", _["outdoor"])
