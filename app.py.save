@@ -1,15 +1,1 @@
-import streamlit as st
-import pandas as pd
-from datetime import datetime, timedelta
-import folium
-from streamlit_folium import folium_static
-import math
 
-# =============================================
-# Cities (alphabetically sorted)
-# =============================================
-cities = [
-    'Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Thane', 'Aurangabad', 'Solapur', 'Amravati', 'Nanded', 'Kolhapur',
-    'Akola', 'Latur', 'Ahmadnagar', 'Jalgaon', 'Dhule', 'Ichalkaranji', 'Malegaon', 'Bhusawal', 'Bhiwandi', 'Bhandara',
-    'Beed', 'Buldana', 'Chandrapur', 'Dharashiv', 'Gondia', 'Hingoli', 'Jalna', 'Mira-Bhayandar', 'Nandurbar', 'Osmanabad',
-    'Palghar', 'Parbhani', 'Rat<|eos|>
