@@ -19,7 +19,7 @@ LANG = {
            "password": "Admin Password", "login": "Log in", "logout": "Log out", "date": "Date",
            "total": "Total Distance & Time"},
     "hi": {"title": "कांटाटा टूर", "subtitle": "महाराष्ट्र", "select_city": "शहर चुनें", "add_city": "जोड़ें",
-           "register": "पंजीकरण करें", "venue": "स्थान", "seats": "सीटें", "indoor": "इनडोर", "outडोर": "आउटडोर",
+           "register": "पंजीकरण करें", "venue": "स्थान", "seats": "सीटें", "indoor": "इनडोर", "outdoor": "आउटडोर",
            "google": "गूगल मानचित्र लिंक", "notes": "टिप्पणी", "tour_map": "टूर मानचित्र", "tour_route": "मार्ग",
            "password": "व्यवस्थापक पासवर्ड", "login": "लॉगिन", "logout": "लॉगआउट", "date": "दिनांक",
            "total": "कुल दूरी और समय"}
@@ -87,7 +87,7 @@ with st.sidebar:
             st.success("👋 손님 모드로 전환합니다.")
             st.rerun()
 
-# --- Christmas Night CSS ---
+# --- Night Sky Theme (No Snow) ---
 st.markdown("""
 <style>
 .stApp {
@@ -98,7 +98,7 @@ st.markdown("""
   overflow: hidden;
 }
 
-/* 별빛 */
+/* 별빛만 남김 */
 body::before {
   content: '';
   position: fixed;
@@ -106,31 +106,13 @@ body::before {
   background: url('https://i.imgur.com/z9P5e6V.png') repeat;
   animation: twinkle 10s infinite ease-in-out;
   opacity: 0.25;
-  z-index: -2;
-}
-
-/* 눈결정체 */
-body::after {
-  content: '';
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-image: url('https://i.imgur.com/lp1Jv4v.png');
-  background-repeat: repeat;
-  animation: snow 40s linear infinite;
-  opacity: 0.25;
   z-index: -1;
-  pointer-events: none;
 }
 
 @keyframes twinkle {
   0% {opacity: 0.2;}
   50% {opacity: 0.7;}
   100% {opacity: 0.2;}
-}
-
-@keyframes snow {
-  0% {background-position: 0px 0px;}
-  100% {background-position: 0px 1000px;}
 }
 
 /* 제목 스타일 */
@@ -209,7 +191,6 @@ with left:
             else:
                 st.info("관리자 모드에서만 저장 가능합니다.")
 
-        # 도시 간 거리
         if i > 0:
             prev = st.session_state.route[i - 1]
             if prev in coords and c in coords:
