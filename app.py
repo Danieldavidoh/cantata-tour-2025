@@ -209,8 +209,7 @@ with right:
                     dist_txt, _, dur_txt, _ = res
                     mid_lat = (pts[i][0]+pts[i+1][0])/2
                     mid_lng = (pts[i][1]+pts[i+1][1])/2
-                    folium.map.Marker([mid_lat, mid_lng], icon=folium.DivIcon(html=f\"<div style='font-size:12px;color:#8B0000;background:white;padding:2px;border-radius:4px;'>{dist_txt} | {dur_txt}</div>\")).add_to(m)
-    # add markers
+                    folium.map.Marker([mid_lat, mid_lng], icon=folium.DivIconhtml=f"<div style='font-size:12px;color:#8B0000;background:white;padding:2px;border-radius:4px;'>{dist_txt} | {dur_txt}</div>"
     for city in st.session_state["route"]:
         if city in coords:
             folium.CircleMarker(location=coords[city], radius=10, color="#90EE90", fill_color="#8B0000", popup=city).add_to(m)
