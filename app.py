@@ -62,9 +62,8 @@ def distance_km(p1, p2):
 st.set_page_config(page_title="Cantata Tour", layout="wide")
 
 # 세션 상태 초기화
-for key in ["lang", "admin", "route", "venue_data"]:
-    if key not in st.session_state:
-        st.session_state[key] = "ko" if key == "lang" else False if key == "admin" else [] if key == "route" else {}
+for key, default in [("lang", "ko"), ("admin", False), ("route", []), ("venue_data", {})]:
+    st.session_state.setdefault(key, default)
 
 # =============================================
 # 사이드바
@@ -90,7 +89,7 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 테마 CSS + 눈 효과 (폭설!)
+# 테마 CSS + 눈 효과 (CSS 먼저!)
 # =============================================
 st.markdown("""
 <style>
@@ -107,22 +106,23 @@ h1 {
   color: #ff3b3b !important;
   text-align: center;
   font-weight: 900;
-  font-size: 3.2em !important;  /* ← 줄어듦! 두 줄 안 됨 */
-  white-space: nowrap;         /* ← 강제 한 줄 */
+  font-size: 3.0em !important;
+  white-space: nowrap;
   text-shadow: 0 0 25px #b71c1c;
   margin: 10px 0 !important;
 }
-h1 span.year {color: #ffffff; font-size: 0.9em; vertical-align: super;}
+h1 span.year {color: #ffffff; font-size: 0.85em; vertical-align: super;}
 h2.subtitle {text-align: center; color: #d0d0d0; font-size: 1.2em; margin-top: -10px;}
 
-/* 눈 효과 (폭설!) */
+/* 눈 효과 */
 .snowflake {
   position: fixed;
-  color: white;
-  font-size: 1.5em;
+  color: #ffffff;
+  font-size: 1.6em;
   pointer-events: none;
   animation: fall linear infinite;
-  z-index: 10;
+  z-index: 9999;
+  opacity: 0.9;
 }
 @keyframes fall {
   0% {transform: translateY(-10vh) rotate(0deg); opacity: 1;}
@@ -138,11 +138,11 @@ h2.subtitle {text-align: center; color: #d0d0d0; font-size: 1.2em; margin-top: -
 """, unsafe_allow_html=True)
 
 # =============================================
-# 눈 폭설 생성 (150개!)
+# 눈 폭설 생성 (200개! CSS 로드 후 실행)
 # =============================================
 snowflakes = "".join(
-    f'<div class="snowflake" style="left:{random.randint(0,100)}%; top:-10%; animation-duration:{random.uniform(10,25)}s; animation-delay:{random.uniform(0,5)}s;">❄️</div>'
-    for _ in range(150)
+    f'<div class="snowflake" style="left:{random.randint(0,100)}%; top:-10%; animation-duration:{random.uniform(8,20)}s; animation-delay:{random.uniform(0,5)}s;">❄️</div>'
+    for _ in range(200)
 )
 st.markdown(snowflakes, unsafe_allow_html=True)
 
@@ -211,8 +211,8 @@ with left:
 
 with right:
     st.subheader(f"{_['tour_map']}")
-    # 지도 밝게! (Stamen Terrain → 밝고 선명)
-    m = folium.Map(location=(19.75, 75.71), zoom_start=7, tiles="Stamen Terrain")
+    # 지도 밝게! (OpenStreetMap 기본 타일)
+    m = folium.Map(location=(19.75, 75.71), zoom_start=7, tiles="OpenStreetMap")
 
     points = [coords[c] for c in st.session_state.route if c in coords]
     if len(points) >= 2:
