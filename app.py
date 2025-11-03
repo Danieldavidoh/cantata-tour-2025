@@ -101,7 +101,7 @@ st.markdown("""
   font-family: 'Noto Sans KR', sans-serif;
 }
 
-/* 제목: 칸타타 투어 빨간색 */
+/* 제목: 칸타타 투어 빨간색 + 마하라스트라 작은 글씨 */
 h1 {
   color: #ff3333 !important;
   text-align: center;
@@ -110,7 +110,8 @@ h1 {
   text-shadow: 0 0 25px #b71c1c, 0 0 15px #00ff99;
   margin-bottom: 0;
 }
-h1 span.year {color: #ffffff; font-weight: 800;}
+h1 span.year {color: #ffffff; font-weight: 800; font-size: 0.8em; vertical-align: super;}
+h1 span.subtitle {color: #cccccc; font-size: 0.45em; vertical-align: super; margin-left: 5px;}
 h2 {text-align: center; color: #cccccc; margin-top: 0;}
 
 /* 버튼 */
@@ -130,11 +131,10 @@ div[data-testid="stButton"] > button:hover {
 """, unsafe_allow_html=True)
 
 # =============================================
-# Title
+# Title (마하라스트라 작은 글씨로 2025와 트리 사이)
 # =============================================
 st.markdown(
-    f"<h1 style='color:#ff3333 !important;'>{_['title']} <span class='year'>2025 🎄</span></h1>"
-    f"<h2>{_['subtitle']}</h2>",
+    f"<h1>{_['title']} <span class='year'>2025</span><span class='subtitle'>{_['subtitle']}</span> 🎄</h1>",
     unsafe_allow_html=True
 )
 
@@ -192,7 +192,6 @@ with left:
                 time_hr = dist / 60.0
                 total_distance += dist
                 total_hours += time_hr
-                # 도시명 없이 거리/시간만 표기
                 st.markdown(
                     f"<p style='text-align:center; color:#90EE90; font-weight:bold; margin:5px 0;'>"
                     f"{dist:.1f} km / {time_hr:.1f} 시간"
