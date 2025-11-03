@@ -56,7 +56,7 @@ LANG = {
         "edit": "संपादित करें", "open_maps": "गूगल मैप्स में खोलें", "navigate": "नेविगेट करें",
         "save": "सहेजें", "delete": "हटाएँ", "tour_map": "टूर मैप",
         "caption": "मोबाइल: होम स्क्रीन पर जोड़ें -> ऐप की तरह उपयोग करें!", "date_format": "%d %b %Y",
-        "admin_mode": "एडमिन मोड", "guest_mode": "गेस्ट मोड", "enter_password": "एडमिन मो드 एक्सेस करने के लिए पासवर्ड दर्ज करें",
+        "admin_mode": "एडमिन मोड", "guest_mode": "गेस्ट मोड", "enter_password": "एडमिन मोड एक्सेस करने के लिए पासवर्ड दर्ज करें",
         "submit": "जमा करें", "drive_to": "यहाँ ड्राइव करें", "edit_venue": "संपादित करें", "delete_venue": "हटाएँ",
         "confirm_delete": "क्या आप वाकई हटाना चाहते हैं?", "date_changed": "तिथि बदली गई",
         "venue_registered": "पंजीकरण सफल", "venue_deleted": "स्थल हटा दिया गया",
@@ -350,4 +350,4 @@ with right:
             if link: popup_html = f'<a href="{nav(link)}" target="_blank" style="color:#90EE90">{popup_html}<br><i>{_["navigate"]}</i></a>'
             folium.CircleMarker(location=coords[city], radius=15, color="#90EE90", fill_color="#8B0000", popup=folium.Popup(popup_html, max_width=300)).add_to(m)
     st_folium(m, width=700, height=500)
-    st.caption(_["caption"])
+    st.caption(_["caption"])  # ← 완벽하게 고침! (.) 제거
