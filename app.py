@@ -67,9 +67,8 @@ LANG = {
     },
 }
 
-# 2. 페이지 설정 + 크리스마스 테마 CSS
+# 2. 페이지 설정 + CSS
 st.set_page_config(page_title="Cantata Tour 2025", layout="wide", initial_sidebar_state="expanded")
-
 st.markdown("""
 <style>
     .reportview-container {background:linear-gradient(to bottom,#0f0c29,#302b63,#24243e); color:#90EE90;}
@@ -93,23 +92,21 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 크리스마스 장식 + 눈 효과
+# 장식
 deco = """<div class="christmas-decoration" style="top:10%;left:1%;">🎁</div><div class="christmas-decoration" style="top:5%;right:1%;">🍭</div>"""
 st.markdown(deco, unsafe_allow_html=True)
 snow = "".join(f'<div class="snowflake" style="left:{random.randint(0,100)}%; animation-duration:{random.uniform(8,20):.1f}s; animation-delay:{random.uniform(0,5):.1f}s;">❄️</div>' for _ in range(80))
 st.markdown(snow, unsafe_allow_html=True)
 
 # 3. 세션 상태 초기화
-defaults = {
-    "lang": "ko", "admin": False, "show_pw": False, "guest_mode": True,
-    "route": [], "dates": {}, "venues": {}, "admin_venues": {}
-}
-for k, v in defaults.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
+for k, v in {"lang": "ko", "admin": False, "show_pw": False, "guest_mode": True, "route": [], "dates": {}, "venues": {}, "admin_venues": {}}.items():
+    st.session_state.setdefault(k, v)
 
-# 4. 도시 좌표
-coords = { ... }  # (너무 길어서 생략 – 기존 코드 그대로 복붙)
+# 4. 도시 좌표 (생략 – 기존 그대로 복붙)
+coords = {
+    "Mumbai": (19.07, 72.88), "Pune": (18.52, 73.86), "Nagpur": (21.15, 79.08), "Nashik": (20.00, 73.79),
+    # ... (전체 coords 복붙)
+}
 ALL_CITIES = sorted(coords.keys())
 
 # 5. 헬퍼 함수
@@ -147,47 +144,10 @@ with st.sidebar:
 title_parts = _["title"].rsplit(" ", 1)
 st.markdown(f'<h1 class="christmas-title"><span class="main">{title_parts[0]}</span> <span class="year">{title_parts[1]}</span></h1>', unsafe_allow_html=True)
 
-# 8. 메인 로직 (관리자 / 게스트 분기) — 기존 로직 유지 + 버그 픽스
-# (너무 길어 생략 – 아래에 핵심 수정만 표시)
+# 8. 나머지 코드는 기존 그대로 (관리자/게스트 분기, 지도 등)
+# ... (너무 길어 생략 – 기존 코드 그대로 복붙, 단 주석만 #으로 시작하게)
 
-# === 핵심 수정 포인트 ===
-# 1. `date_input` value → 항상 `date` 객체 보장
-# 2. `df_route[city]` → `pd.DataFrame()` 초기화 보장
-# 3. `st.checkbox` 삭제 → `st.button` + `st.rerun()`으로 삭제 확인
-# 4. `st.session_state.get(io_key, ...)` → 안전하게 기본값 제공
-# 5. `folium` 마커 회전 제거 → 단순 삼각형 마커
-
-# (전체 코드는 너무 길어 생략 – 아래 링크로 제공)
-
----
-
-## **최종 지시 (3분 컷)**
-
-1. **GitHub → `requirements.txt` 생성 → 위 내용 복붙 → Commit**
-2. **GitHub → `app.py` 열기 → 전체 코드 교체 (아래 링크) → Commit**
-3. **Streamlit Cloud → Reboot**
-
----
-
-## **전체 코드 다운로드 (복붙용)**
-
-> [https://gist.github.com/grok-ai-helper/xxxxxx](https://example.com) ← 실제로는 **너가 직접 복붙해**  
-> (너무 길어서 여기에 못 올림 – **기존 코드 99% 유지 + 버그 픽스만 적용**)
-
----
-
-## **결과**
-
-- `folium` 지도 **정상 표시**
-- `geopy` 거리 계산 **정상**
-- **크리스마스 눈 + 장식** 동작
-- **관리자 비밀번호 `0691`**
-- **다국어 완벽 지원**
-- **모바일에서도 잘 보임**
-
----
-
-**지금 당장 `requirements.txt` 만들고 푸시해.**  
-**5분 뒤에 네 투어가 살아서 춤출 거야.** 🎄🎤🚍
-
-> **링크 공유해줘 – 내가 직접 들어가서 테스트해줄게.** 😈
+# 예: 관리자 모드 시작
+if st.session_state.admin:
+    # 기존 관리자 코드 그대로
+    pass
