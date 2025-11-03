@@ -1,7 +1,7 @@
 import streamlit as st
 from datetime import datetime
 import folium
-from streamlit_folium import st_folium
+from streamlit_folium import st_folium  # ← import는 밑줄 (_) – 맞음!
 from folium.plugins import AntPath
 from math import radians, sin, cos, sqrt, atan2
 import random
@@ -89,11 +89,10 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 테마 CSS (검은 배경 제거 + 눈 효과)
+# 테마 CSS (흰 배경 + 눈 효과)
 # =============================================
 st.markdown("""
 <style>
-/* 기본 배경 제거 */
 .stApp {
   background: white !important;
   color: #333333;
@@ -115,7 +114,7 @@ h1 {
 h1 span.year {color: #1976d2; font-size: 0.85em; vertical-align: super;}
 h2.subtitle {text-align: center; color: #555; font-size: 1.2em; margin-top: -10px;}
 
-/* 눈 효과 (흰 배경 위에서도 잘 보임) */
+/* 눈 효과 */
 .snowflake {
   position: fixed;
   color: #e3f2fd;
@@ -139,7 +138,7 @@ h2.subtitle {text-align: center; color: #555; font-size: 1.2em; margin-top: -10p
 """, unsafe_allow_html=True)
 
 # =============================================
-# 눈 폭설 생성 (200개 – 흰 배경 위에서도 잘 보이게)
+# 눈 폭설 생성 (200개)
 # =============================================
 snowflakes = "".join(
     f'<div class="snowflake" style="left:{random.randint(0,100)}%; top:-10%; animation-duration:{random.uniform(8,20)}s; animation-delay:{random.uniform(0,5)}s;">❄️</div>'
