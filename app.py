@@ -7,7 +7,7 @@ import math
 import random
 
 # ----------------------------------------------------------------------
-# 1. 다국어 사전 (완전)
+# 1. 다국어 사전 (5개 항목 추가)
 # ----------------------------------------------------------------------
 LANG = {
     "en": {
@@ -25,8 +25,9 @@ LANG = {
         "confirm_delete": "Are you sure you want to delete?", "date_changed": "Date changed",
         "venue_registered": "Venue registered successfully", "venue_deleted": "Venue deleted successfully",
         "venue_updated": "Venue updated successfully", "enter_venue_name": "Please enter a venue name",
-        "edit_venue_label": "Venue Name", "edit_seats_label": "Seats", "edit_type_label": "Type",
-        "edit_google_label": "Google Maps Link", "edit_notes_label": "Special Notes",
+        # 추가된 5개
+        "performance_time": "Performance Time", "ticket_price": "Ticket Price", "organizer": "Organizer",
+        "contact": "Contact", "website": "Website",
     },
     "ko": {
         "title": "칸타타 투어 2025", "add_city": "도시 추가", "select_city": "도시 선택",
@@ -43,8 +44,9 @@ LANG = {
         "confirm_delete": "정말 삭제하시겠습니까?", "date_changed": "날짜 변경됨",
         "venue_registered": "등록 완료", "venue_deleted": "삭제 완료",
         "venue_updated": "수정 완료", "enter_venue_name": "공연장 이름을 입력하세요.",
-        "edit_venue_label": "공연장 이름", "edit_seats_label": "좌석 수", "edit_type_label": "유형",
-        "edit_google_label": "구글 지도 링크", "edit_notes_label": "특이사항",
+        # 추가된 5개
+        "performance_time": "공연 시간", "ticket_price": "티켓 가격", "organizer": "주최자",
+        "contact": "연락처", "website": "웹사이트",
     },
     "hi": {
         "title": "कांताता टूर 2025", "add_city": "शहर जोड़ें", "select_city": "शहर चुनें",
@@ -61,8 +63,9 @@ LANG = {
         "confirm_delete": "क्या आप वाकई हटाना चाहते हैं?", "date_changed": "तिथि बदली गई",
         "venue_registered": "पंजीकरण सफल", "venue_deleted": "स्थल हटा दिया गया",
         "venue_updated": "स्थल अपडेट किया गया", "enter_venue_name": "कृपया स्थल का नाम दर्ज करें",
-        "edit_venue_label": "स्थल का नाम", "edit_seats_label": "सीटें", "edit_type_label": "प्रकार",
-        "edit_google_label": "गूगल मैप्स लिंक", "edit_notes_label": "विशेष टिप्पणियाँ",
+        # 추가된 5개
+        "performance_time": "प्रदर्शन समय", "ticket_price": "टिकट मूल्य", "organizer": "आयोजक",
+        "contact": "संपर्क", "website": "वेबसाइट",
     },
 }
 
@@ -153,12 +156,12 @@ with st.sidebar:
 # ----------------------------------------------------------------------
 # 5. 세션 + 도시/좌표
 # ----------------------------------------------------------------------
-cols = ["Venue","Seats","IndoorOutdoor","Google Maps Link","Special Notes"]
+cols = ["Venue","Seats","IndoorOutdoor","Google Maps Link","Special Notes","Performance Time","Ticket Price","Organizer","Contact","Website"]
 for k in ["route","dates","venues","admin_venues"]: st.session_state.setdefault(k, [] if k=="route" else {})
 
 cities = sorted([
     "Mumbai","Pune","Nagpur","Nashik","Thane","Aurangabad","Solapur","Amravati","Nanded","Kolhapur",
-    "Akola","Latur","Ahmadnagar","Jalgaon","Dhule","Ichalkaranji","Malegaon","Bhusawal","Bhiwandi","Bhandara",
+    "Akola","Latur","Ahmadnagar","Jalgaon","Dhule","Ichalkaranji","Malegaon","Bhusawal","Bhiwindi","Bhandara",
     "Beed","Buldana","Chandrapur","Dharashiv","Gondia","Hingoli","Jalna","Mira-Bhayandar","Nandurbar","Osmanabad",
     "Palghar","Parbhani","Ratnagiri","Sangli","Satara","Sindhudurg","Wardha","Washim","Yavatmal","Kalyan-Dombivli",
     "Ulhasnagar","Vasai-Virar","Sangli-Miraj-Kupwad","Nanded-Waghala","Bandra (Mumbai)","Colaba (Mumbai)","Andheri (Mumbai)",
@@ -221,7 +224,7 @@ def date_str(c): d = st.session_state.dates.get(c); return d.strftime(_["date_fo
 def nav(url): return f"https://www.google.com/maps/dir/?api=1&destination={url}&travelmode=driving" if url and url.startswith("http") else ""
 
 # ----------------------------------------------------------------------
-# 8. 왼쪽 컬럼 - 투어 경로 (개조 버전)
+# 8. 왼쪽 컬럼 - 투어 경로 (5개 항목 추가)
 # ----------------------------------------------------------------------
 left, right = st.columns([1,3])
 with left:
@@ -240,20 +243,17 @@ with left:
         for city in st.session_state.route:
             t = target()
             has = city in t and not t.get(city, pd.DataFrame()).empty
-            # 구글맵 아이콘 (등록 후 오른쪽 끝, 🚗 아이콘으로 네비 연결)
             map_icon = ""
             if has:
                 first_link = t[city].iloc[0]["Google Maps Link"]
                 if first_link and first_link.startswith("http"):
                     nav_url = nav(first_link)
                     map_icon = f'<span style="float:right"><a href="{nav_url}" target="_blank" style="color:#90EE90">🚗</a></span>'
-            # expander 라벨: 등록 전 "도시", 등록 후 "도시 – 날짜" + 아이콘
             expander_label = f"**{city}**"
             if has:
                 expander_label += f" – {date_str(city)}"
             expander_label += map_icon
-            with st.expander(expander_label, expanded=not has):  # 등록 전 펼침, 등록 후 닫힘
-                # 공연 날짜 (달력 클릭 기반)
+            with st.expander(expander_label, expanded=not has):
                 cur = st.session_state.dates.get(city, datetime.now().date())
                 new = st.date_input(
                     _["performance_date"],
@@ -266,14 +266,12 @@ with left:
                     st.success(_["date_changed"])
                     st.rerun()
 
-                # 등록 폼 (관리자/손님 모드 + 등록 안 됐을 때)
                 if (st.session_state.admin or st.session_state.guest_mode) and not has:
                     st.markdown("---")
-                    # 공연장 + 좌석
+                    # 기존 5개
                     col1, col2 = st.columns([3,1])
                     with col1: venue_name = st.text_input(_["venue_name"], key=f"v_{city}_v2")
                     with col2: seats = st.number_input(_["seats"], min_value=1, step=50, key=f"s_{city}_v2")
-                    # 구글 링크 + 실내/실외 (기존 유지)
                     col3, col4 = st.columns([3,1])
                     with col3: google_link = st.text_input(_["google_link"], placeholder="https://...", key=f"l_{city}_v2")
                     with col4:
@@ -282,35 +280,45 @@ with left:
                         if st.button(f"**{st.session_state[io_key]}**", key=f"io_btn_{city}_v2"):
                             st.session_state[io_key] = _["indoor"] if st.session_state[io_key] == _["outdoor"] else _["outdoor"]
                             st.rerun()
-                    # 특이사항 + 등록 버튼 (오른쪽 끝)
-                    sn_col, btn_col = st.columns([4,1])
-                    with sn_col: special_notes = st.text_area(_["special_notes"], key=f"sn_{city}_v2")
-                    with btn_col:
-                        if st.button(_["register"], key=f"reg_{city}_v2"):
-                            if not venue_name:
-                                st.error(_["enter_venue_name"])
-                            else:
-                                new_row = pd.DataFrame([{
-                                    "Venue": venue_name,
-                                    "Seats": seats,
-                                    "IndoorOutdoor": st.session_state[io_key],
-                                    "Google Maps Link": google_link,
-                                    "Special Notes": special_notes
-                                }])
-                                t[city] = pd.concat([t.get(city, pd.DataFrame(columns=cols)), new_row], ignore_index=True)
-                                st.success(_["venue_registered"])
-                                # 입력 초기화
-                                for k in [f"v_{city}_v2", f"s_{city}_v2", f"l_{city}_v2", f"sn_{city}_v2", f"io_{city}_v2"]:
-                                    st.session_state.pop(k, None)
-                                st.rerun()
+                    special_notes = st.text_area(_["special_notes"], key=f"sn_{city}_v2")
+                    # 추가된 5개
+                    st.markdown("---")
+                    performance_time = st.text_input(_["performance_time"], key=f"pt_{city}_v2")
+                    ticket_price = st.text_input(_["ticket_price"], key=f"tp_{city}_v2")
+                    organizer = st.text_input(_["organizer"], key=f"org_{city}_v2")
+                    contact = st.text_input(_["contact"], key=f"con_{city}_v2")
+                    website = st.text_input(_["website"], key=f"web_{city}_v2")
+                    # 등록 버튼
+                    if st.button(_["register"], key=f"reg_{city}_v2"):
+                        if not venue_name:
+                            st.error(_["enter_venue_name"])
+                        else:
+                            new_row = pd.DataFrame([{
+                                "Venue": venue_name,
+                                "Seats": seats,
+                                "IndoorOutdoor": st.session_state[io_key],
+                                "Google Maps Link": google_link,
+                                "Special Notes": special_notes,
+                                "Performance Time": performance_time,
+                                "Ticket Price": ticket_price,
+                                "Organizer": organizer,
+                                "Contact": contact,
+                                "Website": website
+                            }])
+                            t[city] = pd.concat([t.get(city, pd.DataFrame(columns=cols)), new_row], ignore_index=True)
+                            st.success(_["venue_registered"])
+                            for k in [f"v_{city}_v2", f"s_{city}_v2", f"l_{city}_v2", f"sn_{city}_v2", f"io_{city}_v2",
+                                      f"pt_{city}_v2", f"tp_{city}_v2", f"org_{city}_v2", f"con_{city}_v2", f"web_{city}_v2"]:
+                                st.session_state.pop(k, None)
+                            st.rerun()
 
-                # 등록된 공연장 목록 (등록 후 닫힌 상태에서 볼 수 있지만, 펼치면 보임)
                 if has:
                     for idx, row in t[city].iterrows():
                         col1, col2, col3, col4 = st.columns([3,1,1,1])
                         with col1:
                             st.write(f"**{row['Venue']}**")
                             st.caption(f"{row['Seats']} {_['seats']} | {row.get('Special Notes','')}")
+                            st.caption(f"{row.get('Performance Time','')} | {row.get('Ticket Price','')} | {row.get('Organizer','')} | {row.get('Contact','')} | {row.get('Website','')}")
                         with col2:
                             st.write(row["IndoorOutdoor"])
                         with col3:
@@ -327,7 +335,7 @@ with left:
                                         st.rerun()
 
 # ----------------------------------------------------------------------
-# 9. 오른쪽 컬럼 – 지도 (기존 유지)
+# 9. 오른쪽 컬럼 – 지도
 # ----------------------------------------------------------------------
 with right:
     st.markdown("---")
