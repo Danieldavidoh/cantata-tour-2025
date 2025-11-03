@@ -4,7 +4,7 @@ import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
 from math import radians, sin, cos, sqrt, atan2
-import random  # 눈 효과용
+import random
 
 # =============================================
 # 언어팩
@@ -89,7 +89,7 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 테마 CSS + 눈 효과 (CSS 먼저!)
+# 테마 CSS
 # =============================================
 st.markdown("""
 <style>
@@ -138,7 +138,7 @@ h2.subtitle {text-align: center; color: #d0d0d0; font-size: 1.2em; margin-top: -
 """, unsafe_allow_html=True)
 
 # =============================================
-# 눈 폭설 생성 (200개! CSS 로드 후 실행)
+# 눈 폭설 생성 (200개)
 # =============================================
 snowflakes = "".join(
     f'<div class="snowflake" style="left:{random.randint(0,100)}%; top:-10%; animation-duration:{random.uniform(8,20)}s; animation-delay:{random.uniform(0,5)}s;">❄️</div>'
@@ -147,7 +147,7 @@ snowflakes = "".join(
 st.markdown(snowflakes, unsafe_allow_html=True)
 
 # =============================================
-# 제목 (한 줄!)
+# 제목
 # =============================================
 st.markdown(f"<h1>🎄 {_['title']} <span class='year'>2025</span></h1>", unsafe_allow_html=True)
 st.markdown(f"<h2 class='subtitle'>{_['subtitle']}</h2>", unsafe_allow_html=True)
@@ -211,8 +211,7 @@ with left:
 
 with right:
     st.subheader(f"{_['tour_map']}")
-    # 지도 밝게! (OpenStreetMap 기본 타일)
-    m = folium.Map(location=(19.75, 75.71), zoom_start=7, tiles="OpenStreetMap")
+    m = folium.Map(location=(19.75, 75.71), zoom_start=7, tiles="OpenStreetMap", attr="OpenStreetMap contributors")  # ← attribution 추가 + 밝은 타일
 
     points = [coords[c] for c in st.session_state.route if c in coords]
     if len(points) >= 2:
