@@ -19,7 +19,7 @@ LANG = {
            "total": "कुल दूरी और समय"},
 }
 
-# --- 도시 리스트 및 좌표 ---
+# --- 도시 좌표 ---
 cities = sorted([
     "Mumbai", "Pune", "Nagpur", "Nashik", "Thane", "Aurangabad", "Solapur",
     "Amravati", "Nanded", "Kolhapur", "Akola", "Latur", "Ahmadnagar", "Jalgaon",
@@ -36,7 +36,7 @@ coords = {
     "Bhandara": (21.17, 79.65), "Beed": (18.99, 75.76)
 }
 
-# --- 거리 계산 함수 ---
+# --- 거리 계산 ---
 def distance_km(p1, p2):
     R = 6371
     lat1, lon1 = radians(p1[0]), radians(p1[1])
@@ -45,7 +45,7 @@ def distance_km(p1, p2):
     a = sin(dlat / 2)**2 + cos(lat1)*cos(lat2)*sin(dlon / 2)**2
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
-# --- 기본 설정 ---
+# --- Streamlit 기본 설정 ---
 st.set_page_config(page_title="Cantata Tour", layout="wide")
 
 if "lang" not in st.session_state:
@@ -80,7 +80,7 @@ with st.sidebar:
             st.session_state.admin = False
             st.rerun()
 
-# --- 🌌 테마 (은하수 + 별 + 눈결정체, 텍스트 고정) ---
+# --- 🌌 테마 스타일 (은하수 + 눈결정체) ---
 st.markdown("""
 <style>
 .stApp {
@@ -92,7 +92,7 @@ st.markdown("""
 }
 
 /* 별 */
-body::before {
+.stApp::before {
   content: '';
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -102,23 +102,20 @@ body::before {
   z-index: -2;
 }
 
-/* 눈결정체 (글씨 영향 없음) */
-body::after {
+/* 눈결정체 */
+.stApp::after {
   content: '';
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   background-image: url('https://i.imgur.com/lp1Jv4v.png');
-  background-repeat: repeat;
   animation: snow 45s linear infinite;
   opacity: 0.25;
-  pointer-events: none;
   z-index: -1;
 }
 
-/* 반짝임 & 눈 내림 애니메이션 */
 @keyframes twinkle {
   0% {opacity: 0.2;}
-  50% {opacity: 0.6;}
+  50% {opacity: 0.7;}
   100% {opacity: 0.2;}
 }
 @keyframes snow {
@@ -126,21 +123,21 @@ body::after {
   100% {background-position: 0px 1000px;}
 }
 
-/* 제목 */
+/* 제목 스타일 */
 h1 {
   color: #ff3b3b;
   text-align: center;
   font-weight: 900;
-  font-size: 4.2em;
+  font-size: 3.6em;
   text-shadow: 0 0 25px #b71c1c;
 }
 h1 span.year {
   color: #ffffff;
-  font-weight: 800;
+  font-weight: 700;
 }
 h2.subtitle {
   text-align: center;
-  color: #d0d0d0;
+  color: #dcdcdc;
   font-size: 1.2em;
   margin-top: -20px;
 }
@@ -152,14 +149,14 @@ h2.subtitle {
 </style>
 """, unsafe_allow_html=True)
 
-# --- 제목 ---
+# --- 제목 표시 ---
 _ = LANG[st.session_state.lang]
 st.markdown(f"""
 <h1>🎄 {_['title']} <span class='year'>2025</span></h1>
 <h2 class='subtitle'>{_['subtitle']}</h2>
 """, unsafe_allow_html=True)
 
-# --- 본문 구성 ---
+# --- 레이아웃 ---
 left, right = st.columns([1, 2])
 
 with left:
