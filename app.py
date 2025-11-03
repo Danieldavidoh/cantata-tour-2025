@@ -6,7 +6,7 @@ from streamlit_folium import st_folium
 from folium.plugins import AntPath
 from math import radians, sin, cos, sqrt, atan2
 
-# --- language pack ---
+# --- language ---
 LANG = {
     "ko": {"title": "칸타타 투어", "subtitle": "마하라스트라", "select_city": "도시 선택", "add_city": "추가",
            "register": "등록", "venue": "공연장", "seats": "좌석 수", "indoor": "실내", "outdoor": "실외",
@@ -19,18 +19,29 @@ LANG = {
            "password": "Admin Password", "login": "Log in", "logout": "Log out", "date": "Date",
            "total": "Total Distance & Time"},
     "hi": {"title": "कांटाटा टूर", "subtitle": "महाराष्ट्र", "select_city": "शहर चुनें", "add_city": "जोड़ें",
-           "register": "पंजीकरण करें", "venue": "स्थान", "seats": "सीटें", "indoor": "इनडोर", "outडोर": "आउटडोर",
+           "register": "पंजीकरण करें", "venue": "स्थान", "seats": "सीटें", "indoor": "इनडोर", "outdoor": "आउटडोर",
            "google": "गूगल मानचित्र लिंक", "notes": "टिप्पणी", "tour_map": "टूर मानचित्र", "tour_route": "मार्ग",
            "password": "व्यवस्थापक पासवर्ड", "login": "लॉगिन", "logout": "लॉगआउट", "date": "दिनांक",
            "total": "कुल दूरी और समय"}
 }
 
-# --- expanded 200+ cities ---
-# (테스트를 위해 임의로 200개 도시 생성 — 실제 사용 시 파일로 불러올 수 있음)
-cities = [f"City{i}" for i in range(1, 201)]
-coords = {f"City{i}": (19 + (i % 5) * 0.5, 72 + (i % 10) * 0.5) for i in range(1, 201)}
+# --- cities (실제 마하라스트라 주요 200개 중 대표 샘플 30개) ---
+cities = sorted([
+    "Mumbai","Pune","Nagpur","Nashik","Thane","Aurangabad","Solapur","Amravati","Nanded","Kolhapur",
+    "Akola","Latur","Ahmadnagar","Jalgaon","Dhule","Malegaon","Bhusawal","Bhiwandi","Bhandara","Beed",
+    "Ratnagiri","Wardha","Sangli","Satara","Yavatmal","Parbhani","Osmanabad","Palghar","Chandrapur","Raigad"
+])
 
-# --- utility: haversine ---
+coords = {
+    "Mumbai":(19.07,72.88),"Pune":(18.52,73.86),"Nagpur":(21.15,79.08),"Nashik":(20.00,73.79),"Thane":(19.22,72.98),
+    "Aurangabad":(19.88,75.34),"Solapur":(17.67,75.91),"Amravati":(20.93,77.75),"Nanded":(19.16,77.31),"Kolhapur":(16.70,74.24),
+    "Akola":(20.70,77.00),"Latur":(18.40,76.18),"Ahmadnagar":(19.10,74.75),"Jalgaon":(21.00,75.57),"Dhule":(20.90,74.77),
+    "Malegaon":(20.55,74.53),"Bhusawal":(21.05,76.00),"Bhiwandi":(19.30,73.06),"Bhandara":(21.17,79.65),"Beed":(18.99,75.76),
+    "Ratnagiri":(16.99,73.31),"Wardha":(20.74,78.60),"Sangli":(16.86,74.57),"Satara":(17.68,74.00),"Yavatmal":(20.39,78.13),
+    "Parbhani":(19.26,76.77),"Osmanabad":(18.17,76.04),"Palghar":(19.70,72.77),"Chandrapur":(19.95,79.29),"Raigad":(18.51,73.19)
+}
+
+# --- utility: haversine distance (km) ---
 def distance_km(p1, p2):
     R = 6371
     lat1, lon1 = radians(p1[0]), radians(p1[1])
@@ -39,21 +50,17 @@ def distance_km(p1, p2):
     a = sin(dlat/2)**2 + cos(lat1)*cos(lat2)*sin(dlon/2)**2
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
-# --- Streamlit state ---
+# --- streamlit state ---
 st.set_page_config(page_title="Cantata Tour", layout="wide")
 
-if "lang" not in st.session_state:
-    st.session_state.lang = "ko"
-if "admin" not in st.session_state:
-    st.session_state.admin = False
-if "route" not in st.session_state:
-    st.session_state.route = []
-if "venue_data" not in st.session_state:
-    st.session_state.venue_data = {}
+if "lang" not in st.session_state: st.session_state.lang = "ko"
+if "admin" not in st.session_state: st.session_state.admin = False
+if "route" not in st.session_state: st.session_state.route = []
+if "venue_data" not in st.session_state: st.session_state.venue_data = {}
 
 # --- Sidebar ---
 with st.sidebar:
-    lang_selected = st.selectbox("Language / 언어 / भाषा", ["ko", "en", "hi"], index=0)
+    lang_selected = st.selectbox("Language / 언어 / भाषा", ["ko","en","hi"], index=0)
     st.session_state.lang = lang_selected
     _ = LANG[st.session_state.lang]
 
@@ -75,7 +82,7 @@ with st.sidebar:
             st.success("👋 손님 모드로 전환합니다.")
             st.rerun()
 
-# --- Christmas night theme ---
+# --- Theme ---
 st.markdown("""
 <style>
 .stApp {
@@ -91,7 +98,7 @@ body::before {
   top: 0; left: 0; right: 0; bottom: 0;
   background: url('https://i.imgur.com/z9P5e6V.png') repeat;
   animation: twinkle 10s infinite ease-in-out;
-  opacity: 0.3;
+  opacity: 0.25;
   z-index: -1;
 }
 @keyframes twinkle {
@@ -109,15 +116,8 @@ h1 {
   text-shadow: 0 0 25px #b71c1c, 0 0 15px #00ff99;
   margin-bottom: 0;
 }
-h1 span.year {
-  color: #ffffff;
-  font-weight: 800;
-}
-h2 {
-  text-align: center;
-  color: #cccccc;
-  margin-top: 0;
-}
+h1 span.year { color: #ffffff; font-weight: 800; }
+h2 { text-align: center; color: #cccccc; margin-top: 0; }
 
 /* 버튼 */
 div[data-testid="stButton"] > button {
@@ -143,28 +143,31 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-left, right = st.columns([1, 2])
+# --- Layout ---
+left, right = st.columns([1,2])
 
 # --- Left panel ---
 with left:
-    # 경로 제목을 제일 위로
-    st.subheader(f"🛷 {_['tour_route']}")
-
-    # 전체 도시 보이게 selectbox 정렬 유지
-    selected_city = st.selectbox(_["select_city"], sorted(cities))
-    if st.button(_["add_city"]):
-        if selected_city not in st.session_state.route:
-            st.session_state.route.append(selected_city)
-            if selected_city not in st.session_state.venue_data:
+    # 도시 선택
+    c1, c2 = st.columns([3,1])
+    with c1:
+        selected_city = st.selectbox(_["select_city"], sorted(cities))
+    with c2:
+        if st.button(_["add_city"]):
+            if selected_city not in st.session_state.route:
+                st.session_state.route.append(selected_city)
                 st.session_state.venue_data[selected_city] = {}
-            st.rerun()
+                st.rerun()
 
     st.markdown("---")
+
+    # 경로 제목을 도시 추가 아래, 도시 블록 위에 배치
+    st.subheader(f"🛷 {_['tour_route']}")
 
     total_distance = 0.0
     total_hours = 0.0
 
-    # 추가된 도시 관리
+    # 추가된 도시들
     for i, c in enumerate(st.session_state.route):
         with st.expander(f"🎁 {c}"):
             today = datetime.now().date()
@@ -195,16 +198,15 @@ with left:
                 total_hours += time_hr
                 st.markdown(f"➡️ **{prev} → {c}** : {dist:.1f} km / {time_hr:.1f} 시간")
 
-    # 총 거리
     if len(st.session_state.route) > 1:
         st.markdown("---")
         st.markdown(f"### {_['total']}")
         st.success(f"🎅 총 거리: **{total_distance:.1f} km** | 총 소요시간: **{total_hours:.1f} 시간**")
 
-# --- Right panel: MAP (밝은 지도 복구) ---
+# --- Right panel (지도: 밝은 기본 모드) ---
 with right:
     st.subheader(_["tour_map"])
-    m = folium.Map(location=(19.75, 75.71), zoom_start=6, tiles="CartoDB positron")
+    m = folium.Map(location=(19.75,75.71), zoom_start=6, tiles="CartoDB positron")
 
     points = [coords[c] for c in st.session_state.route if c in coords]
     if len(points) >= 2:
