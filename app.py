@@ -183,7 +183,7 @@ with left:
                     st.success("저장되었습니다.")
                     st.rerun()
 
-        # 도시 박스 사이에 거리/시간 표기
+        # 도시 박스 사이에 **글로만** 거리/시간 표기
         if i > 0:
             prev = st.session_state.route[i - 1]
             if prev in coords and c in coords:
@@ -192,9 +192,9 @@ with left:
                 total_distance += dist
                 total_hours += time_hr
                 st.markdown(
-                    f"<div style='text-align:center; margin:10px 0; padding:8px; background:linear-gradient(90deg, #ff3b3b, #228B22); color:white; border-radius:8px; font-weight:bold;'>"
-                    f"{prev} → {c}<br>{dist:.1f} km / {time_hr:.1f} 시간"
-                    f"</div>",
+                    f"<p style='text-align:center; color:#90EE90; font-weight:bold; margin:5px 0;'>"
+                    f"{prev} → {c} : {dist:.1f} km / {time_hr:.1f} 시간"
+                    f"</p>",
                     unsafe_allow_html=True
                 )
 
