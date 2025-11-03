@@ -89,35 +89,36 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 테마 CSS
+# 테마 CSS (검은 배경 제거 + 눈 효과)
 # =============================================
 st.markdown("""
 <style>
+/* 기본 배경 제거 */
 .stApp {
-  background: radial-gradient(circle at 20% 20%, #0b0b10 0%, #000000 100%);
-  color: #ffffff;
+  background: white !important;
+  color: #333333;
   font-family: 'Noto Sans KR', sans-serif;
   overflow: hidden;
   position: relative;
 }
 
-/* 제목: 한 줄 강제 + 크기 조절 */
+/* 제목: 한 줄 + 크기 조절 */
 h1 {
-  color: #ff3b3b !important;
+  color: #d32f2f !important;
   text-align: center;
   font-weight: 900;
   font-size: 3.0em !important;
   white-space: nowrap;
-  text-shadow: 0 0 25px #b71c1c;
+  text-shadow: 0 0 15px rgba(211, 47, 47, 0.5);
   margin: 10px 0 !important;
 }
-h1 span.year {color: #ffffff; font-size: 0.85em; vertical-align: super;}
-h2.subtitle {text-align: center; color: #d0d0d0; font-size: 1.2em; margin-top: -10px;}
+h1 span.year {color: #1976d2; font-size: 0.85em; vertical-align: super;}
+h2.subtitle {text-align: center; color: #555; font-size: 1.2em; margin-top: -10px;}
 
-/* 눈 효과 */
+/* 눈 효과 (흰 배경 위에서도 잘 보임) */
 .snowflake {
   position: fixed;
-  color: #ffffff;
+  color: #e3f2fd;
   font-size: 1.6em;
   pointer-events: none;
   animation: fall linear infinite;
@@ -131,14 +132,14 @@ h2.subtitle {text-align: center; color: #d0d0d0; font-size: 1.2em; margin-top: -
 
 /* Expander */
 .streamlit-expanderHeader {
-  background-color: rgba(0, 80, 40, 0.7) !important;
-  color: #fff !important;
+  background-color: rgba(25, 118, 210, 0.1) !important;
+  color: #1976d2 !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # =============================================
-# 눈 폭설 생성 (200개)
+# 눈 폭설 생성 (200개 – 흰 배경 위에서도 잘 보이게)
 # =============================================
 snowflakes = "".join(
     f'<div class="snowflake" style="left:{random.randint(0,100)}%; top:-10%; animation-duration:{random.uniform(8,20)}s; animation-delay:{random.uniform(0,5)}s;">❄️</div>'
@@ -211,7 +212,7 @@ with left:
 
 with right:
     st.subheader(f"{_['tour_map']}")
-    m = folium.Map(location=(19.75, 75.71), zoom_start=7, tiles="OpenStreetMap", attr="OpenStreetMap contributors")  # ← attribution 추가 + 밝은 타일
+    m = folium.Map(location=(19.75, 75.71), zoom_start=7, tiles="OpenStreetMap", attr="OpenStreetMap")
 
     points = [coords[c] for c in st.session_state.route if c in coords]
     if len(points) >= 2:
