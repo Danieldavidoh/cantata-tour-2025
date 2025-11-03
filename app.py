@@ -26,19 +26,23 @@ LANG = {
 }
 
 # --- cities and coordinates ---
-cities = sorted([
-    "Mumbai", "Pune", "Nagpur", "Nashik", "Thane", "Aurangabad", "Solapur", "Amravati", "Nanded", "Kolhapur",
-    "Akola", "Latur", "Ahmadnagar", "Jalgaon", "Dhule", "Malegaon", "Bhusawal", "Bhiwandi", "Bhandara", "Beed"
-])
+cities = [
+    "Mumbai", "Pune", "Nagpur", "Nashik", "Thane", "Aurangabad", "Solapur",
+    "Amravati", "Nanded", "Kolhapur", "Akola", "Latur", "Ahmadnagar", "Jalgaon",
+    "Dhule", "Malegaon", "Bhusawal", "Bhiwandi", "Bhandara", "Beed"
+]
 
 coords = {
-    "Mumbai": (19.07, 72.88), "Pune": (18.52, 73.86), "Nagpur": (21.15, 79.08), "Nashik": (20.00, 73.79), "Thane": (19.22, 72.98),
-    "Aurangabad": (19.88, 75.34), "Solapur": (17.67, 75.91), "Amravati": (20.93, 77.75), "Nanded": (19.16, 77.31), "Kolhapur": (16.70, 74.24),
-    "Akola": (20.70, 77.00), "Latur": (18.40, 76.18), "Ahmadnagar": (19.10, 74.75), "Jalgaon": (21.00, 75.57), "Dhule": (20.90, 74.77),
-    "Malegaon": (20.55, 74.53), "Bhusawal": (21.05, 76.00), "Bhiwandi": (19.30, 73.06), "Bhandara": (21.17, 79.65), "Beed": (18.99, 75.76)
+    "Mumbai": (19.07, 72.88), "Pune": (18.52, 73.86), "Nagpur": (21.15, 79.08), "Nashik": (20.00, 73.79),
+    "Thane": (19.22, 72.98), "Aurangabad": (19.88, 75.34), "Solapur": (17.67, 75.91),
+    "Amravati": (20.93, 77.75), "Nanded": (19.16, 77.31), "Kolhapur": (16.70, 74.24),
+    "Akola": (20.70, 77.00), "Latur": (18.40, 76.18), "Ahmadnagar": (19.10, 74.75),
+    "Jalgaon": (21.00, 75.57), "Dhule": (20.90, 74.77), "Malegaon": (20.55, 74.53),
+    "Bhusawal": (21.05, 76.00), "Bhiwandi": (19.30, 73.06), "Bhandara": (21.17, 79.65),
+    "Beed": (18.99, 75.76)
 }
 
-# --- utility: haversine distance (km) ---
+# --- distance utility ---
 def distance_km(p1, p2):
     R = 6371
     lat1, lon1 = radians(p1[0]), radians(p1[1])
@@ -47,7 +51,7 @@ def distance_km(p1, p2):
     a = sin(dlat/2)**2 + cos(lat1)*cos(lat2)*sin(dlon/2)**2
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
-# --- Streamlit state setup ---
+# --- streamlit setup ---
 st.set_page_config(page_title="Cantata Tour", layout="wide")
 
 if "lang" not in st.session_state:
@@ -66,7 +70,7 @@ with st.sidebar:
     _ = LANG[st.session_state.lang]
 
     st.markdown("---")
-    st.write("### Admin")
+    st.write("🎅 **Admin**")
 
     if not st.session_state.admin:
         pw = st.text_input(_["password"], type="password")
@@ -83,12 +87,78 @@ with st.sidebar:
             st.success("👋 손님 모드로 전환합니다.")
             st.rerun()
 
-# --- Title section ---
-_ = LANG[st.session_state.lang]
+# --- 🌌 크리스마스 밤 테마 (빨강/초록/흰색 포인트, 눈 없음) ---
+st.markdown("""
+<style>
+.stApp {
+  background: radial-gradient(circle at 20% 20%, #0a0a0f 0%, #000000 100%);
+  color: #ffffff;
+  font-family: 'Noto Sans KR', sans-serif;
+  overflow: hidden;
+}
 
+/* 반짝이는 별빛 */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: url('https://i.imgur.com/z9P5e6V.png') repeat;
+  animation: twinkle 10s infinite ease-in-out;
+  opacity: 0.3;
+  z-index: -1;
+}
+
+@keyframes twinkle {
+  0% {opacity: 0.2;}
+  50% {opacity: 0.6;}
+  100% {opacity: 0.2;}
+}
+
+/* 제목 - 크리스마스 데코 */
+h1 {
+  text-align: center;
+  font-weight: 900;
+  font-size: 4em;
+  text-shadow: 0 0 20px #ff0000, 0 0 40px #228B22;
+  color: #ff3333;
+  margin-bottom: 0;
+}
+h1 span.year {
+  color: #ffffff;
+  text-shadow: 0 0 20px #00ff99;
+}
+h2 {
+  text-align: center;
+  color: #cccccc;
+  margin-top: 0;
+}
+
+/* 버튼 데코 */
+div[data-testid="stButton"] > button {
+  background: linear-gradient(90deg, #ff3b3b, #228B22);
+  border: none;
+  color: white;
+  font-weight: 700;
+  border-radius: 10px;
+  transition: 0.3s;
+}
+div[data-testid="stButton"] > button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px #ff4d4d;
+}
+
+/* 구분선 포인트 */
+hr, .stMarkdown h3 {
+  border-color: #228B22;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# --- Title ---
+_ = LANG[st.session_state.lang]
 st.markdown(
-    f"<h1 style='text-align:center; margin-bottom:0;'>{_['title']}</h1>"
-    f"<h2 style='text-align:center; margin-top:0;'>2025 &nbsp; <span style='font-size:0.8em; color:gray;'>{_['subtitle']}</span></h2>",
+    f"<h1>🎄 {_['title']} <span class='year'>2025</span></h1>"
+    f"<h2>{_['subtitle']}</h2>",
     unsafe_allow_html=True
 )
 
@@ -98,11 +168,10 @@ left, right = st.columns([1, 2])
 with left:
     st.subheader(_["tour_route"])
 
-    c1, c2 = st.columns([3, 1])
-    with c1:
-        selected_city = st.selectbox(_["select_city"], cities)
-    with c2:
-        if st.button(_["add_city"]):
+    # 도시 전체 표시 오류 해결
+    selected_city = st.selectbox(_["select_city"], sorted(cities))
+    if st.button(_["add_city"]):
+        if selected_city not in st.session_state.route:
             st.session_state.route.append(selected_city)
             if selected_city not in st.session_state.venue_data:
                 st.session_state.venue_data[selected_city] = {}
@@ -110,13 +179,13 @@ with left:
 
     st.markdown("---")
 
-    # 추가된 도시 리스트 및 거리 표시
     total_distance = 0.0
     total_hours = 0.0
 
     for i, c in enumerate(st.session_state.route):
-        with st.expander(c):
-            date = st.date_input(_["date"], value=datetime.now().date(), key=f"date_{c}")
+        with st.expander(f"🎁 {c}"):
+            today = datetime.now().date()
+            date = st.date_input(_["date"], value=today, min_value=today, key=f"date_{c}")
             venue = st.text_input(_["venue"], key=f"venue_{c}")
             seats = st.number_input(_["seats"], min_value=0, step=50, key=f"seats_{c}")
             google = st.text_input(_["google"], key=f"google_{c}")
@@ -138,7 +207,6 @@ with left:
             else:
                 st.info("관리자 모드에서만 저장 가능합니다.")
 
-        # 도시 간 거리 표시
         if i > 0:
             prev = st.session_state.route[i - 1]
             if prev in coords and c in coords:
@@ -146,18 +214,17 @@ with left:
                 time_hr = dist / 60.0
                 total_distance += dist
                 total_hours += time_hr
-                st.write(f"➡️ **{prev} → {c}** : 약 {dist:.1f} km / {time_hr:.1f} 시간")
+                st.markdown(f"➡️ **{prev} → {c}** : {dist:.1f} km / {time_hr:.1f} 시간")
 
     if len(st.session_state.route) > 1:
         st.markdown("---")
         st.markdown(f"### {_['total']}")
-        st.success(f"총 거리: **{total_distance:.1f} km**  /  총 소요시간: **{total_hours:.1f} 시간**")
+        st.success(f"🎅 총 거리: **{total_distance:.1f} km** | 총 소요시간: **{total_hours:.1f} 시간**")
 
 # --- Right panel: MAP ---
 with right:
     st.subheader(_["tour_map"])
-
-    m = folium.Map(location=(19.75, 75.71), zoom_start=7, tiles="CartoDB positron")
+    m = folium.Map(location=(19.75, 75.71), zoom_start=7, tiles="CartoDB dark_matter")
 
     points = [coords[c] for c in st.session_state.route if c in coords]
     if len(points) >= 2:
@@ -171,7 +238,7 @@ with right:
                 popup += f"{data['date']}<br>{data['venue']}<br>Seats: {data['seats']}<br>{data['type']}<br>"
             if "google" in data and data["google"]:
                 popup += f"<a href='{data['google']}' target='_blank'>📍 Google Maps</a>"
-            folium.Marker(coords[c], popup=popup).add_to(m)
+            folium.Marker(coords[c], popup=popup,
+                          icon=folium.Icon(color="red", icon="music", prefix="fa")).add_to(m)
 
     st_folium(m, width=900, height=650)
-
