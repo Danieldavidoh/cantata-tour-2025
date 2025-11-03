@@ -1,3 +1,5 @@
+# 🎄 Cantata Tour 2025 (Christmas Eve Theme)
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -6,7 +8,7 @@ from streamlit_folium import st_folium
 from folium.plugins import AntPath
 from math import radians, sin, cos, sqrt, atan2
 
-# --- Language packs ---
+# --- Language ---
 LANG = {
     "ko": {"title": "칸타타 투어", "subtitle": "마하라스트라", "select_city": "도시 선택", "add_city": "추가",
            "register": "등록", "venue": "공연장", "seats": "좌석 수", "indoor": "실내", "outdoor": "실외",
@@ -20,19 +22,21 @@ LANG = {
            "total": "कुल दूरी और समय"},
 }
 
+# --- Cities and Coordinates ---
 cities = sorted([
-    "Mumbai", "Pune", "Nagpur", "Nashik", "Thane", "Aurangabad", "Solapur", "Amravati",
-    "Nanded", "Kolhapur", "Akola", "Latur", "Ahmadnagar", "Jalgaon", "Dhule",
-    "Malegaon", "Bhusawal", "Bhiwandi", "Bhandara", "Beed"
+    "Mumbai", "Pune", "Nagpur", "Nashik", "Thane", "Aurangabad", "Solapur",
+    "Amravati", "Nanded", "Kolhapur", "Akola", "Latur", "Ahmadnagar", "Jalgaon",
+    "Dhule", "Malegaon", "Bhusawal", "Bhiwandi", "Bhandara", "Beed"
 ])
 
 coords = {
-    "Mumbai": (19.07, 72.88), "Pune": (18.52, 73.86), "Nagpur": (21.15, 79.08), "Nashik": (20.00, 73.79),
-    "Thane": (19.22, 72.98), "Aurangabad": (19.88, 75.34), "Solapur": (17.67, 75.91),
-    "Amravati": (20.93, 77.75), "Nanded": (19.16, 77.31), "Kolhapur": (16.70, 74.24),
-    "Akola": (20.70, 77.00), "Latur": (18.40, 76.18), "Ahmadnagar": (19.10, 74.75),
-    "Jalgaon": (21.00, 75.57), "Dhule": (20.90, 74.77), "Malegaon": (20.55, 74.53),
-    "Bhusawal": (21.05, 76.00), "Bhiwandi": (19.30, 73.06), "Bhandara": (21.17, 79.65), "Beed": (18.99, 75.76)
+    "Mumbai": (19.07, 72.88), "Pune": (18.52, 73.86), "Nagpur": (21.15, 79.08),
+    "Nashik": (20.00, 73.79), "Thane": (19.22, 72.98), "Aurangabad": (19.88, 75.34),
+    "Solapur": (17.67, 75.91), "Amravati": (20.93, 77.75), "Nanded": (19.16, 77.31),
+    "Kolhapur": (16.70, 74.24), "Akola": (20.70, 77.00), "Latur": (18.40, 76.18),
+    "Ahmadnagar": (19.10, 74.75), "Jalgaon": (21.00, 75.57), "Dhule": (20.90, 74.77),
+    "Malegaon": (20.55, 74.53), "Bhusawal": (21.05, 76.00), "Bhiwandi": (19.30, 73.06),
+    "Bhandara": (21.17, 79.65), "Beed": (18.99, 75.76)
 }
 
 def distance_km(p1, p2):
@@ -40,10 +44,10 @@ def distance_km(p1, p2):
     lat1, lon1 = radians(p1[0]), radians(p1[1])
     lat2, lon2 = radians(p2[0]), radians(p2[1])
     dlat, dlon = lat2 - lat1, lon2 - lon1
-    a = sin(dlat/2)**2 + cos(lat1)*cos(lat2)*sin(dlon/2)**2
+    a = sin(dlat / 2)**2 + cos(lat1)*cos(lat2)*sin(dlon / 2)**2
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
-# --- Streamlit setup ---
+# --- Streamlit Config ---
 st.set_page_config(page_title="Cantata Tour", layout="wide")
 
 if "lang" not in st.session_state:
@@ -78,80 +82,91 @@ with st.sidebar:
             st.session_state.admin = False
             st.rerun()
 
-# --- Dark Christmas Eve Theme CSS ---
+# --- 🌌 Dark Christmas Eve Theme CSS ---
 st.markdown("""
 <style>
-body {
-  background-color: #000;
-  color: #f0f0f0;
-  font-family: 'Noto Sans KR', sans-serif;
-}
-
-/* 은하수 + 별빛 배경 */
 .stApp {
-  background: radial-gradient(ellipse at bottom, #0d1b2a 0%, #000000 100%);
-  background-image: url('https://i.imgur.com/pg5f8z3.png');
-  background-size: cover;
+  background: radial-gradient(circle at 20% 20%, #0b0b10 0%, #000000 100%);
+  color: #ffffff;
+  font-family: 'Noto Sans KR', sans-serif;
   position: relative;
   overflow: hidden;
 }
 
-/* 별 반짝임 */
-@keyframes twinkle {
-  0% {opacity: 0.2;}
-  50% {opacity: 1;}
-  100% {opacity: 0.2;}
-}
+/* 별빛 반짝이 */
 .stApp::before {
   content: '';
-  position: absolute;
+  position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   background: url('https://i.imgur.com/z9P5e6V.png') repeat;
-  animation: twinkle 8s infinite ease-in-out;
-  opacity: 0.5;
+  animation: twinkle 12s infinite ease-in-out;
+  opacity: 0.25;
+  z-index: -2;
 }
 
 /* 눈 내리는 효과 */
+.stApp::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: url('https://i.imgur.com/lp1Jv4v.png');
+  animation: snow 40s linear infinite;
+  opacity: 0.25;
+  z-index: -1;
+}
+
+@keyframes twinkle {
+  0% {opacity: 0.2;}
+  50% {opacity: 0.6;}
+  100% {opacity: 0.2;}
+}
+
 @keyframes snow {
   0% {background-position: 0px 0px;}
   100% {background-position: 0px 1000px;}
 }
-.stApp::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-image: url('https://i.imgur.com/lp1Jv4v.png');
-  animation: snow 30s linear infinite;
-  opacity: 0.3;
-}
 
-h1, h2 {
+h1 {
+  color: #ff4d4d; /* 빨강 */
   text-align: center;
-  color: #ffffff;
-  text-shadow: 0px 0px 8px #e53935;
+  font-weight: 900;
+  font-size: 3em;
+  text-shadow: 0 0 20px #e53935;
 }
 
-button {
-  background-color: #b71c1c !important;
-  color: white !important;
-  border-radius: 10px !important;
+h1 span.year {
+  color: #ffffff; /* 흰색 */
+  font-weight: 700;
+}
+
+h2.subtitle {
+  text-align: center;
+  color: #cccccc;
+  font-size: 1.2em;
+  margin-top: -15px;
 }
 
 .streamlit-expanderHeader {
-  background-color: #1b5e20 !important;
+  background-color: rgba(0,80,40,0.7) !important;
   color: #fff !important;
+}
+
+button[kind="primary"] {
+  background-color: #b71c1c !important;
+  color: white !important;
+  border-radius: 10px !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # --- Title ---
 _ = LANG[st.session_state.lang]
-st.markdown(
-    f"<h1>🎄 {_['title']} 2025</h1>"
-    f"<h2 style='font-size:1em; color:#a5d6a7;'>{_['subtitle']}</h2>",
-    unsafe_allow_html=True
-)
+st.markdown(f"""
+<h1>🎄 {_['title']} <span class='year'>2025</span></h1>
+<h2 class='subtitle'>{_['subtitle']}</h2>
+""", unsafe_allow_html=True)
 
+# --- Layout ---
 left, right = st.columns([1, 2])
 
 with left:
