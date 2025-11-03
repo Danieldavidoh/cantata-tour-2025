@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 from datetime import datetime
 import folium
 from streamlit_folium import st_folium
@@ -19,13 +18,13 @@ LANG = {
            "password": "Admin Password", "login": "Log in", "logout": "Log out", "date": "Date",
            "total": "Total Distance & Time"},
     "hi": {"title": "कांटाटा टूर", "subtitle": "महाराष्ट्र", "select_city": "शहर चुनें", "add_city": "जोड़ें",
-           "register": "पंजीकरण करें", "venue": "स्थान", "seats": "सीटें", "indoor": "इनडोर", "outdoor": "आउटडोर",
+           "register": "पंजीकरण करें", "venue": "स्थान", "seats": "सीटें", "indoor": "इनडोर", "outडोर": "आउटडोर",
            "google": "गूगल मानचित्र लिंक", "notes": "टिप्पणी", "tour_map": "टूर मानचित्र", "tour_route": "मार्ग",
            "password": "व्यवस्थापक पासवर्ड", "login": "लॉगिन", "logout": "लॉगआउट", "date": "दिनांक",
            "total": "कुल दूरी और समय"}
 }
 
-# --- cities (실제 마하라스트라 주요 200개 중 대표 샘플 30개) ---
+# --- 실제 도시 목록 ---
 cities = sorted([
     "Mumbai","Pune","Nagpur","Nashik","Thane","Aurangabad","Solapur","Amravati","Nanded","Kolhapur",
     "Akola","Latur","Ahmadnagar","Jalgaon","Dhule","Malegaon","Bhusawal","Bhiwandi","Bhandara","Beed",
@@ -41,7 +40,7 @@ coords = {
     "Parbhani":(19.26,76.77),"Osmanabad":(18.17,76.04),"Palghar":(19.70,72.77),"Chandrapur":(19.95,79.29),"Raigad":(18.51,73.19)
 }
 
-# --- utility: haversine distance (km) ---
+# --- 거리 계산 ---
 def distance_km(p1, p2):
     R = 6371
     lat1, lon1 = radians(p1[0]), radians(p1[1])
@@ -50,7 +49,7 @@ def distance_km(p1, p2):
     a = sin(dlat/2)**2 + cos(lat1)*cos(lat2)*sin(dlon/2)**2
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
-# --- streamlit state ---
+# --- Streamlit state ---
 st.set_page_config(page_title="Cantata Tour", layout="wide")
 
 if "lang" not in st.session_state: st.session_state.lang = "ko"
@@ -91,33 +90,24 @@ st.markdown("""
   font-family: 'Noto Sans KR', sans-serif;
 }
 
-/* 별빛 반짝이 */
-body::before {
-  content: '';
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: url('https://i.imgur.com/z9P5e6V.png') repeat;
-  animation: twinkle 10s infinite ease-in-out;
-  opacity: 0.25;
-  z-index: -1;
-}
-@keyframes twinkle {
-  0% {opacity: 0.2;}
-  50% {opacity: 0.7;}
-  100% {opacity: 0.2;}
-}
-
 /* 제목 */
 h1 {
   color: #ff3333;
   text-align: center;
   font-weight: 900;
-  font-size: 4.2em;
+  font-size: 4.3em;
   text-shadow: 0 0 25px #b71c1c, 0 0 15px #00ff99;
   margin-bottom: 0;
 }
-h1 span.year { color: #ffffff; font-weight: 800; }
-h2 { text-align: center; color: #cccccc; margin-top: 0; }
+h1 span.year {
+  color: #ffffff;
+  font-weight: 800;
+}
+h2 {
+  text-align: center;
+  color: #cccccc;
+  margin-top: 0;
+}
 
 /* 버튼 */
 div[data-testid="stButton"] > button {
@@ -138,7 +128,7 @@ div[data-testid="stButton"] > button:hover {
 # --- Title ---
 _ = LANG[st.session_state.lang]
 st.markdown(
-    f"<h1>🎄 {_['title']} <span class='year'>2025</span></h1>"
+    f"<h1>{_['title']} <span class='year'>2025 🎄</span></h1>"
     f"<h2>{_['subtitle']}</h2>",
     unsafe_allow_html=True
 )
@@ -148,7 +138,7 @@ left, right = st.columns([1,2])
 
 # --- Left panel ---
 with left:
-    # 도시 선택
+    # 도시 추가
     c1, c2 = st.columns([3,1])
     with c1:
         selected_city = st.selectbox(_["select_city"], sorted(cities))
@@ -161,13 +151,13 @@ with left:
 
     st.markdown("---")
 
-    # 경로 제목을 도시 추가 아래, 도시 블록 위에 배치
+    # 경로 제목
     st.subheader(f"🛷 {_['tour_route']}")
 
     total_distance = 0.0
     total_hours = 0.0
 
-    # 추가된 도시들
+    # 도시별 입력 및 거리 표시
     for i, c in enumerate(st.session_state.route):
         with st.expander(f"🎁 {c}"):
             today = datetime.now().date()
@@ -189,6 +179,7 @@ with left:
             else:
                 st.info("관리자 모드에서만 저장 가능합니다.")
 
+        # --- 도시 간 거리 및 시간 표시 ---
         if i > 0:
             prev = st.session_state.route[i - 1]
             if prev in coords and c in coords:
@@ -196,14 +187,15 @@ with left:
                 time_hr = dist / 60.0
                 total_distance += dist
                 total_hours += time_hr
-                st.markdown(f"➡️ **{prev} → {c}** : {dist:.1f} km / {time_hr:.1f} 시간")
+                st.markdown(f"<p style='color:#90EE90;'>➡️ <b>{prev}</b> → <b>{c}</b> : {dist:.1f} km / {time_hr:.1f} 시간</p>", unsafe_allow_html=True)
 
+    # 총합 표시
     if len(st.session_state.route) > 1:
         st.markdown("---")
         st.markdown(f"### {_['total']}")
         st.success(f"🎅 총 거리: **{total_distance:.1f} km** | 총 소요시간: **{total_hours:.1f} 시간**")
 
-# --- Right panel (지도: 밝은 기본 모드) ---
+# --- Right panel ---
 with right:
     st.subheader(_["tour_map"])
     m = folium.Map(location=(19.75,75.71), zoom_start=6, tiles="CartoDB positron")
