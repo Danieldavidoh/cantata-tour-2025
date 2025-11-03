@@ -1,11 +1,14 @@
+# 🎄 Cantata Tour 2025 (Christmas Eve Theme)
+
 import streamlit as st
+import pandas as pd
 from datetime import datetime
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
 from math import radians, sin, cos, sqrt, atan2
 
-# --- 언어팩 ---
+# --- Language ---
 LANG = {
     "ko": {"title": "칸타타 투어", "subtitle": "마하라스트라", "select_city": "도시 선택", "add_city": "추가",
            "register": "등록", "venue": "공연장", "seats": "좌석 수", "indoor": "실내", "outdoor": "실외",
@@ -19,7 +22,7 @@ LANG = {
            "total": "कुल दूरी और समय"},
 }
 
-# --- 도시 좌표 ---
+# --- Cities and Coordinates ---
 cities = sorted([
     "Mumbai", "Pune", "Nagpur", "Nashik", "Thane", "Aurangabad", "Solapur",
     "Amravati", "Nanded", "Kolhapur", "Akola", "Latur", "Ahmadnagar", "Jalgaon",
@@ -36,7 +39,6 @@ coords = {
     "Bhandara": (21.17, 79.65), "Beed": (18.99, 75.76)
 }
 
-# --- 거리 계산 ---
 def distance_km(p1, p2):
     R = 6371
     lat1, lon1 = radians(p1[0]), radians(p1[1])
@@ -45,7 +47,7 @@ def distance_km(p1, p2):
     a = sin(dlat / 2)**2 + cos(lat1)*cos(lat2)*sin(dlon / 2)**2
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
-# --- Streamlit 기본 설정 ---
+# --- Streamlit Config ---
 st.set_page_config(page_title="Cantata Tour", layout="wide")
 
 if "lang" not in st.session_state:
@@ -57,7 +59,7 @@ if "route" not in st.session_state:
 if "venue_data" not in st.session_state:
     st.session_state.venue_data = {}
 
-# --- 사이드바 ---
+# --- Sidebar ---
 with st.sidebar:
     lang_selected = st.selectbox("Language / 언어 / भाषा", ["ko", "hi"], index=0)
     st.session_state.lang = lang_selected
@@ -80,83 +82,91 @@ with st.sidebar:
             st.session_state.admin = False
             st.rerun()
 
-# --- 🌌 테마 스타일 (은하수 + 눈결정체) ---
+# --- 🌌 Dark Christmas Eve Theme CSS ---
 st.markdown("""
 <style>
 .stApp {
   background: radial-gradient(circle at 20% 20%, #0b0b10 0%, #000000 100%);
   color: #ffffff;
   font-family: 'Noto Sans KR', sans-serif;
-  overflow: hidden;
   position: relative;
+  overflow: hidden;
 }
 
-/* 별 */
+/* 별빛 반짝이 */
 .stApp::before {
   content: '';
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   background: url('https://i.imgur.com/z9P5e6V.png') repeat;
-  animation: twinkle 10s infinite ease-in-out;
-  opacity: 0.3;
+  animation: twinkle 12s infinite ease-in-out;
+  opacity: 0.25;
   z-index: -2;
 }
 
-/* 눈결정체 */
+/* 눈 내리는 효과 */
 .stApp::after {
   content: '';
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   background-image: url('https://i.imgur.com/lp1Jv4v.png');
-  animation: snow 45s linear infinite;
+  animation: snow 40s linear infinite;
   opacity: 0.25;
   z-index: -1;
 }
 
 @keyframes twinkle {
   0% {opacity: 0.2;}
-  50% {opacity: 0.7;}
+  50% {opacity: 0.6;}
   100% {opacity: 0.2;}
 }
+
 @keyframes snow {
   0% {background-position: 0px 0px;}
   100% {background-position: 0px 1000px;}
 }
 
-/* 제목 스타일 */
 h1 {
-  color: #ff3b3b;
+  color: #ff4d4d; /* 빨강 */
   text-align: center;
   font-weight: 900;
-  font-size: 3.6em;
-  text-shadow: 0 0 25px #b71c1c;
+  font-size: 3em;
+  text-shadow: 0 0 20px #e53935;
 }
+
 h1 span.year {
-  color: #ffffff;
+  color: #ffffff; /* 흰색 */
   font-weight: 700;
 }
+
 h2.subtitle {
   text-align: center;
-  color: #dcdcdc;
+  color: #cccccc;
   font-size: 1.2em;
-  margin-top: -20px;
+  margin-top: -15px;
 }
 
 .streamlit-expanderHeader {
-  background-color: rgba(0, 80, 40, 0.7) !important;
+  background-color: rgba(0,80,40,0.7) !important;
   color: #fff !important;
+}
+
+button[kind="primary"] {
+  background-color: #b71c1c !important;
+  color: white !important;
+  border-radius: 10px !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 제목 표시 ---
+# --- Title ---
 _ = LANG[st.session_state.lang]
 st.markdown(f"""
 <h1>🎄 {_['title']} <span class='year'>2025</span></h1>
 <h2 class='subtitle'>{_['subtitle']}</h2>
 """, unsafe_allow_html=True)
 
-# --- 레이아웃 ---
+# --- Layout ---
 left, right = st.columns([1, 2])
 
 with left:
