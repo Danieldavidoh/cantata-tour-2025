@@ -1,9 +1,10 @@
 import streamlit as st
 from datetime import datetime
 import folium
-from streamlit_folium import st_folium  # ← st_folium 사용 (v0.13+)
+from streamlit_folium import st_folium
 from folium.plugins import AntPath
 from math import radians, sin, cos, sqrt, atan2
+import random  # 눈 효과용
 
 # =============================================
 # 언어팩
@@ -26,7 +27,7 @@ LANG = {
 }
 
 # =============================================
-# 도시 리스트 및 좌표 (완전 정렬)
+# 도시 리스트 및 좌표
 # =============================================
 cities = sorted([
     "Mumbai", "Pune", "Nagpur", "Nashik", "Thane", "Aurangabad", "Solapur",
@@ -61,21 +62,15 @@ def distance_km(p1, p2):
 st.set_page_config(page_title="Cantata Tour", layout="wide")
 
 # 세션 상태 초기화
-if "lang" not in st.session_state:
-    st.session_state.lang = "ko"
-if "admin" not in st.session_state:
-    st.session_state.admin = False
-if "route" not in st.session_state:
-    st.session_state.route = []
-if "venue_data" not in st.session_state:
-    st.session_state.venue_data = {}
+for key in ["lang", "admin", "route", "venue_data"]:
+    if key not in st.session_state:
+        st.session_state[key] = "ko" if key == "lang" else False if key == "admin" else [] if key == "route" else {}
 
 # =============================================
 # 사이드바
 # =============================================
 with st.sidebar:
-    lang_selected = st.selectbox("Language", ["ko", "hi"], index=["ko", "hi"].index(st.session_state.lang))
-    st.session_state.lang = lang_selected
+    st.session_state.lang = st.selectbox("Language", ["ko", "hi"], index=["ko", "hi"].index(st.session_state.lang))
     _ = LANG[st.session_state.lang]
 
     st.markdown("---")
@@ -95,7 +90,7 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 테마 CSS
+# 테마 CSS + 눈 효과 (폭설!)
 # =============================================
 st.markdown("""
 <style>
@@ -103,16 +98,56 @@ st.markdown("""
   background: radial-gradient(circle at 20% 20%, #0b0b10 0%, #000000 100%);
   color: #ffffff;
   font-family: 'Noto Sans KR', sans-serif;
+  overflow: hidden;
+  position: relative;
 }
-h1 {color: #ff3b3b; text-align: center; font-size: 4.2em; text-shadow: 0 0 25px #b71c1c;}
-h1 span.year {color: #ffffff;}
-h2.subtitle {text-align: center; color: #d0d0d0; font-size: 1.2em; margin-top: -20px;}
-.streamlit-expanderHeader {background-color: rgba(0, 80, 40, 0.7) !important; color: #fff !important;}
+
+/* 제목: 한 줄 강제 + 크기 조절 */
+h1 {
+  color: #ff3b3b !important;
+  text-align: center;
+  font-weight: 900;
+  font-size: 3.2em !important;  /* ← 줄어듦! 두 줄 안 됨 */
+  white-space: nowrap;         /* ← 강제 한 줄 */
+  text-shadow: 0 0 25px #b71c1c;
+  margin: 10px 0 !important;
+}
+h1 span.year {color: #ffffff; font-size: 0.9em; vertical-align: super;}
+h2.subtitle {text-align: center; color: #d0d0d0; font-size: 1.2em; margin-top: -10px;}
+
+/* 눈 효과 (폭설!) */
+.snowflake {
+  position: fixed;
+  color: white;
+  font-size: 1.5em;
+  pointer-events: none;
+  animation: fall linear infinite;
+  z-index: 10;
+}
+@keyframes fall {
+  0% {transform: translateY(-10vh) rotate(0deg); opacity: 1;}
+  100% {transform: translateY(110vh) rotate(360deg); opacity: 0;}
+}
+
+/* Expander */
+.streamlit-expanderHeader {
+  background-color: rgba(0, 80, 40, 0.7) !important;
+  color: #fff !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # =============================================
-# 제목
+# 눈 폭설 생성 (150개!)
+# =============================================
+snowflakes = "".join(
+    f'<div class="snowflake" style="left:{random.randint(0,100)}%; top:-10%; animation-duration:{random.uniform(10,25)}s; animation-delay:{random.uniform(0,5)}s;">❄️</div>'
+    for _ in range(150)
+)
+st.markdown(snowflakes, unsafe_allow_html=True)
+
+# =============================================
+# 제목 (한 줄!)
 # =============================================
 st.markdown(f"<h1>🎄 {_['title']} <span class='year'>2025</span></h1>", unsafe_allow_html=True)
 st.markdown(f"<h2 class='subtitle'>{_['subtitle']}</h2>", unsafe_allow_html=True)
@@ -144,7 +179,7 @@ with left:
     for i, c in enumerate(st.session_state.route):
         with st.expander(f"{c}"):
             today = datetime.now().date()
-            date = st.date_input(_["date"], value=today, min_value=today, key=f"date_{c}_{i}")  # ← 키 중복 방지
+            date = st.date_input(_["date"], value=today, min_value=today, key=f"date_{c}_{i}")
             venue = st.text_input(_["venue"], key=f"venue_{c}_{i}")
             seats = st.number_input(_["seats"], min_value=0, step=50, key=f"seats_{c}_{i}")
             google = st.text_input(_["google"], key=f"google_{c}_{i}")
@@ -176,7 +211,8 @@ with left:
 
 with right:
     st.subheader(f"{_['tour_map']}")
-    m = folium.Map(location=(19.75, 75.71), zoom_start=7, tiles="CartoDB dark_matter")
+    # 지도 밝게! (Stamen Terrain → 밝고 선명)
+    m = folium.Map(location=(19.75, 75.71), zoom_start=7, tiles="Stamen Terrain")
 
     points = [coords[c] for c in st.session_state.route if c in coords]
     if len(points) >= 2:
@@ -192,7 +228,7 @@ with right:
                     popup += f"<a href='{data['google']}' target='_blank'>Google Maps</a>"
             folium.Marker(
                 coords[c], popup=popup,
-                icon=folium.Icon(color="lightgray", icon="star", prefix="fa")
+                icon=folium.Icon(color="red", icon="music", prefix="fa")
             ).add_to(m)
 
-    st_folium(m, width=900, height=650)  # ← st_folium 사용
+    st_folium(m, width=900, height=650)
