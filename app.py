@@ -1,13 +1,10 @@
 import streamlit as st
-import pandas as pd
-from datetime import datetime
 import folium
 from streamlit_folium import st_folium
-import math
 import random
 
 # ----------------------------------------------------------------------
-# 1. 다국어 사전 (완전)
+# 1. 다국어 사전 (필수만 남김)
 # ----------------------------------------------------------------------
 LANG = {
     "en": {
@@ -36,7 +33,7 @@ LANG = {
 st.set_page_config(page_title="Cantata Tour 2025", layout="wide", initial_sidebar_state="collapsed")
 
 # ----------------------------------------------------------------------
-# 3. 테마 + 장식
+# 3. 테마 + 장식 (그대로)
 # ----------------------------------------------------------------------
 st.markdown("""
 <style>
