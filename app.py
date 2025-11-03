@@ -164,6 +164,7 @@ with left:
     total_distance = 0.0
     total_hours = 0.0
 
+    # 도시 박스 + 거리/시간 (도시명 없이)
     for i, c in enumerate(st.session_state.route):
         with st.expander(f"{c}"):
             today = datetime.now().date()
@@ -183,7 +184,7 @@ with left:
                     st.success("저장되었습니다.")
                     st.rerun()
 
-        # 도시 박스 사이에 **글로만** 거리/시간 표기
+        # 첫 번째와 두 번째 사이에도 거리/시간 표시
         if i > 0:
             prev = st.session_state.route[i - 1]
             if prev in coords and c in coords:
@@ -191,9 +192,10 @@ with left:
                 time_hr = dist / 60.0
                 total_distance += dist
                 total_hours += time_hr
+                # 도시명 없이 거리/시간만 표기
                 st.markdown(
                     f"<p style='text-align:center; color:#90EE90; font-weight:bold; margin:5px 0;'>"
-                    f"{prev} → {c} : {dist:.1f} km / {time_hr:.1f} 시간"
+                    f"{dist:.1f} km / {time_hr:.1f} 시간"
                     f"</p>",
                     unsafe_allow_html=True
                 )
