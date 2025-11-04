@@ -158,7 +158,7 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 스타일 (아코디언 + X 버튼 + 서클 화살표)
+# 스타일
 # =============================================
 st.markdown("""
 <style>
@@ -168,7 +168,6 @@ h1 { color: #ff3333 !important; text-align: center; font-weight: 900; font-size:
 h1 span.year { color: #fff; font-size: 0.8em; vertical-align: super; }
 h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin-left: 5px; }
 
-/* 투어지도 헤더 */
 .map-header {
     display: flex; 
     justify-content: space-between; 
@@ -181,7 +180,6 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     color: #ff6b6b;
 }
 
-/* 서클 화살표 새로고침 */
 .refresh-btn {
     background: none; 
     border: 2px solid #00c853; 
@@ -209,7 +207,6 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     to { transform: rotate(360deg); }
 }
 
-/* 공지 아코디언 (제목 클릭 → 펼쳐짐) */
 .notice-accordion {
     background:#1a1a1a; border:2px solid #333; border-radius:12px; margin:12px 0; 
     overflow: hidden; transition: all 0.3s;
@@ -227,14 +224,12 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 }
 .notice-content.open { max-height: 1000px; padding: 18px; }
 
-/* X 닫기 버튼 (오른쪽 위) */
 .close-btn {
     background: none; border: none; color: #ff6b6b; font-size: 1.4em; font-weight: bold;
     cursor: pointer; padding: 0 8px; line-height: 1; transition: all 0.2s;
 }
 .close-btn:hover { color: #ff3333; transform: scale(1.2); }
 
-/* 모바일 반응형 */
 @media (max-width: 768px) {
     .map-header { padding: 0 12px; }
     .map-title { font-size: 1.3em; }
@@ -279,7 +274,7 @@ def distance_km(p1, p2):
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
-# 공지 아코디언 UI (제목 클릭 → 펼쳐짐 + X 버튼)
+# 공지 아코디언 UI (이미지 src 수정)
 # =============================================
 def render_notice_list():
     if st.session_state.notice_data:
@@ -288,7 +283,9 @@ def render_notice_list():
             is_open = st.session_state.expanded_notice == notice_id
             uid = f"notice_{notice_id}_{uuid.uuid4().hex[:8]}"
             
-            # 아코디언 헤더 (클릭 → 펼쳐짐)
+            # 이미지 src 안전하게 f-string
+            image_html = f'<img src="data:image/png;base64,{n["file"]}" style="max-width:100%; margin-top:15px; border-radius:8px;">' if 'file' in n else ''
+            
             st.markdown(f"""
             <div class="notice-accordion">
                 <div class="notice-header" onclick="document.getElementById('{uid}_toggle').click()">
@@ -296,19 +293,18 @@ def render_notice_list():
                         <div class="notice-title">📢 {n['title']}</div>
                         <div class="notice-time">{n['timestamp'][:16].replace('T',' ')}</div>
                     </div>
-                    <div style="margin-left: auto; color: #888;">▼</div>
+                    <div style="margin-left: auto; color: #888;">{'▲' if is_open else '▼'}</div>
                 </div>
                 <div id="{uid}_content" class="notice-content {'open' if is_open else ''}">
                     <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
                         <button class="close-btn" onclick="document.getElementById('{uid}_close').click()">×</button>
                     </div>
                     <div>{n['content']}</div>
-                    {'<img src="data:image/png;base64,' + n['file'] + '" style="max-width:100%; margin-top:15px; border-radius:8px;">' if 'file' in n else ''}
+                    {image_html}
                 </div>
             </div>
             """, unsafe_allow_html=True)
             
-            # 숨긴 토글/닫기 버튼
             if st.button("", key=f"{uid}_toggle"):
                 st.session_state.expanded_notice = notice_id if not is_open else None
                 st.rerun()
