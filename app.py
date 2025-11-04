@@ -203,29 +203,29 @@ with left:
         st.success(f"**{total_distance:.1f} km** | **{total_hours:.1f} 시간**")
 
 # =============================================
-# Right panel - 구글지도 적용!
+# Right panel - 구글지도 (KeyError 방지)
 # =============================================
 with right:
     st.subheader(_["tour_map"])
     
-    # Streamlit Secrets에서 API 키 가져오기
-    GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+    # Secrets에서 API 키 가져오기 (KeyError 방지)
+    try:
+        GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+    except KeyError:
+        st.error("Google Maps API 키가 없습니다. Streamlit Cloud Secrets에 `GOOGLE_API_KEY`를 추가하세요.")
+        st.stop()
 
-    # 구글지도 (기본 도로)
     m = folium.Map(
         location=(19.75, 75.71),
         zoom_start=6,
         tiles=f"https://mt1.google.com/vt/lyrs=m&x={{x}}&y={{y}}&z={{z}}&key={GOOGLE_API_KEY}",
-        attr="Google",
-        name="Google Maps"
+        attr="Google"
     )
 
-    # 경로 선
     points = [coords[c] for c in st.session_state.route if c in coords]
     if len(points) >= 2:
         AntPath(points, color="red", weight=4, delay=800).add_to(m)
 
-    # 마커
     for c in st.session_state.route:
         if c in coords:
             data = st.session_state.venue_data.get(c, {})
