@@ -181,7 +181,7 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 스타일
+# 스타일 (모바일 최적화)
 # =============================================
 st.markdown("""
 <style>
@@ -190,13 +190,51 @@ h1 { color: #ff3333 !important; text-align: center; font-weight: 900; font-size:
      text-shadow: 0 0 25px #b71c1c, 0 0 15px #00ff99; }
 h1 span.year { color: #fff; font-size: 0.8em; vertical-align: super; }
 h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin-left: 5px; }
-.notice-card { background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:15px; margin:10px 0; display:flex; justify-content:space-between; align-items:center; }
+
+/* 모바일 최적화: 투어지도 타이틀 + 새로고침 버튼 나란히 */
+.map-header {
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 10px;
+}
+.map-title {
+    font-size: 1.5em; 
+    font-weight: bold; 
+    color: #ff6b6b;
+}
+.refresh-btn {
+    background: #00c853; 
+    color: white; 
+    border: none; 
+    padding: 10px 16px; 
+    border-radius: 50%; 
+    font-weight: bold; 
+    cursor: pointer; 
+    box-shadow: 0 0 15px rgba(0,200,83,0.6);
+    transition: all 0.2s;
+}
+.refresh-btn:hover {
+    background: #00b140; 
+    transform: scale(1.1);
+}
+
+/* 공지 카드 */
+.notice-card { 
+    background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:15px; margin:10px 0; 
+    display:flex; justify-content:space-between; align-items:center; 
+}
 .notice-title { color:#ff6b6b; font-weight:bold; }
 .notice-time { color:#888; font-size:0.8em; }
 .btn-view { background:#ff6b6b; color:white; border:none; padding:8px 14px; border-radius:6px; margin:0 4px; cursor:pointer; font-size:0.9em; }
 .btn-del { background:#d32f2f; color:white; border:none; padding:8px 14px; border-radius:6px; margin:0 4px; cursor:pointer; font-size:0.9em; }
-.refresh-btn { background:#00c853; color:white; border:none; padding:10px 16px; border-radius:50%; font-weight:bold; cursor:pointer; box-shadow:0 0 15px rgba(0,200,83,0.6); }
-.refresh-btn:hover { background:#00b140; transform:scale(1.1); }
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+    .map-header { flex-direction: row; justify-content: space-between; }
+    .map-title { font-size: 1.3em; }
+    .refresh-btn { padding: 8px 12px; font-size: 0.9em; }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -265,13 +303,13 @@ def render_notice_list(is_admin=False):
 # 일반 사용자 모드
 # =============================================
 if not st.session_state.admin:
-    # 투어지도 위 오른쪽 새로고침 버튼
-    col_map_title, col_refresh = st.columns([8, 1])
-    with col_map_title:
-        st.markdown("### 투어지도")
-    with col_refresh:
-        if st.button("새로고침", key="full_refresh_user", help="전체 페이지 새로고침"):
-            full_page_refresh()
+    # 투어지도 타이틀 + 새로고침 버튼 (모바일 나란히)
+    st.markdown(f"""
+    <div class="map-header">
+        <div class="map-title">투어지도</div>
+        <button class="refresh-btn" onclick="window.location.reload()">새로고침</button>
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.expander("투어지도", expanded=False):
         try:
@@ -331,13 +369,13 @@ if not st.session_state.admin:
 # =============================================
 # 관리자 모드
 # =============================================
-# 투어지도 위 오른쪽 새로고침 버튼 (관리자도 동일)
-col_map_title, col_refresh = st.columns([8, 1])
-with col_map_title:
-    st.markdown("### 투어지도")
-with col_refresh:
-    if st.button("새로고침", key="full_refresh_admin", help="전체 페이지 새로고침"):
-        full_page_refresh()
+# 투어지도 타이틀 + 새로고침 버튼 (모바일 나란히)
+st.markdown(f"""
+<div class="map-header">
+    <div class="map-title">투어지도</div>
+    <button class="refresh-btn" onclick="window.location.reload()">새로고침</button>
+</div>
+""", unsafe_allow_html=True)
 
 with st.expander("투어지도", expanded=False):
     try:
