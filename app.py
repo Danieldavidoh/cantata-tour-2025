@@ -6,13 +6,53 @@
 if not st.session_state.admin:
     # 투어지도
     with st.expander("투어지도", expanded=False):
-        # ... (지도 코드 생략 – 이전 유지)
+        try:
+            GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+        except:
+            st.error("Google Maps API 키 없음")
+            st.stop()
 
-    # 공지현황 버튼 (말풍선 + 슬라이드 알림)
+        m = folium.Map(location=(19.75, 75.71), zoom_start=6,
+                       tiles=f"https://mt1.google.com/vt/lyrs=m&x={{x}}&y={{y}}&z={{z}}&key={GOOGLE_API_KEY}",
+                       attr="Google")
+
+        points = [coords[c] for c in st.session_state.route if c in coords]
+        if len(points) >= 2:
+            for i in range(len(points) - 1):
+                p1, p2 = points[i], points[i + 1]
+                dist = distance_km(p1, p2)
+                time_hr = dist / 60.0
+                mid_lat = (p1[0] + p2[0]) / 2
+                mid_lng = (p1[1] + p2[1]) / 2
+                folium.Marker(
+                    location=[mid_lat, mid_lng],
+                    icon=folium.DivIcon(html=f"""
+                        <div class="distance-label">
+                            {dist:.1f} km / {time_hr:.1f} h
+                        </div>
+                    """)
+                ).add_to(m)
+            AntPath(points, color="red", weight=4, delay=800).add_to(m)
+
+        for c in st.session_state.route:
+            if c in coords:
+                data = st.session_state.venue_data.get(c, {})
+                popup = f"<b>{c}</b><br>"
+                if "date" in data:
+                    popup += f"{data['date']}<br>{data['venue']}<br>Seats: {data['seats']}<br>{data['type']}<br>"
+                if "google" in data and data["google"]:
+                    match = re.search(r'@(\d+\.\d+),(\d+\.\d+)', data["google"])
+                    lat, lng = (match.group(1), match.group(2)) if match else (None, None)
+                    nav_link = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lng}" if lat and lng else data["google"]
+                    popup += f"<a href='{nav_link}' target='_blank'>네비 시작</a>"
+                folium.Marker(coords[c], popup=popup,
+                              icon=folium.Icon(color="red", icon="music", prefix="fa")).add_to(m)
+
+        st_folium(m, width=900, height=650)
+
+    # 투어지도 아래 공지현황 버튼 (말풍선)
     st.markdown("---")
-    notice_expander = st.expander("공지현황", expanded=False)
-
-    with notice_expander:
+    with st.expander("공지현황", expanded=False):
         if st.session_state.notice_data:
             for notice in st.session_state.notice_data:
                 st.markdown(f"""
@@ -66,10 +106,10 @@ if not st.session_state.admin:
         st.session_state.show_popup = False
 
     # 공지현황 클릭 시 슬라이드 사라짐
-    if notice_expander:
+    if 'notice_expander' in locals() and notice_expander:
         st.markdown("<script>document.querySelector('.slide-alert')?.remove();</script>", unsafe_allow_html=True)
 
-    # 전체 화면 공지 (기존 버튼 제거 + 새 나가기 버튼)
+    # 전체 화면 공지 (새 나가기 버튼)
     if st.session_state.show_full_notice is not None:
         notice = next((n for n in st.session_state.notice_data if n["id"] == st.session_state.show_full_notice), None)
         if notice:
@@ -77,13 +117,11 @@ if not st.session_state.admin:
             if "file" in notice and notice["file"]:
                 content += f"<br><img src='data:image/png;base64,{notice['file']}' style='max-width:100%;'>"
 
-            # 숨겨진 버튼
             close_clicked = st.button("", key="close_full_notice_hidden")
             if close_clicked:
                 st.session_state.show_full_notice = None
                 st.rerun()
 
-            # 새 나가기 버튼 (오른쪽 위)
             st.markdown(f"""
             <div id="full-screen-notice">
                 <button id="new-exit-button" onclick="document.getElementById('close_full_notice_hidden').click();">나가기</button>
