@@ -84,10 +84,13 @@ def open_notice(notice_id):
     st.session_state.show_full_notice = notice_id
     st.rerun()
 
-def refresh_notices():
-    st.session_state.notice_data = load_json(NOTICE_FILE, [])
-    st.session_state.notice_counter = len(st.session_state.notice_data)
-    st.rerun()
+# 전체 페이지 새로고침 (JS)
+def full_page_refresh():
+    st.markdown("""
+    <script>
+    window.location.reload();
+    </script>
+    """, unsafe_allow_html=True)
 
 # =============================================
 # 실시간 알림 시스템
@@ -192,7 +195,8 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 .notice-time { color:#888; font-size:0.8em; }
 .btn-view { background:#ff6b6b; color:white; border:none; padding:8px 14px; border-radius:6px; margin:0 4px; cursor:pointer; font-size:0.9em; }
 .btn-del { background:#d32f2f; color:white; border:none; padding:8px 14px; border-radius:6px; margin:0 4px; cursor:pointer; font-size:0.9em; }
-.refresh-btn { background:#00c853; color:white; border:none; padding:6px 12px; border-radius:50%; font-weight:bold; cursor:pointer; }
+.refresh-btn { background:#00c853; color:white; border:none; padding:10px 16px; border-radius:50%; font-weight:bold; cursor:pointer; box-shadow:0 0 15px rgba(0,200,83,0.6); }
+.refresh-btn:hover { background:#00b140; transform:scale(1.1); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -221,21 +225,13 @@ def distance_km(p1, p2):
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
-# 공통 공지현황 UI (컬럼 0 금지)
+# 공통 공지현황 UI
 # =============================================
 def render_notice_list(is_admin=False):
-    col_title, col_refresh = st.columns([8, 1])
-    with col_title:
-        st.markdown(f"### 공지현황")
-    with col_refresh:
-        if st.button("새로고침", key=f"refresh_{'admin' if is_admin else 'user'}", help="공지 새로고침"):
-            refresh_notices()
-
     if st.session_state.notice_data:
         for n in st.session_state.notice_data:
             uid = f"{'admin' if is_admin else 'user'}_notice_{n['id']}_{uuid.uuid4().hex[:8]}"
             
-            # 카드 스타일
             st.markdown(f"""
             <div class="notice-card">
                 <div>
@@ -249,7 +245,6 @@ def render_notice_list(is_admin=False):
             </div>
             """, unsafe_allow_html=True)
             
-            # 숨긴 버튼 (컬럼 0 금지 → 항상 1 이상)
             if is_admin:
                 col1, col2 = st.columns([1, 1])
                 with col1:
@@ -259,7 +254,7 @@ def render_notice_list(is_admin=False):
                     if st.button("", key=f"{uid}_del"):
                         delete_notice(n['id'])
             else:
-                col1, _ = st.columns([1, 10])  # 두 번째 컬럼은 무시용
+                col1, _ = st.columns([1, 10])
                 with col1:
                     if st.button("", key=f"{uid}_view"):
                         open_notice(n['id'])
@@ -270,6 +265,14 @@ def render_notice_list(is_admin=False):
 # 일반 사용자 모드
 # =============================================
 if not st.session_state.admin:
+    # 투어지도 위 오른쪽 새로고침 버튼
+    col_map_title, col_refresh = st.columns([8, 1])
+    with col_map_title:
+        st.markdown("### 투어지도")
+    with col_refresh:
+        if st.button("새로고침", key="full_refresh_user", help="전체 페이지 새로고침"):
+            full_page_refresh()
+
     with st.expander("투어지도", expanded=False):
         try:
             GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
@@ -307,7 +310,6 @@ if not st.session_state.admin:
     with st.expander("공지현황", expanded=st.session_state.show_full_notice is not None):
         render_notice_list(is_admin=False)
 
-    # 공지 상세 보기
     if st.session_state.show_full_notice:
         notice = next((x for x in st.session_state.notice_data if x["id"] == st.session_state.show_full_notice), None)
         if notice:
@@ -329,6 +331,47 @@ if not st.session_state.admin:
 # =============================================
 # 관리자 모드
 # =============================================
+# 투어지도 위 오른쪽 새로고침 버튼 (관리자도 동일)
+col_map_title, col_refresh = st.columns([8, 1])
+with col_map_title:
+    st.markdown("### 투어지도")
+with col_refresh:
+    if st.button("새로고침", key="full_refresh_admin", help="전체 페이지 새로고침"):
+        full_page_refresh()
+
+with st.expander("투어지도", expanded=False):
+    try:
+        GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+    except:
+        st.error("Google Maps API 키 없음")
+        st.stop()
+
+    m = folium.Map(location=(19.75, 75.71), zoom_start=6,
+                   tiles=f"https://mt1.google.com/vt/lyrs=m&x={{x}}&y={{y}}&z={{z}}&key={GOOGLE_API_KEY}",
+                   attr="Google")
+    points = [coords[c] for c in st.session_state.route if c in coords]
+    if len(points) >= 2:
+        for i in range(len(points)-1):
+            p1, p2 = points[i], points[i+1]
+            dist = distance_km(p1, p2)
+            time_hr = dist / 60.0
+            mid = ((p1[0]+p2[0])/2, (p1[1]+p2[1])/2)
+            folium.Marker(mid, icon=folium.DivIcon(html=f"<div style='color:white;font-size:10pt'>{dist:.1f}km / {time_hr:.1f}h</div>")).add_to(m)
+        AntPath(points, color="red", weight=4, delay=800).add_to(m)
+
+    for c in st.session_state.route:
+        if c in coords:
+            data = st.session_state.venue_data.get(c, {})
+            popup = f"<b>{c}</b><br>"
+            if "date" in data: popup += f"{data['date']}<br>{data['venue']}<br>Seats: {data['seats']}<br>{data['type']}<br>"
+            if "google" in data and data["google"]:
+                match = re.search(r'@(\d+\.\d+),(\d+\.\d+)', data["google"])
+                lat, lng = (match.group(1), match.group(2)) if match else (None, None)
+                nav = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lng}" if lat else data["google"]
+                popup += f"<a href='{nav}' target='_blank'>네비 시작</a>"
+            folium.Marker(coords[c], popup=popup, icon=folium.Icon(color="red")).add_to(m)
+    st_folium(m, width=900, height=600)
+
 st.subheader("공지사항 입력")
 title = st.text_input(_["notice_title"])
 content = st.text_area(_["notice_content"])
@@ -353,7 +396,6 @@ st.markdown("---")
 with st.expander("공지현황", expanded=st.session_state.show_full_notice is not None):
     render_notice_list(is_admin=True)
 
-# 관리자도 공지 상세 보기
 if st.session_state.show_full_notice:
     notice = next((x for x in st.session_state.notice_data if x["id"] == st.session_state.show_full_notice), None)
     if notice:
