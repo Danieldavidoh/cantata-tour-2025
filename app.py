@@ -4,32 +4,65 @@ import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
 from math import radians, sin, cos, sqrt, atan2
+import re  # Google Maps 위경도 추출
 import json
 import os
 
 # =============================================
-# 언어팩 (선택 시 각 언어로 표기)
+# 데이터 저장 (공유 json 파일)
+# =============================================
+VENUE_FILE = "venue_data.json"
+NOTICE_FILE = "notice_data.json"
+
+def load_venue_data():
+    if os.path.exists(VENUE_FILE):
+        with open(VENUE_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_venue_data(data):
+    with open(VENUE_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+def load_notice_data():
+    if os.path.exists(NOTICE_FILE):
+        with open(NOTICE_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+def save_notice_data(data):
+    with open(NOTICE_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+# =============================================
+# 언어팩
 # =============================================
 LANG = {
-    "ko": {"title": "칸타타 투어", "subtitle": "마하라슈트라", "select_city": "도시 선택", "add_city": "추가",
+    "ko": {"title": "칸타타 투어", "subtitle": "마하라스트라", "select_city": "도시 선택", "add_city": "추가",
            "register": "등록", "venue": "공연장", "seats": "좌석 수", "indoor": "실내", "outdoor": "실외",
            "google": "구글 지도 링크", "notes": "특이사항", "tour_map": "투어 지도", "tour_route": "경로",
            "password": "관리자 비밀번호", "login": "로그인", "logout": "로그아웃", "date": "공연 날짜",
-           "total": "총 거리 및 소요시간", "already_added": "이미 추가된 도시입니다.", "lang_name": "한국어"},
+           "total": "총 거리 및 소요시간", "already_added": "이미 추가된 도시입니다.", "lang_name": "한국어",
+           "notice_title": "공지 제목", "notice_content": "공지 내용", "notice_button": "공지", "new_notice": "새로운 공지",
+           "notices": "이전 공지"},
     "en": {"title": "Cantata Tour", "subtitle": "Maharashtra", "select_city": "Select City", "add_city": "Add",
            "register": "Register", "venue": "Venue", "seats": "Seats", "indoor": "Indoor", "outdoor": "Outdoor",
            "google": "Google Maps Link", "notes": "Notes", "tour_map": "Tour Map", "tour_route": "Route",
-           "password": "Admin Password", "login": "Login", "logout": "Logout", "date": "Date",
-           "total": "Total Distance & Time", "already_added": "City already added.", "lang_name": "English"},
+           "password": "Admin Password", "login": "Log in", "logout": "Log out", "date": "Date",
+           "total": "Total Distance & Time", "already_added": "City already added.", "lang_name": "English",
+           "notice_title": "Notice Title", "notice_content": "Notice Content", "notice_button": "Notice", "new_notice": "New Notice",
+           "notices": "Previous Notices"},
     "hi": {"title": "कांटाटा टूर", "subtitle": "महाराष्ट्र", "select_city": "शहर चुनें", "add_city": "जोड़ें",
            "register": "पंजीकरण करें", "venue": "स्थान", "seats": "सीटें", "indoor": "इनडोर", "outdoor": "आउटडोर",
            "google": "गूगल मानचित्र लिंक", "notes": "टिप्पणी", "tour_map": "टूर मानचित्र", "tour_route": "मार्ग",
-           "password": "व्यवस्थापक पासवर्ड", "login": "लॉगिन", "logout": "लॉगआउट", "date": "दिनांक",
-           "total": "कुल दूरी और समय", "already_added": "यह शहर पहले से जोड़ा गया है।", "lang_name": "हिन्दी"}
+           "password": "व्यवस्थापक पासवर्ड", "login": "लॉगिन", "logout": "लॉग아우ट", "date": "दिनांक",
+           "total": "कुल दूरी और समय", "already_added": "यह शहर पहले से जोड़ा गया है।", "lang_name": "हिन्दी",
+           "notice_title": "सूचना शीर्षक", "notice_content": "सूचना सामग्री", "notice_button": "सूचना", "new_notice": "नई सूचना",
+           "notices": "पिछली सूचनाएं"}
 }
 
 # =============================================
-# 마하라슈트라 주요 150개 도시 (실제 도시 + 좌표)
+# 마하라슈트라 주요 150개 도시 (인구 순, 웹 검색 기반)
 # =============================================
 cities = sorted([
     "Mumbai", "Pune", "Nagpur", "Nashik", "Thane", "Aurangabad", "Solapur", "Amravati", "Nanded", "Kolhapur",
@@ -38,19 +71,18 @@ cities = sorted([
     "Mira-Bhayandar", "Ulhasnagar", "Kalyan", "Vasai-Virar", "Ambernath", "Panvel", "Badlapur", "Virar", "Dombivli", "Bhivandi",
     "Ichalkaranji", "Khamgaon", "Phaltan", "Sangole", "Sawantwadi", "Shirur", "Shirdi", "Sinnar", "Talegaon", "Wai",
     "Wani", "Karjat", "Mahad", "Manmad", "Nandurbar", "Niphad", "Ramtek", "Saswad", "Shrirampur", "Lonavala",
-    "Khopoli", "Karad", "Kopargaon", "Malvan", "Satara Road", "Kudal", "Karanja", "Karjat", "Kolad", "Kavathe Mahankal",
-    "Koparkhairane", "Kurla", "Malkapur", "Peth", "Shahada", "Shirpur", "Solankur", "Sonegaon", "Tumsar", "Udgir",
-    "Wadgaon Road", "Wadwani", "Chiplun", "Kothrud", "Gondia", "Hingoli", "Jalna", "Bhiwandi Nizampur", "Kopargaon",
-    "Panaji", "Alibag", "Amalner", "Arvi", "Baramati", "Barsi", "Basmath", "Bhor", "Bhusawal", "Chakan",
-    "Chalisgaon", "Chinchwad", "Dahanu", "Dapoli", "Daund", "Deolali", "Dehu", "Digras", "Erandol", "Gadhinglaj",
-    "Gangakhed", "Gevrai", "Hinganghat", "Junnar", "Kagal", "Kandhar", "Kankavli", "Karanja Lad", "Khed", "Kinwat",
-    "Koregaon", "Kurkumbh", "Lanja", "Loha", "Mahabaleshwar", "Mahagaon", "Majalgaon", "Mangalvedhe", "Mangaon", "Mhaswad",
-    "Mokhada", "Morgaon", "Morshi", "Murbad", "Murtijapur", "Nandgaon", "Navi Mumbai", "Nilanga", "Ozar", "Pachora",
-    "Paithan", "Pandharpur", "Paranda", "Parli", "Parner", "Partur", "Pathardi", "Patoda", "Pauni", "Pen",
-    "Pimpalgaon Baswant", "Pimpri", "Pusad", "Rahuri", "Rajapur", "Rajgurunagar", "Raver", "Risod", "Roha", "Sangamner",
-    "Saoner", "Sashti", "Savitri", "Selu", "Shevgaon", "Shrigonda", "Shrirampur", "Sillod", "Sinnar", "Soygaon",
-    "Talode", "Tasgaon", "Tirora", "Trimbak", "Tuljapur", "Umarga", "Umarkhed", "Uran", "Vaijapur", "Vani",
-    "Vita", "Wada", "Warora", "Warud", "Washim", "Yaval", "Yeola"
+    "Khopoli", "Karad", "Kopargaon", "Malvan", "Satara Road", "Kudal", "Karanja", "Kolad", "Kavathe Mahankal", "Koparkhairane",
+    "Kurla", "Malkapur", "Peth", "Shahada", "Shirpur", "Solankur", "Sonegaon", "Tumsar", "Udgir", "Wadgaon Road",
+    "Wadwani", "Chiplun", "Kothrud", "Gondia", "Hingoli", "Jalna", "Bhiwandi Nizampur", "Alibag", "Amalner", "Arvi",
+    "Baramati", "Barsi", "Basmath", "Bhor", "Chakan", "Chalisgaon", "Chinchwad", "Dahanu", "Dapoli", "Daund",
+    "Deolali", "Dehu", "Digras", "Erandol", "Gadhinglaj", "Gangakhed", "Gevrai", "Hinganghat", "Junnar", "Kagal",
+    "Kandhar", "Kankavli", "Karanja Lad", "Khed", "Kinwat", "Koregaon", "Kurkumbh", "Lanja", "Loha", "Mahabaleshwar",
+    "Mahagaon", "Majalgaon", "Mangalvedhe", "Mangaon", "Mhaswad", "Mokhada", "Morgaon", "Morshi", "Murbad", "Murtijapur",
+    "Nandgaon", "Navi Mumbai", "Nilanga", "Ozar", "Pachora", "Paithan", "Pandharpur", "Paranda", "Parli", "Parner",
+    "Partur", "Pathardi", "Patoda", "Pauni", "Pen", "Pimpalgaon Baswant", "Pimpri", "Pusad", "Rahuri", "Rajapur",
+    "Rajgurunagar", "Raver", "Risod", "Roha", "Sangamner", "Saoner", "Sashti", "Savitri", "Selu", "Shevgaon",
+    "Shrigonda", "Sillod", "Soygaon", "Talode", "Tasgaon", "Tirora", "Trimbak", "Tuljapur", "Umarga", "Umarkhed",
+    "Uran", "Vaijapur", "Vani", "Vita", "Wada", "Warora", "Warud", "Washim", "Yaval", "Yeola"
 ])
 
 coords = {
@@ -86,7 +118,7 @@ coords = {
     "Kurkumbh": (18.3833, 74.5833), "Lanja": (16.8667, 73.5500), "Loha": (18.9667, 77.1333), "Mahabaleshwar": (17.9167, 73.6667),
     "Mahagaon": (16.8667, 77.7333), "Majalgaon": (19.1500, 76.2333), "Mangalvedhe": (17.5167, 75.4667), "Mangaon": (18.2333, 73.2833),
     "Mhaswad": (17.6333, 74.7833), "Mokhada": (19.9333, 73.3667), "Morgaon": (18.2667, 74.3167), "Morshi": (21.3333, 78.0167),
-    "Murbad": (19.2500, 73.4000), "Murtijapur": (20.7333, 77.3667), "Nandgaon": (20.3167, 74.6500), "Navi Mumbai": (19.0333, 73.0333),
+    "Murbad": (19.2500, 73.4000), "Murtijapur": (20.7333, 77.3667), "Nandgaon": (20.3167, 74.6500), "Navi Mumbai": (19.0330, 73.0297),
     "Nilanga": (18.1167, 76.7500), "Ozar": (20.1000, 73.9167), "Pachora": (20.6667, 75.3500), "Paithan": (19.4833, 75.3833),
     "Pandharpur": (17.6833, 75.3333), "Paranda": (18.2667, 75.4333), "Parli": (18.8500, 76.5333), "Parner": (19.0000, 74.4333),
     "Partur": (19.6000, 76.2167), "Pathardi": (19.1667, 75.1833), "Patoda": (18.8000, 75.5000), "Pauni": (20.7833, 79.6333),
@@ -113,21 +145,6 @@ def distance_km(p1, p2):
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
-# 데이터 저장 (모든 사용자 공유)
-# =============================================
-DATA_FILE = "venue_data.json"
-
-def load_data():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
-            return json.load(f)
-    return {}
-
-def save_data(data):
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=2)
-
-# =============================================
 # Streamlit state
 # =============================================
 st.set_page_config(page_title="Cantata Tour", layout="wide")
@@ -135,18 +152,16 @@ st.set_page_config(page_title="Cantata Tour", layout="wide")
 if "lang" not in st.session_state: st.session_state.lang = "ko"
 if "admin" not in st.session_state: st.session_state.admin = False
 if "route" not in st.session_state: st.session_state.route = []
-st.session_state.venue_data = load_data()  # 공유 데이터
+st.session_state.venue_data = load_venue_data()  # 공유
+st.session_state.notice_data = load_notice_data()  # 공유
+if "new_notice" not in st.session_state: st.session_state.new_notice = False  # 새 공지 플래그
+if "viewed_notice" not in st.session_state: st.session_state.viewed_notice = set()  # 본 공지 ID
 
 # =============================================
-# Sidebar (언어 선택 – 각 언어로 표기)
+# Sidebar
 # =============================================
 with st.sidebar:
-    lang_options = {
-        "ko": LANG["ko"]["lang_name"],
-        "en": LANG["en"]["lang_name"],
-        "hi": LANG["hi"]["lang_name"]
-    }
-    lang_selected = st.selectbox("Language", options=list(lang_options.keys()), format_func=lambda x: lang_options[x])
+    lang_selected = st.selectbox("Language", ["ko","en","hi"], index=["ko","en","hi"].index(st.session_state.lang))
     st.session_state.lang = lang_selected
     _ = LANG[st.session_state.lang]
 
@@ -177,12 +192,32 @@ st.markdown("""
   color: #ffffff;
   font-family: 'Noto Sans KR', sans-serif;
 }
-h1 { color: #ff3333 !important; text-align: center; font-weight: 900; font-size: 4.3em; text-shadow: 0 0 25px #b71c1c, 0 0 15px #00ff99; margin-bottom: 0; }
-h1 span.year {color: #ffffff; font-weight: 800; font-size: 0.8em; vertical-align: super;}
-h1 span.subtitle {color: #cccccc; font-size: 0.45em; vertical-align: super; margin-left: 5px;}
+
+/* 제목: 칸타타 투어 빨간색 */
+h1 {
+  color: #ff3333 !important;
+  text-align: center;
+  font-weight: 900
+font-size: 4.3em;
+  text-shadow: 0 0 25px #b71c1c, 0 0 15px #00ff99;
+  margin-bottom: 0;
+}
+h1 span.year {color: #ffffff; font-weight: 800;}
 h2 {text-align: center; color: #cccccc; margin-top: 0;}
-div[data-testid="stButton"] > button { background: linear-gradient(90deg, #ff3b3b, #228B22); color:white; font-weight:700; border-radius:8px; }
-div[data-testid="stButton"] > button:hover { transform: scale(1.05); box-shadow: 0 0 15px #ff4d4d; }
+
+/* 버튼 */
+div[data-testid="stButton"] > button {
+  background: linear-gradient(90deg, #ff3b3b, #228B22);
+  border: none;
+  color: white;
+  font-weight: 700;
+  border-radius: 8px;
+  transition: 0.3s;
+}
+div[data-testid="stButton"] > button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px #ff4d4d;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -190,49 +225,19 @@ div[data-testid="stButton"] > button:hover { transform: scale(1.05); box-shadow:
 # Title
 # =============================================
 st.markdown(
-    f"<h1>{_['title']} <span class='year'>2025</span><span class='subtitle'>{_['subtitle']}</span> 🎄</h1>",
+    f"<h1>{_['title']} <span class='year'>2025 🎄</span></h1>"
+    f"<h2>{_['subtitle']}</h2>",
     unsafe_allow_html=True
 )
 
 # =============================================
-# 일반 모드: 지도만 표시
-# =============================================
-if not st.session_state.admin:
-    with st.container():
-        col1, col2 = st.columns([1, 3])
-        with col2:
-            st.subheader(_["tour_map"])
-            try:
-                GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
-            except:
-                st.error("Google Maps API 키 없음")
-                st.stop()
-
-            m = folium.Map(location=(19.75, 75.71), zoom_start=6,
-                           tiles=f"https://mt1.google.com/vt/lyrs=m&x={{x}}&y={{y}}&z={{z}}&key={GOOGLE_API_KEY}",
-                           attr="Google")
-
-            points = [coords[c] for c in st.session_state.route if c in coords]
-            if len(points) >= 2:
-                AntPath(points, color="red", weight=4, delay=800).add_to(m)
-
-            for c in st.session_state.route:
-                if c in coords and c in st.session_state.venue_data:
-                    data = st.session_state.venue_data[c]
-                    popup = f"<b>{c}</b><br>{data.get('date','')}<br>{data.get('venue','')}<br>Seats: {data.get('seats','')}<br>{data.get('type','')}"
-                    if data.get("google"):
-                        popup += f"<br><a href='{data['google']}' target='_blank'>🚗 네비 시작</a>"
-                    folium.Marker(coords[c], popup=popup,
-                                  icon=folium.Icon(color="red", icon="music", prefix="fa")).add_to(m)
-
-            st_folium(m, width=900, height=650)
-    st.stop()
-
-# =============================================
-# 관리자 모드: 전체 UI
+# Layout
 # =============================================
 left, right = st.columns([1,2])
 
+# =============================================
+# Left panel
+# =============================================
 with left:
     c1, c2 = st.columns([3,1])
     with c1:
@@ -261,14 +266,15 @@ with left:
             notes = st.text_area(_["notes"], key=f"notes_{c}")
             io = st.radio("Type", [_["indoor"], _["outdoor"]], key=f"io_{c}")
 
-            if st.button(_["register"], key=f"reg_{c}"):
-                st.session_state.venue_data[c] = {
-                    "date": str(date), "venue": venue, "seats": seats,
-                    "type": io, "google": google, "notes": notes
-                }
-                save_data(st.session_state.venue_data)
-                st.success("저장되었습니다.")
-                st.rerun()
+            if st.session_state.admin:
+                if st.button(_["register"], key=f"reg_{c}"):
+                    st.session_state.venue_data[c] = {
+                        "date": str(date), "venue": venue, "seats": seats,
+                        "type": io, "google": google, "notes": notes
+                    }
+                    save_venue_data(st.session_state.venue_data)
+                    st.success("저장되었습니다.")
+                    st.rerun()
 
         if i > 0:
             prev = st.session_state.route[i - 1]
@@ -289,28 +295,25 @@ with left:
         st.markdown(f"### {_['total']}")
         st.success(f"**{total_distance:.1f} km** | **{total_hours:.1f} 시간**")
 
+# =============================================
+# Right panel
+# =============================================
 with right:
     st.subheader(_["tour_map"])
-    try:
-        GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
-    except:
-        st.error("Google Maps API 키 없음")
-        st.stop()
-
-    m = folium.Map(location=(19.75, 75.71), zoom_start=6,
-                   tiles=f"https://mt1.google.com/vt/lyrs=m&x={{x}}&y={{y}}&z={{z}}&key={GOOGLE_API_KEY}",
-                   attr="Google")
+    m = folium.Map(location=(19.75,75.71), zoom_start=6, tiles="CartoDB positron")
 
     points = [coords[c] for c in st.session_state.route if c in coords]
     if len(points) >= 2:
         AntPath(points, color="red", weight=4, delay=800).add_to(m)
 
     for c in st.session_state.route:
-        if c in coords and c in st.session_state.venue_data:
-            data = st.session_state.venue_data[c]
-            popup = f"<b>{c}</b><br>{data.get('date','')}<br>{data.get('venue','')}<br>Seats: {data.get('seats','')}<br>{data.get('type','')}"
-            if data.get("google"):
-                popup += f"<br><a href='{data['google']}' target='_blank'>🚗 네비 시작</a>"
+        if c in coords:
+            data = st.session_state.venue_data.get(c, {})
+            popup = f"<b>{c}</b><br>"
+            if "date" in data:
+                popup += f"{data['date']}<br>{data['venue']}<br>Seats: {data['seats']}<br>{data['type']}<br>"
+            if "google" in data and data["google"]:
+                popup += f"<a href='{data['google']}' target='_blank'>Google Maps</a>"
             folium.Marker(coords[c], popup=popup,
                           icon=folium.Icon(color="red", icon="music", prefix="fa")).add_to(m)
 
