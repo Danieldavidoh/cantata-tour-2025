@@ -38,13 +38,31 @@ def save_notice_data(data):
 # 언어팩
 # =============================================
 LANG = {
-    "ko": {"title": "칸타타 투어", "subtitle": "마하라스트라", "tour_map": "투어 지도", "notice_button": "공지", "new_notice": "새로운 공지", "notices": "이전 공지"},
-    "en": {"title": "Cantata Tour", "subtitle": "Maharashtra", "tour_map": "Tour Map", "notice_button": "Notice", "new_notice": "New Notice", "notices": "Previous Notices"},
-    "hi": {"title": "कांटाटा टूर", "subtitle": "महाराष्ट्र", "tour_map": "टूर मानचित्र", "notice_button": "सूचना", "new_notice": "नई सूचना", "notices": "पिछली सूचनाएं"}
+    "ko": {"title": "칸타타 투어", "subtitle": "마하라스트라", "select_city": "도시 선택", "add_city": "추가",
+           "register": "등록", "venue": "공연장", "seats": "좌석 수", "indoor": "실내", "outdoor": "실외",
+           "google": "구글 지도 링크", "notes": "특이사항", "tour_map": "투어 지도", "tour_route": "경로",
+           "password": "관리자 비밀번호", "login": "로그인", "logout": "로그아웃", "date": "공연 날짜",
+           "total": "총 거리 및 소요시간", "already_added": "이미 추가된 도시입니다.", "lang_name": "한국어",
+           "notice_title": "공지 제목", "notice_content": "공지 내용", "notice_button": "공지", "new_notice": "새로운 공지",
+           "notices": "이전 공지", "notice_save": "공지 등록"},
+    "en": {"title": "Cantata Tour", "subtitle": "Maharashtra", "select_city": "Select City", "add_city": "Add",
+           "register": "Register", "venue": "Venue", "seats": "Seats", "indoor": "Indoor", "outdoor": "Outdoor",
+           "google": "Google Maps Link", "notes": "Notes", "tour_map": "Tour Map", "tour_route": "Route",
+           "password": "Admin Password", "login": "Log in", "logout": "Log out", "date": "Date",
+           "total": "Total Distance & Time", "already_added": "City already added.", "lang_name": "English",
+           "notice_title": "Notice Title", "notice_content": "Notice Content", "notice_button": "Notice", "new_notice": "New Notice",
+           "notices": "Previous Notices", "notice_save": "Save Notice"},
+    "hi": {"title": "कांटाटा टूर", "subtitle": "महाराष्ट्र", "select_city": "शहर चुनें", "add_city": "जोड़ें",
+           "register": "पंजीकरण करें", "venue": "स्थान", "seats": "सीटें", "indoor": "इनडोर", "outdoor": "आउटडोर",
+           "google": "गूगल मानचित्र लिंक", "notes": "टिप्पणी", "tour_map": "टूर मानचित्र", "tour_route": "मार्ग",
+           "password": "व्यवस्थापक पासवर्ड", "login": "लॉगिन", "logout": "लॉगआउट", "date": "दिनांक",
+           "total": "कुल दूरी और समय", "already_added": "यह शहर पहले से जोड़ा गया है।", "lang_name": "हिन्दी",
+           "notice_title": "सूचना शीर्षक", "notice_content": "सूचना सामग्री", "notice_button": "सूचना", "new_notice": "नई सूचना",
+           "notices": "पिछली सूचनाएं", "notice_save": "सूचना सहेजें"}
 }
 
 # =============================================
-# 150개 도시 + 좌표 (복구!)
+# 150개 도시 + 좌표
 # =============================================
 cities = sorted([
     "Mumbai", "Pune", "Nagpur", "Nashik", "Thane", "Aurangabad", "Solapur", "Amravati", "Nanded", "Kolhapur",
@@ -116,6 +134,17 @@ coords = {
 }
 
 # =============================================
+# 거리 계산
+# =============================================
+def distance_km(p1, p2):
+    R = 6371
+    lat1, lon1 = radians(p1[0]), radians(p1[1])
+    lat2, lon2 = radians(p2[0]), radians(p2[1])
+    dlat, dlon = lat2 - lat1, lon2 - lon1
+    a = sin(dlat/2)**2 + cos(lat1)*cos(lat2)*sin(dlon/2)**2
+    return R * 2 * atan2(sqrt(a), sqrt(1 - a))
+
+# =============================================
 # Streamlit state
 # =============================================
 st.set_page_config(page_title="Cantata Tour", layout="wide")
@@ -126,8 +155,10 @@ if "route" not in st.session_state: st.session_state.route = []
 st.session_state.venue_data = load_venue_data()
 st.session_state.notice_data = load_notice_data()
 if "new_notice" not in st.session_state: st.session_state.new_notice = len(st.session_state.notice_data) > 0
+if "show_notice_list" not in st.session_state: st.session_state.expanded = False
 if "show_notice_list" not in st.session_state: st.session_state.show_notice_list = False
 if "show_popup" not in st.session_state: st.session_state.show_popup = False
+if "exp_state" not in st.session_state: st.session_state.exp_state = {}
 
 # =============================================
 # Sidebar
@@ -203,14 +234,13 @@ if not st.session_state.admin:
         st_folium(m, width=900, height=650)
 
     with notice_col:
-        st.write("")  # 공간
+        st.write("")
         button_label = f"{_['new_notice']} 📢" if st.session_state.new_notice else _["notice_button"]
         if st.button(button_label, key="notice_btn"):
             st.session_state.show_notice_list = True
             st.session_state.new_notice = False
             st.rerun()
 
-    # 공지 리스트
     if st.session_state.show_notice_list:
         st.markdown("### 공지사항")
         for notice in st.session_state.notice_data:
@@ -222,7 +252,6 @@ if not st.session_state.admin:
                 </div>
                 """, unsafe_allow_html=True)
 
-    # 새 공지 알림음 + 팝업
     if st.session_state.new_notice and st.session_state.show_popup:
         st.markdown("""
         <audio autoplay>
@@ -241,9 +270,107 @@ if not st.session_state.admin:
         """, unsafe_allow_html=True)
         st.session_state.show_popup = False
 
-    st.stop()
+    st.stop()  # 일반 모드 끝
 
 # =============================================
 # 관리자 모드: 전체 UI
 # =============================================
-# (이전 코드의 관리자 부분 – 생략, 기존 그대로)
+if st.session_state.admin:
+    st.markdown("---")
+    st.subheader("공지사항 입력")
+    notice_title = st.text_input(_["notice_title"])
+    notice_content = st.text_area(_["notice_content"])
+    if st.button(_["notice_save"]):
+        if notice_title and notice_content:
+            new_notice = {"id": len(st.session_state.notice_data) + 1, "title": notice_title, "content": notice_content, "timestamp": str(datetime.now())}
+            st.session_state.notice_data.insert(0, new_notice)
+            save_notice_data(st.session_state.notice_data)
+            st.success("공지 등록 완료")
+            st.session_state.new_notice = True
+            st.rerun()
+
+    left, right = st.columns([1,2])
+
+    with left:
+        c1, c2 = st.columns([3,1])
+        with c1:
+            selected_city = st.selectbox(_["select_city"], cities)
+        with c2:
+            if st.button(_["add_city"]):
+                if selected_city not in st.session_state.route:
+                    st.session_state.route.append(selected_city)
+                    st.rerun()
+                else:
+                    st.warning(_["already_added"])
+
+        st.markdown("---")
+        st.subheader(f"{_['tour_route']}")
+
+        total_distance = 0.0
+        total_hours = 0.0
+
+        for i, c in enumerate(st.session_state.route):
+            expanded = st.session_state.exp_state.get(c, True)
+            with st.expander(f"{c}", expanded=expanded):
+                today = datetime.now().date()
+                date = st.date_input(_["date"], value=today, min_value=today, key=f"date_{c}")
+                venue = st.text_input(_["venue"], key=f"venue_{c}")
+                seats = st.number_input(_["seats"], min_value=0, step=50, key=f"seats_{c}")
+                google = st.text_input(_["google"], key=f"google_{c}")
+                notes = st.text_area(_["notes"], key=f"notes_{c}")
+                io = st.radio("Type", [_["indoor"], _["outdoor"]], key=f"io_{c}")
+
+                if st.button(_["register"], key=f"reg_{c}"):
+                    st.session_state.venue_data[c] = {
+                        "date": str(date), "venue": venue, "seats": seats,
+                        "type": io, "google": google, "notes": notes
+                    }
+                    save_venue_data(st.session_state.venue_data)
+                    st.success("저장되었습니다.")
+                    for city in st.session_state.route:
+                        st.session_state.exp_state[city] = False
+                    st.rerun()
+
+            if i > 0:
+                prev = st.session_state.route[i - 1]
+                if prev in coords and c in coords:
+                    dist = distance_km(coords[prev], coords[c])
+                    time_hr = dist / 60.0
+                    total_distance += dist
+                    total_hours += time_hr
+                    st.markdown(f"<p style='text-align:center; color:#90EE90; font-weight:bold;'>{dist:.1f} km / {time_hr:.1f} 시간</p>", unsafe_allow_html=True)
+
+        if len(st.session_state.route) > 1:
+            st.markdown("---")
+            st.markdown(f"### {_['total']}")
+            st.success(f"**{total_distance:.1f} km** | **{total_hours:.1f} 시간**")
+
+    with right:
+        st.subheader(_["tour_map"])
+        try:
+            GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+        except:
+            st.error("Google Maps API 키 없음")
+            st.stop()
+
+        m = folium.Map(location=(19.75, 75.71), zoom_start=6,
+                       tiles=f"https://mt1.google.com/vt/lyrs=m&x={{x}}&y={{y}}&z={{z}}&key={GOOGLE_API_KEY}",
+                       attr="Google")
+
+        points = [coords[c] for c in st.session_state.route if c in coords]
+        if len(points) >= 2:
+            AntPath(points, color="red", weight=4, delay=800).add_to(m)
+
+        for c in st.session_state.route:
+            if c in coords:
+                data = st.session_state.venue_data.get(c, {})
+                popup = f"<b>{c}</b><br>"
+                if "date" in data:
+                    popup += f"{data['date']}<br>{data['venue']}<br>Seats: {data['seats']}<br>{data['type']}<br>"
+                if "google" in data and data["google"]:
+                    lat, lng = re.search(r'@(\d+\.\d+),(\d+\.\d+)', data["google"]) or (None, None)
+                    nav_link = f"https://www.google.com/maps/dir/?api=1&destination={lat.group(1)},{lng.group(1)}" if lat and lng else data["google"]
+                    popup += f"<a href='{nav_link}' target='_blank'>네비 시작</a>"
+                folium.Marker(coords[c], popup=popup, icon=folium.Icon(color="red", icon="music", prefix="fa")).add_to(m)
+
+        st_folium(m, width=900, height=650)
