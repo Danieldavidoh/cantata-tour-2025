@@ -221,7 +221,7 @@ def distance_km(p1, p2):
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
-# 공통 공지현황 UI (재사용)
+# 공통 공지현황 UI (컬럼 0 금지)
 # =============================================
 def render_notice_list(is_admin=False):
     col_title, col_refresh = st.columns([8, 1])
@@ -249,15 +249,20 @@ def render_notice_list(is_admin=False):
             </div>
             """, unsafe_allow_html=True)
             
-            # 숨긴 버튼
-            col1, col2 = st.columns([1, 1] if is_admin else [1, 0])
-            with col1:
-                if st.button("", key=f"{uid}_view"):
-                    open_notice(n['id'])
+            # 숨긴 버튼 (컬럼 0 금지 → 항상 1 이상)
             if is_admin:
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    if st.button("", key=f"{uid}_view"):
+                        open_notice(n['id'])
                 with col2:
                     if st.button("", key=f"{uid}_del"):
                         delete_notice(n['id'])
+            else:
+                col1, _ = st.columns([1, 10])  # 두 번째 컬럼은 무시용
+                with col1:
+                    if st.button("", key=f"{uid}_view"):
+                        open_notice(n['id'])
     else:
         st.write("공지가 없습니다.")
 
