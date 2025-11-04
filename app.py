@@ -44,7 +44,7 @@ if ('Notification' in window && Notification.permission === 'default') {
 # =============================================
 defaults = {
     "lang": "ko", "admin": False, "route": [], "venue_data": {}, "notice_data": [],
-    "show_full_notice": None, "show_popup": True, "notice_counter": 0, "push_enabled": False
+    "expanded_notice": None, "show_popup": True, "notice_counter": 0, "push_enabled": False
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -158,7 +158,7 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 스타일 (서클 화살표 새로고침 + 공지 버튼 완전 삭제)
+# 스타일 (아코디언 + X 버튼 + 서클 화살표)
 # =============================================
 st.markdown("""
 <style>
@@ -181,7 +181,7 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     color: #ff6b6b;
 }
 
-/* 서클 화살표 새로고침 버튼 */
+/* 서클 화살표 새로고침 */
 .refresh-btn {
     background: none; 
     border: 2px solid #00c853; 
@@ -190,7 +190,6 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; 
     transition: all 0.3s;
-    padding: 0;
 }
 .refresh-btn:hover {
     background: rgba(0,200,83,0.1); 
@@ -210,27 +209,46 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     to { transform: rotate(360deg); }
 }
 
-/* 공지 카드 (버튼 완전 삭제) */
-.notice-card { 
-    background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:18px; margin:12px 0; 
-    display: block;
+/* 공지 아코디언 (제목 클릭 → 펼쳐짐) */
+.notice-accordion {
+    background:#1a1a1a; border:2px solid #333; border-radius:12px; margin:12px 0; 
+    overflow: hidden; transition: all 0.3s;
 }
+.notice-header {
+    padding: 18px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+    background: #222; transition: background 0.2s;
+}
+.notice-header:hover { background: #2a2a2a; }
 .notice-title { color:#ff6b6b; font-weight:bold; font-size: 1.1em; }
-.notice-time { color:#888; font-size:0.85em; margin-top: 6px; }
+.notice-time { color:#888; font-size:0.85em; }
+.notice-content {
+    padding: 0 18px 18px; color: #ddd; line-height: 1.7; white-space: pre-line;
+    max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.4s ease;
+}
+.notice-content.open { max-height: 1000px; padding: 18px; }
+
+/* X 닫기 버튼 (오른쪽 위) */
+.close-btn {
+    background: none; border: none; color: #ff6b6b; font-size: 1.4em; font-weight: bold;
+    cursor: pointer; padding: 0 8px; line-height: 1; transition: all 0.2s;
+}
+.close-btn:hover { color: #ff3333; transform: scale(1.2); }
 
 /* 모바일 반응형 */
 @media (max-width: 768px) {
     .map-header { padding: 0 12px; }
     .map-title { font-size: 1.3em; }
     .refresh-btn { width: 40px; height: 40px; }
-    .notice-card { padding: 15px; margin: 8px 0; }
+    .notice-header { padding: 15px; }
+    .notice-title { font-size: 1em; }
+    .close-btn { font-size: 1.2em; }
 }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown(f"<h1>{_['title']} <span class='year'>2025</span><span class='subtitle'>마하라스트라</span> 🎄</h1>", unsafe_allow_html=True)
 
-# 서클 화살표 SVG (구글 스타일)
+# 서클 화살표 SVG
 REFRESH_SVG = """
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
   <path d="M23 4v6h-6"></path>
@@ -261,17 +279,42 @@ def distance_km(p1, p2):
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
-# 공지현황 UI (버튼 완전 삭제)
+# 공지 아코디언 UI (제목 클릭 → 펼쳐짐 + X 버튼)
 # =============================================
 def render_notice_list():
     if st.session_state.notice_data:
         for n in st.session_state.notice_data:
+            notice_id = n['id']
+            is_open = st.session_state.expanded_notice == notice_id
+            uid = f"notice_{notice_id}_{uuid.uuid4().hex[:8]}"
+            
+            # 아코디언 헤더 (클릭 → 펼쳐짐)
             st.markdown(f"""
-            <div class="notice-card">
-                <div class="notice-title">📢 {n['title']}</div>
-                <div class="notice-time">{n['timestamp'][:16].replace('T',' ')}</div>
+            <div class="notice-accordion">
+                <div class="notice-header" onclick="document.getElementById('{uid}_toggle').click()">
+                    <div>
+                        <div class="notice-title">📢 {n['title']}</div>
+                        <div class="notice-time">{n['timestamp'][:16].replace('T',' ')}</div>
+                    </div>
+                    <div style="margin-left: auto; color: #888;">▼</div>
+                </div>
+                <div id="{uid}_content" class="notice-content {'open' if is_open else ''}">
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+                        <button class="close-btn" onclick="document.getElementById('{uid}_close').click()">×</button>
+                    </div>
+                    <div>{n['content']}</div>
+                    {'<img src="data:image/png;base64,' + n['file'] + '" style="max-width:100%; margin-top:15px; border-radius:8px;">' if 'file' in n else ''}
+                </div>
             </div>
             """, unsafe_allow_html=True)
+            
+            # 숨긴 토글/닫기 버튼
+            if st.button("", key=f"{uid}_toggle"):
+                st.session_state.expanded_notice = notice_id if not is_open else None
+                st.rerun()
+            if st.button("", key=f"{uid}_close"):
+                st.session_state.expanded_notice = None
+                st.rerun()
     else:
         st.write("공지가 없습니다.")
 
@@ -279,7 +322,6 @@ def render_notice_list():
 # 일반 사용자 모드
 # =============================================
 if not st.session_state.admin:
-    # 투어지도 + 서클 화살표 새로고침
     st.markdown(f"""
     <div class="map-header">
         <div class="map-title">투어지도</div>
