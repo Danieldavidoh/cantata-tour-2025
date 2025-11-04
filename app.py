@@ -70,6 +70,21 @@ st.session_state.venue_data = load_json(VENUE_FILE, {})
 st.session_state.notice_data = load_json(NOTICE_FILE, [])
 
 # =============================================
+# 콜백 함수들 (버튼 작동 보장)
+# =============================================
+def delete_notice(notice_id):
+    st.session_state.notice_data = [x for x in st.session_state.notice_data if x["id"] != notice_id]
+    save_json(NOTICE_FILE, st.session_state.notice_data)
+    if st.session_state.show_full_notice == notice_id:
+        st.session_state.show_full_notice = None
+    st.success("삭제됨")
+    st.rerun()
+
+def open_notice(notice_id):
+    st.session_state.show_full_notice = notice_id
+    st.rerun()
+
+# =============================================
 # 실시간 알림 시스템
 # =============================================
 ALERT_SOUND = """
@@ -86,7 +101,7 @@ def check_new_notices():
 def show_alert_popup():
     st.markdown(f"""
     <div style="position:fixed;top:20px;right:20px;z-index:9999;background:linear-gradient(135deg,#ff1744,#ff6b6b);color:white;padding:20px;border-radius:15px;box-shadow:0 0 30px rgba(255,23,68,0.8);font-weight:bold;font-size:1.2em;text-align:center;max-width:300px;border:3px solid #fff;animation:pulse 1.5s infinite,slideIn 0.5s;">
-        🎉 새 공지 도착! 🎉
+        새 공지 도착!
     </div>
     <style>
     @keyframes pulse {{0%,100%{{transform:scale(1)}}50%{{transform:scale(1.05)}}}}
@@ -140,9 +155,8 @@ with st.sidebar:
         ["ko", "en", "hi"], 
         format_func=lambda x: {"ko":"한국어","en":"English","hi":"हिन्दी"}[x]
     )
-    # KeyError 방지: 없는 언어는 ko로 fallback
     st.session_state.lang = lang_selected if lang_selected in LANG else "ko"
-    _ = LANG[st.session_state.lang]  # 안전하게 할당
+    _ = LANG[st.session_state.lang]
 
     st.markdown("---")
     st.write("**Admin**")
@@ -236,7 +250,7 @@ if not st.session_state.admin:
     with st.expander("공지현황", expanded=st.session_state.show_full_notice is not None):
         if st.session_state.notice_data:
             for n in st.session_state.notice_data:
-                uid = f"notice_{n['id']}_{uuid.uuid4().hex[:8]}"
+                uid = f"user_notice_{n['id']}_{uuid.uuid4().hex[:8]}"
                 st.markdown(f"""
                 <div style="background:#111;border:2px solid #333;border-radius:12px;padding:15px;margin:10px 0;cursor:pointer;"
                      onclick="document.getElementById('{uid}_btn').click()">
@@ -245,11 +259,11 @@ if not st.session_state.admin:
                 </div>
                 """, unsafe_allow_html=True)
                 if st.button("", key=f"{uid}_btn"):
-                    st.session_state.show_full_notice = n['id']
-                    st.rerun()
+                    open_notice(n['id'])
         else:
             st.write("공지가 없습니다.")
 
+    # 공지 상세 보기
     if st.session_state.show_full_notice:
         notice = next((x for x in st.session_state.notice_data if x["id"] == st.session_state.show_full_notice), None)
         if notice:
@@ -292,17 +306,53 @@ if st.button("등록") and title:
     st.rerun()
 
 st.markdown("---")
-with st.expander("공지현황", expanded=False):
+with st.expander("공지현황", expanded=st.session_state.show_full_notice is not None):
     if st.session_state.notice_data:
         for n in st.session_state.notice_data:
-            col1, col2 = st.columns([8, 2])
-            with col1:
-                st.write(f"📢 {n['title']}")
-            with col2:
-                if st.button("삭제", key=f"del_{n['id']}_{uuid.uuid4().hex[:8]}"):
-                    st.session_state.notice_data = [x for x in st.session_state.notice_data if x["id"] != n["id"]]
-                    save_json(NOTICE_FILE, st.session_state.notice_data)
-                    st.success("삭제됨")
-                    st.rerun()
+            uid = f"admin_notice_{n['id']}_{uuid.uuid4().hex[:8]}"
+            st.markdown(f"""
+            <div style="background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:15px; margin:10px 0; 
+                        display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <strong style="color:#ff6b6b;">📢 {n['title']}</strong><br>
+                    <small style="color:#888;">{n['timestamp'][:16].replace('T',' ')}</small>
+                </div>
+                <div>
+                    <button onclick="document.getElementById('{uid}_view').click()" 
+                            style="background:#ff6b6b; color:white; border:none; padding:8px 12px; border-radius:6px; margin-right:5px; cursor:pointer;">
+                        보기
+                    </button>
+                    <button onclick="document.getElementById('{uid}_del').click()" 
+                            style="background:#d32f2f; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;">
+                        삭제
+                    </button>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            col_view, col_del = st.columns([1, 1])
+            with col_view:
+                if st.button("", key=f"{uid}_view"):
+                    open_notice(n['id'])
+            with col_del:
+                if st.button("", key=f"{uid}_del"):
+                    delete_notice(n['id'])
     else:
         st.write("공지가 없습니다.")
+
+# 관리자도 공지 상세 보기
+if st.session_state.show_full_notice:
+    notice = next((x for x in st.session_state.notice_data if x["id"] == st.session_state.show_full_notice), None)
+    if notice:
+        st.markdown(f"""
+        <div style="background:rgba(10,10,15,0.95);padding:25px;border-radius:15px;border:2px solid #ff1744;margin:20px 0;box-shadow:0 0 30px rgba(255,23,68,0.4);">
+            <h3 style="color:#ff6b6b;margin-top:0;">📢 {notice['title']}</h3>
+            <p style="white-space:pre-line;line-height:1.8;">{notice['content']}</p>
+            <small style="color:#888;">{notice['timestamp'][:16].replace('T',' ')}</small>
+        </div>
+        """, unsafe_allow_html=True)
+        if 'file' in notice:
+            st.image(base64.b64decode(notice['file']), use_column_width=True)
+        if st.button("닫기"):
+            st.session_state.show_full_notice = None
+            st.rerun()
