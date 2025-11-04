@@ -173,7 +173,7 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 스타일 (구글 새로고침 SVG + 회전 애니 + 공지 버튼 완벽 정렬)
+# 스타일
 # =============================================
 st.markdown("""
 <style>
@@ -183,7 +183,6 @@ h1 { color: #ff3333 !important; text-align: center; font-weight: 900; font-size:
 h1 span.year { color: #fff; font-size: 0.8em; vertical-align: super; }
 h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin-left: 5px; }
 
-/* 모바일 최적화: 투어지도 타이틀 + 새로고침 버튼 나란히 */
 .map-header {
     display: flex; 
     justify-content: space-between; 
@@ -196,7 +195,6 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     color: #ff6b6b;
 }
 
-/* 구글 새로고침 버튼 (SVG + 회전 애니메이션) */
 .refresh-btn {
     background: none; 
     border: none; 
@@ -223,11 +221,10 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     to { transform: rotate(360deg); }
 }
 
-/* 공지 카드 완벽 정렬 + 버튼 작동 보장 */
 .notice-card { 
     background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:15px; margin:10px 0; 
     display:flex; justify-content:space-between; align-items:center; 
-    gap: 10px; /* 버튼 간격 */
+    gap: 10px;
 }
 .notice-title { color:#ff6b6b; font-weight:bold; flex: 1; }
 .notice-time { color:#888; font-size:0.8em; margin-top: 4px; }
@@ -239,7 +236,6 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 .btn-del { background: #d32f2f !important; }
 .btn-view:hover, .btn-del:hover { transform: scale(1.05); opacity: 0.9; }
 
-/* 모바일 반응형 */
 @media (max-width: 768px) {
     .map-header { flex-direction: row; justify-content: space-between; padding: 0 10px; }
     .map-title { font-size: 1.3em; }
@@ -253,7 +249,7 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 
 st.markdown(f"<h1>{_['title']} <span class='year'>2025</span><span class='subtitle'>마하라스트라</span> 🎄</h1>", unsafe_allow_html=True)
 
-# 구글 새로고침 SVG (Flaticon 기반, 화살표 회전 모양)
+# 구글 새로고침 SVG
 REFRESH_SVG = """
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#00c853" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
   <polyline points="23,4 23,10 17,10"></polyline>
@@ -284,14 +280,13 @@ def distance_km(p1, p2):
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
-# 공통 공지현황 UI (버튼 정렬 + 작동 100%)
+# 공통 공지현황 UI (컬럼 0 금지)
 # =============================================
 def render_notice_list(is_admin=False):
     if st.session_state.notice_data:
         for n in st.session_state.notice_data:
             uid = f"{'admin' if is_admin else 'user'}_notice_{n['id']}_{uuid.uuid4().hex[:8]}"
             
-            # 카드 + 버튼 (onclick으로 연결)
             st.markdown(f"""
             <div class="notice-card">
                 <div style="flex: 1;">
@@ -305,15 +300,19 @@ def render_notice_list(is_admin=False):
             </div>
             """, unsafe_allow_html=True)
             
-            # 숨긴 Streamlit 버튼 (실제 작동)
-            col1, col2 = st.columns([1, 1]) if is_admin else st.columns([1, 0])
-            with col1:
-                if st.button(" ", key=f"{uid}_view", help="공지 보기"):  # 공백으로 숨김
-                    open_notice(n['id'])
             if is_admin:
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    if st.button(" ", key=f"{uid}_view"):
+                        open_notice(n['id'])
                 with col2:
-                    if st.button(" ", key=f"{uid}_del", help="공지 삭제"):  # 공백으로 숨김
+                    if st.button(" ", key=f"{uid}_del"):
                         delete_notice(n['id'])
+            else:
+                col1, _ = st.columns([1, 10])
+                with col1:
+                    if st.button(" ", key=f"{uid}_view"):
+                        open_notice(n['id'])
     else:
         st.write("공지가 없습니다.")
 
@@ -321,7 +320,6 @@ def render_notice_list(is_admin=False):
 # 일반 사용자 모드
 # =============================================
 if not st.session_state.admin:
-    # 투어지도 타이틀 + 구글 새로고침 버튼 (모바일 나란히)
     st.markdown(f"""
     <div class="map-header">
         <div class="map-title">투어지도</div>
@@ -389,7 +387,6 @@ if not st.session_state.admin:
 # =============================================
 # 관리자 모드
 # =============================================
-# 투어지도 타이틀 + 구글 새로고침 버튼 (모바일 나란히)
 st.markdown(f"""
 <div class="map-header">
     <div class="map-title">투어지도</div>
