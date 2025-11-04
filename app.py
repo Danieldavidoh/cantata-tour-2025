@@ -105,7 +105,7 @@ def notice_badge():
         """, unsafe_allow_html=True)
 
 # =============================================
-# 언어 설정
+# 언어 설정 (모든 언어 지원 + KeyError 방지)
 # =============================================
 LANG = {
     "ko": {
@@ -114,31 +114,35 @@ LANG = {
         "notes": "특이사항", "tour_map": "투어 지도", "tour_route": "경로", "password": "관리자 비밀번호",
         "login": "로그인", "logout": "로그아웃", "date": "공연 날짜", "notice_title": "공지 제목",
         "notice_content": "공지 내용", "upload_file": "사진/파일 업로드", "notice_status": "공지현황"
+    },
+    "en": {
+        "title": "Cantata Tour", "select_city": "Select City", "add_city": "Add", "register": "Register",
+        "venue": "Venue", "seats": "Seats", "indoor": "Indoor", "outdoor": "Outdoor", "google": "Google Maps Link",
+        "notes": "Notes", "tour_map": "Tour Map", "tour_route": "Route", "password": "Admin Password",
+        "login": "Login", "logout": "Logout", "date": "Performance Date", "notice_title": "Notice Title",
+        "notice_content": "Notice Content", "upload_file": "Upload Photo/File", "notice_status": "Notice Board"
+    },
+    "hi": {
+        "title": "कांताता टूर", "select_city": "शहर चुनें", "add_city": "जोड़ें", "register": "रजिस्टर",
+        "venue": "स्थल", "seats": "सीटें", "indoor": "इनडोर", "outdoor": "आउटडोर", "google": "गूगल मैप लिंक",
+        "notes": "नोट्स", "tour_map": "टूर मैप", "tour_route": "रूट", "password": "एडमिन पासवर्ड",
+        "login": "लॉगिन", "logout": "लॉगआउट", "date": "प्रदर्शन तिथि", "notice_title": "सूचना शीर्षक",
+        "notice_content": "सूचना सामग्री", "upload_file": "फोटो/फ़ाइल अपलोड करें", "notice_status": "सूचना बोर्ड"
     }
 }
-_ = LANG.get(st.session_state.lang, LANG["ko"])
-
-# =============================================
-# 도시 & 거리 계산
-# =============================================
-cities = ["Mumbai", "Pune", "Nagpur"]
-coords = {"Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882)}
-
-def distance_km(p1, p2):
-    R = 6371
-    lat1, lon1 = radians(p1[0]), radians(p1[1])
-    lat2, lon2 = radians(p2[0]), radians(p2[1])
-    dlat, dlon = lat2 - lat1, lon2 - lon1
-    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
-    return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
 # 사이드바
 # =============================================
 with st.sidebar:
-    lang_selected = st.selectbox("Language", ["ko", "en", "hi"], format_func=lambda x: {"ko":"한국어","en":"English","hi":"हिन्दी"}[x])
-    st.session_state.lang = lang_selected
-    _ = LANG[st.session_state.lang]
+    lang_selected = st.selectbox(
+        "Language", 
+        ["ko", "en", "hi"], 
+        format_func=lambda x: {"ko":"한국어","en":"English","hi":"हिन्दी"}[x]
+    )
+    # KeyError 방지: 없는 언어는 ko로 fallback
+    st.session_state.lang = lang_selected if lang_selected in LANG else "ko"
+    _ = LANG[st.session_state.lang]  # 안전하게 할당
 
     st.markdown("---")
     st.write("**Admin**")
@@ -176,6 +180,20 @@ notice_badge()
 if check_new_notices() and st.session_state.show_popup:
     show_alert_popup()
     st.session_state.show_popup = False
+
+# =============================================
+# 도시 & 거리 계산
+# =============================================
+cities = ["Mumbai", "Pune", "Nagpur"]
+coords = {"Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882)}
+
+def distance_km(p1, p2):
+    R = 6371
+    lat1, lon1 = radians(p1[0]), radians(p1[1])
+    lat2, lon2 = radians(p2[0]), radians(p2[1])
+    dlat, dlon = lat2 - lat1, lon2 - lon1
+    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+    return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
 # 일반 사용자 모드
