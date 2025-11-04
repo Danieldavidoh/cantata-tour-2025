@@ -219,11 +219,12 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 .notice-item {
     background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:12px; margin:8px 0; 
 }
-.notice-title { color:#ff6b6b; font-weight:bold; font-size: 1.1em; }
+.notice-title { color:#ff6b6b; font-weight:bold; font-size: 1.1em; cursor: pointer; }
 .notice-time { color:#888; font-size:0.85em; }
+.notice-content { color: #ddd; margin-top: 8px; white-space: pre-line; }
 .delete-btn {
     background: #d32f2f; color: white; border: none; padding: 6px 12px; border-radius: 6px;
-    font-size: 0.9em; cursor: pointer; transition: all 0.2s;
+    font-size: 0.9em; cursor: pointer; transition: all 0.2s; margin-top: 8px;
 }
 .delete-btn:hover { background: #b71c1c; transform: scale(1.05); }
 
@@ -286,14 +287,15 @@ def render_notice_list(show_delete=False):
             is_expanded = st.session_state.expanded_notices.get(notice_id, False)
             toggle_key = f"toggle_{notice_id}_{uuid.uuid4().hex[:8]}"
             
-            # 제목 클릭으로 펼치기
-            if st.button(f"📢 {n['title']}", key=toggle_key):
+            # 제목 클릭으로 펼치기/닫기
+            if st.button(n["title"], key=toggle_key):
                 st.session_state.expanded_notices[notice_id] = not is_expanded
                 st.rerun()
             
+            # 시간 표시
             st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
             
-            # 내용 펼쳐짐
+            # 내용 펼침
             if is_expanded:
                 with st.container():
                     st.write(n["content"])
@@ -350,7 +352,7 @@ def render_tour_map():
         st_folium(m, width=900, height=600)
 
 # =============================================
-# 일반 사용자 UI (새로고침 아이콘 왼쪽)
+# 일반 사용자 UI (새로고침 왼쪽)
 # =============================================
 if not st.session_state.admin:
     st.markdown(f"""
@@ -358,7 +360,7 @@ if not st.session_state.admin:
         <button class="refresh-btn" onclick="window.location.reload(); return false;" title="새로고침">
             <div class="refresh-icon">{REFRESH_SVG}</div>
         </button>
-        <div class="today-notice-title'>{_['today_notice']}</div>
+        <div class='today-notice-title'>{_['today_notice']}</div>
     </div>
     """, unsafe_allow_html=True)
     
