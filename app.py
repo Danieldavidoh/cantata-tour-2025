@@ -172,15 +172,36 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     margin-bottom: 15px;
 }
 
-/* 등록 버튼 오른쪽 끝 (새로고침 제거) */
+/* 새로고침 버튼만 오른쪽 끝 */
 .notice-input-header {
     display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
 }
-.register-btn {
-    background: #00c853; color: white; border: none; padding: 8px 20px; border-radius: 8px;
-    font-weight: bold; cursor: pointer; transition: all 0.2s;
+.refresh-btn {
+    background: none; 
+    border: 2px solid #00c853; 
+    border-radius: 50%; 
+    width: 44px; height: 44px; 
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; 
+    transition: all 0.3s;
 }
-.register-btn:hover { background: #00b140; transform: scale(1.05); }
+.refresh-btn:hover {
+    background: rgba(0,200,83,0.1); 
+    border-color: #00b140;
+    transform: scale(1.15);
+}
+.refresh-icon {
+    width: 24px; height: 24px; 
+    animation: rotate 1.5s linear infinite paused;
+    stroke: #00c853;
+}
+.refresh-btn:hover .refresh-icon {
+    animation-play-state: running;
+}
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
 
 .notice-list-item {
     background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:12px; margin:8px 0; 
@@ -199,7 +220,7 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 
 @media (max-width: 768px) {
     .notice-input-header { flex-direction: column; align-items: flex-start; }
-    .register-btn { margin-top: 10px; }
+    .refresh-btn { margin-top: 10px; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -241,23 +262,18 @@ def delete_notice(notice_id):
     st.rerun()
 
 # =============================================
-# 공지현황 리스트 (공통 함수) - 터치 OK
+# 공지현황 리스트 (공통 함수) - 터치/삭제 100% OK
 # =============================================
 def render_notice_list(show_delete=False):
     if st.session_state.notice_data:
         for n in st.session_state.notice_data:
-            if show_delete:
-                col1, col2 = st.columns([5, 1])
-                with col1:
-                    st.markdown(f"**📢 {n['title']}**")
-                    st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
-                with col2:
+            with st.container():
+                st.write(f"**📢 {n['title']}**")
+                st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
+                if show_delete:
                     unique_key = f"del_{n['id']}_{uuid.uuid4().hex[:8]}"
                     if st.button(_["delete"], key=unique_key):
                         delete_notice(n['id'])
-            else:
-                st.markdown(f"**📢 {n['title']}**")
-                st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
     else:
         st.write("등록된 공지가 없습니다.")
 
@@ -321,12 +337,14 @@ if not st.session_state.admin:
 # 관리자 모드
 # =============================================
 
-# 공지사항 입력 + 등록 버튼 (새로고침 제거)
+# 공지사항 입력 + 새로고침 버튼 (등록 제거)
 st.markdown(f"""
 <div class="notice-input-header">
     <div class="notice-input-title">공지사항 입력</div>
     <div>
-        <button class="register-btn" onclick="this.closest('form').submit()">등록</button>
+        <button class="refresh-btn" onclick="window.location.reload(); return false;" title="새로고침">
+            <div class="refresh-icon">{REFRESH_SVG}</div>
+        </button>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -352,7 +370,7 @@ if submitted and title:
     st.success("공지 등록 완료")
     st.rerun()
 
-# 공지현황 (expander + 터치 OK + 삭제 버튼)
+# 공지현황 (expander + 터치/삭제 100% OK)
 with st.expander("공지현황", expanded=False):
     render_notice_list(show_delete=True)
 
