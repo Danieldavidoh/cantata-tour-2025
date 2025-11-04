@@ -355,7 +355,7 @@ def render_notice_list():
         st.write("공지가 없습니다.")
 
 # =============================================
-# 공통 투어지도 UI
+# 공통 투어지도 UI (f-string 이스케이프 수정)
 # =============================================
 def render_tour_map():
     st.markdown(f"""
@@ -375,4 +375,100 @@ def render_tour_map():
             return
 
         m = folium.Map(location=(19.75, 75.71), zoom_start=6,
-                       tiles=f"https://mt1.google.com/vt/lyrs=m&x={{x
+                       tiles=f"https://mt1.google.com/vt/lyrs=m&x={{{x}}}&y={{{y}}}&z={{{z}}}&key={GOOGLE_API_KEY}",
+                       attr="Google")
+        points = [coords[c] for c in st.session_state.route if c in coords]
+        if len(points) >= 2:
+            for i in range(len(points)-1):
+                p1, p2 = points[i], points[i+1]
+                dist = distance_km(p1, p2)
+                time_hr = dist / 60.0
+                mid = ((p1[0]+p2[0])/2, (p1[1]+p2[1])/2)
+                folium.Marker(mid, icon=folium.DivIcon(html=f"<div style='color:white;font-size:10pt'>{dist:.1f}km / {time_hr:.1f}h</div>")).add_to(m)
+            AntPath(points, color="red", weight=4, delay=800).add_to(m)
+
+        for c in st.session_state.route:
+            if c in coords:
+                data = st.session_state.venue_data.get(c, {})
+                popup = f"<b>{c}</b><br>"
+                if "date" in data: popup += f"{data['date']}<br>{data['venue']}<br>Seats: {data['seats']}<br>{data['type']}<br>"
+                if "google" in data and data["google"]:
+                    match = re.search(r'@(\d+\.\d+),(\d+\.\d+)', data["google"])
+                    lat, lng = (match.group(1), match.group(2)) if match else (None, None)
+                    nav = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lng}" if lat else data["google"]
+                    popup += f"<a href='{nav}' target='_blank'>네비 시작</a>"
+                folium.Marker(coords[c], popup=popup, icon=folium.Icon(color="red")).add_to(m)
+        st_folium(m, width=900, height=600)
+
+# =============================================
+# 공통 UI: 투어지도 + 공지현황 (모두에게 보임)
+# =============================================
+render_tour_map()
+st.markdown("---")
+with st.expander("공지현황", expanded=False):
+    render_notice_list()
+
+# =============================================
+# 일반 사용자 → 여기서 끝
+# =============================================
+if not st.session_state.admin:
+    st.stop()
+
+# =============================================
+# 관리자 전용 UI (여기서부터 보임)
+# =============================================
+st.markdown("---")
+
+# 도시 입력 폼
+st.markdown(f"<div class='city-input-title'>{_['city_input']}</div>", unsafe_allow_html=True)
+with st.form("city_form", clear_on_submit=True):
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        new_city = st.text_input("도시 이름", placeholder="예: Delhi")
+    with col2:
+        venue_name = st.text_input(_["venue_name"], placeholder="공연장 이름")
+
+    col3, col4 = st.columns([1, 1])
+    with col3:
+        seats = st.number_input(_["seats_count"], min_value=1, step=1)
+    with col4:
+        venue_type = st.selectbox(_["venue_type"], ["실내", "실외"])
+
+    google_link = st.text_input(_["google_link"], placeholder="구글 링크 (선택)")
+
+    if st.form_submit_button(_["add_venue"]):
+        if new_city in st.session_state.venue_data:
+            st.error(_["already_exists"])
+        else:
+            st.session_state.venue_data[new_city] = {
+                "venue": venue_name,
+                "seats": seats,
+                "type": venue_type,
+                "google": google_link
+            }
+            save_json(VENUE_FILE, st.session_state.venue_data)
+            if new_city not in st.session_state.route:
+                st.session_state.route.append(new_city)
+            st.success(f"{new_city} 추가됨!")
+            st.rerun()
+
+# 공지사항 입력
+st.subheader("공지사항 입력")
+title = st.text_input(_["notice_title"])
+content = st.text_area(_["notice_content"])
+uploaded = st.file_uploader(_["upload_file"], type=["png", "jpg", "jpeg"])
+
+if st.button("등록") and title:
+    new_notice = {
+        "id": len(st.session_state.notice_data) + 1,
+        "title": title,
+        "content": content,
+        "timestamp": str(datetime.now())
+    }
+    if uploaded:
+        new_notice["file"] = base64.b64encode(uploaded.read()).decode()
+    st.session_state.notice_data.insert(0, new_notice)
+    save_json(NOTICE_FILE, st.session_state.notice_data)
+    st.session_state.show_popup = True
+    st.success("공지 등록 완료")
+    st.rerun()
