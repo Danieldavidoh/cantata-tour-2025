@@ -219,7 +219,7 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 .notice-item {
     background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:12px; margin:8px 0; 
 }
-.notice-title { color:#ff6b6b; font-weight:bold; font-size: 1.1em; cursor: pointer; }
+.notice-title { color:#ff6b6b; font-weight:bold; font-size: 1.1em; }
 .notice-time { color:#888; font-size:0.85em; }
 .notice-content { color: #ddd; margin-top: 8px; white-space: pre-line; }
 .delete-btn {
@@ -278,7 +278,7 @@ def delete_notice(notice_id):
     st.rerun()
 
 # =============================================
-# 공지현황 리스트 (제목 클릭 → 내용 펼쳐짐 + 삭제 OK)
+# 공지현황 리스트 (제목 클릭 → 내용 펼쳐짐 + 삭제 항상 표시)
 # =============================================
 def render_notice_list(show_delete=False):
     if st.session_state.notice_data:
@@ -288,12 +288,18 @@ def render_notice_list(show_delete=False):
             toggle_key = f"toggle_{notice_id}_{uuid.uuid4().hex[:8]}"
             
             # 제목 클릭으로 펼치기/닫기
-            if st.button(n["title"], key=toggle_key):
+            if st.button(f"📢 {n['title']}", key=toggle_key):
                 st.session_state.expanded_notices[notice_id] = not is_expanded
-                st.rerun()
+                st.rerun()  # 반드시 rerun!
             
             # 시간 표시
             st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
+            
+            # 삭제 버튼 (항상 표시)
+            if show_delete:
+                del_key = f"del_{notice_id}_{uuid.uuid4().hex[:8]}"
+                if st.button(_["delete"], key=del_key):
+                    delete_notice(notice_id)
             
             # 내용 펼침
             if is_expanded:
@@ -301,10 +307,6 @@ def render_notice_list(show_delete=False):
                     st.write(n["content"])
                     if "file" in n and n["file"]:
                         st.image(base64.b64decode(n["file"]), use_column_width=True)
-                    if show_delete:
-                        del_key = f"del_{notice_id}_{uuid.uuid4().hex[:8]}"
-                        if st.button(_["delete"], key=del_key):
-                            delete_notice(notice_id)
     else:
         st.write("등록된 공지가 없습니다.")
 
