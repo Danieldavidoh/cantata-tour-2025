@@ -84,14 +84,6 @@ def open_notice(notice_id):
     st.session_state.show_full_notice = notice_id
     st.rerun()
 
-# 전체 페이지 새로고침 (JS)
-def full_page_refresh():
-    st.markdown("""
-    <script>
-    window.location.reload();
-    </script>
-    """, unsafe_allow_html=True)
-
 # =============================================
 # 실시간 알림 시스템
 # =============================================
@@ -181,7 +173,7 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 스타일 (모바일 최적화)
+# 스타일 (구글 새로고침 SVG + 회전 애니 + 공지 버튼 완벽 정렬)
 # =============================================
 st.markdown("""
 <style>
@@ -203,42 +195,71 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     font-weight: bold; 
     color: #ff6b6b;
 }
+
+/* 구글 새로고침 버튼 (SVG + 회전 애니메이션) */
 .refresh-btn {
-    background: #00c853; 
-    color: white; 
+    background: none; 
     border: none; 
-    padding: 10px 16px; 
-    border-radius: 50%; 
-    font-weight: bold; 
     cursor: pointer; 
-    box-shadow: 0 0 15px rgba(0,200,83,0.6);
+    padding: 8px; 
+    border-radius: 50%; 
     transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px;
 }
 .refresh-btn:hover {
-    background: #00b140; 
+    background: rgba(0,200,83,0.2); 
     transform: scale(1.1);
 }
+.refresh-icon {
+    width: 24px; height: 24px; 
+    animation: rotate 2s linear infinite paused;
+}
+.refresh-btn:hover .refresh-icon {
+    animation-play-state: running;
+}
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
 
-/* 공지 카드 */
+/* 공지 카드 완벽 정렬 + 버튼 작동 보장 */
 .notice-card { 
     background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:15px; margin:10px 0; 
     display:flex; justify-content:space-between; align-items:center; 
+    gap: 10px; /* 버튼 간격 */
 }
-.notice-title { color:#ff6b6b; font-weight:bold; }
-.notice-time { color:#888; font-size:0.8em; }
-.btn-view { background:#ff6b6b; color:white; border:none; padding:8px 14px; border-radius:6px; margin:0 4px; cursor:pointer; font-size:0.9em; }
-.btn-del { background:#d32f2f; color:white; border:none; padding:8px 14px; border-radius:6px; margin:0 4px; cursor:pointer; font-size:0.9em; }
+.notice-title { color:#ff6b6b; font-weight:bold; flex: 1; }
+.notice-time { color:#888; font-size:0.8em; margin-top: 4px; }
+.notice-buttons { display: flex; gap: 8px; align-items: center; }
+.btn-view, .btn-del { 
+    background: #ff6b6b; color:white; border:none; padding:8px 14px; border-radius:6px; 
+    cursor:pointer; font-size:0.9em; transition: all 0.2s; white-space: nowrap;
+}
+.btn-del { background: #d32f2f !important; }
+.btn-view:hover, .btn-del:hover { transform: scale(1.05); opacity: 0.9; }
 
 /* 모바일 반응형 */
 @media (max-width: 768px) {
-    .map-header { flex-direction: row; justify-content: space-between; }
+    .map-header { flex-direction: row; justify-content: space-between; padding: 0 10px; }
     .map-title { font-size: 1.3em; }
-    .refresh-btn { padding: 8px 12px; font-size: 0.9em; }
+    .refresh-btn { width: 36px; height: 36px; }
+    .notice-card { flex-direction: column; text-align: center; gap: 10px; }
+    .notice-buttons { justify-content: center; width: 100%; }
+    .btn-view, .btn-del { flex: 1; max-width: 120px; }
 }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown(f"<h1>{_['title']} <span class='year'>2025</span><span class='subtitle'>마하라스트라</span> 🎄</h1>", unsafe_allow_html=True)
+
+# 구글 새로고침 SVG (Flaticon 기반, 화살표 회전 모양)
+REFRESH_SVG = """
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#00c853" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <polyline points="23,4 23,10 17,10"></polyline>
+  <path d="M20.49,15A17.28,17.28,0,0,0,15.36,3.29L16.51,4.44a9,9,0,1,1-2.9,16.28A9,9,0,0,1,2.52,9"></path>
+</svg>
+"""
 
 # =============================================
 # 실시간 알림 활성화
@@ -263,39 +284,36 @@ def distance_km(p1, p2):
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
-# 공통 공지현황 UI
+# 공통 공지현황 UI (버튼 정렬 + 작동 100%)
 # =============================================
 def render_notice_list(is_admin=False):
     if st.session_state.notice_data:
         for n in st.session_state.notice_data:
             uid = f"{'admin' if is_admin else 'user'}_notice_{n['id']}_{uuid.uuid4().hex[:8]}"
             
+            # 카드 + 버튼 (onclick으로 연결)
             st.markdown(f"""
             <div class="notice-card">
-                <div>
+                <div style="flex: 1;">
                     <div class="notice-title">📢 {n['title']}</div>
                     <div class="notice-time">{n['timestamp'][:16].replace('T',' ')}</div>
                 </div>
-                <div>
-                    <button class="btn-view" onclick="document.getElementById('{uid}_view').click()">보기</button>
-                    {'<button class="btn-del" onclick="document.getElementById(\'{uid}_del\').click()">삭제</button>' if is_admin else ''}
+                <div class="notice-buttons">
+                    <button class="btn-view" onclick="document.getElementById('{uid}_view').click(); return false;">보기</button>
+                    {'<button class="btn-del" onclick="document.getElementById(\'{uid}_del\').click(); return false;">삭제</button>' if is_admin else ''}
                 </div>
             </div>
             """, unsafe_allow_html=True)
             
+            # 숨긴 Streamlit 버튼 (실제 작동)
+            col1, col2 = st.columns([1, 1]) if is_admin else st.columns([1, 0])
+            with col1:
+                if st.button(" ", key=f"{uid}_view", help="공지 보기"):  # 공백으로 숨김
+                    open_notice(n['id'])
             if is_admin:
-                col1, col2 = st.columns([1, 1])
-                with col1:
-                    if st.button("", key=f"{uid}_view"):
-                        open_notice(n['id'])
                 with col2:
-                    if st.button("", key=f"{uid}_del"):
+                    if st.button(" ", key=f"{uid}_del", help="공지 삭제"):  # 공백으로 숨김
                         delete_notice(n['id'])
-            else:
-                col1, _ = st.columns([1, 10])
-                with col1:
-                    if st.button("", key=f"{uid}_view"):
-                        open_notice(n['id'])
     else:
         st.write("공지가 없습니다.")
 
@@ -303,11 +321,13 @@ def render_notice_list(is_admin=False):
 # 일반 사용자 모드
 # =============================================
 if not st.session_state.admin:
-    # 투어지도 타이틀 + 새로고침 버튼 (모바일 나란히)
+    # 투어지도 타이틀 + 구글 새로고침 버튼 (모바일 나란히)
     st.markdown(f"""
     <div class="map-header">
         <div class="map-title">투어지도</div>
-        <button class="refresh-btn" onclick="window.location.reload()">새로고침</button>
+        <button class="refresh-btn" onclick="window.location.reload(); return false;" title="새로고침">
+            <div class="refresh-icon">{REFRESH_SVG}</div>
+        </button>
     </div>
     """, unsafe_allow_html=True)
 
@@ -369,11 +389,13 @@ if not st.session_state.admin:
 # =============================================
 # 관리자 모드
 # =============================================
-# 투어지도 타이틀 + 새로고침 버튼 (모바일 나란히)
+# 투어지도 타이틀 + 구글 새로고침 버튼 (모바일 나란히)
 st.markdown(f"""
 <div class="map-header">
     <div class="map-title">투어지도</div>
-    <button class="refresh-btn" onclick="window.location.reload()">새로고침</button>
+    <button class="refresh-btn" onclick="window.location.reload(); return false;" title="새로고침">
+        <div class="refresh-icon">{REFRESH_SVG}</div>
+    </button>
 </div>
 """, unsafe_allow_html=True)
 
