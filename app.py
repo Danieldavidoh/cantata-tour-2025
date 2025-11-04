@@ -7,8 +7,6 @@ from datetime import datetime
 # =============================================
 # 초기화
 # =============================================
-if "admin" not in st.session_state:
-    st.session_state.admin = False
 if "notice_data" not in st.session_state:
     st.session_state.notice_data = []
 if "show_full_notice" not in st.session_state:
@@ -19,10 +17,8 @@ if "show_popup" not in st.session_state:
     st.session_state.show_popup = True
 if "rerun_counter" not in st.session_state:
     st.session_state.rerun_counter = 0
-if "notice_counter" not in st.session_state:
-    st.session_state.notice_counter = 0
 
-# 데이터 저장/로드
+# 데이터 파일
 DATA_FILE = "notice_data.json"
 
 def load_notice_data():
@@ -35,12 +31,12 @@ def save_notice_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-# 초기 데이터 로드
+# 초기 로드
 if not st.session_state.notice_data:
     st.session_state.notice_data = load_notice_data()
 
 # 새 공지 감지
-if len(st.session_state.notice_data) > 0:
+if st.session_state.notice_data:
     latest_id = max(n["id"] for n in st.session_state.notice_data)
     if "last_seen_id" not in st.session_state:
         st.session_state.last_seen_id = latest_id
@@ -51,7 +47,7 @@ else:
     st.session_state.new_notice = False
 
 # =============================================
-# CSS & JS 인젝션
+# CSS 스타일
 # =============================================
 st.markdown("""
 <style>
@@ -138,166 +134,96 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =============================================
-# 일반 모드
+# 1. 투어지도
 # =============================================
-if not st.session_state.admin:
-    # 투어지도 (예시)
-    with st.expander("투어지도", expanded=False):
-        st.map()  # 실제 지도 데이터 연결 필요
+with st.expander("📍 투어지도", expanded=False):
+    # 여기에 실제 지도 데이터 연결 (예: st.map, folium, etc.)
+    st.write("지도 로딩 중...")
+    # 예시: st.map(data)  # data = pd.DataFrame with lat, lon
 
-    st.markdown("---")
+st.markdown("---")
 
-    # 공지현황 (말풍선)
-    notice_expander = st.expander("공지현황", expanded=False)
-    with notice_expander:
-        if st.session_state.notice_data:
-            st.session_state.rerun_counter += 1
-            counter = st.session_state.rerun_counter
-            placeholders = []
+# =============================================
+# 2. 공지현황
+# =============================================
+notice_expander = st.expander("📢 공지현황", expanded=False)
+with notice_expander:
+    if st.session_state.notice_data:
+        st.session_state.rerun_counter += 1
+        counter = st.session_state.rerun_counter
+        placeholders = []
 
-            for idx, notice in enumerate(st.session_state.notice_data):
-                placeholder = st.empty()
-                placeholders.append((placeholder, notice, counter, idx))
+        for idx, notice in enumerate(st.session_state.notice_data):
+            placeholder = st.empty()
+            placeholders.append((placeholder, notice, counter, idx))
 
-            for placeholder, notice, counter, idx in placeholders:
-                with placeholder.container():
-                    unique_key = f"open_notice_{notice['id']}_{counter}_{idx}"
-                    st.markdown(f"""
-                    <div class="speech-bubble">
-                        <div style="font-weight: bold; color: #228B22;">{notice['title']}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    if st.button("열기", key=unique_key, use_container_width=True):
-                        st.session_state.show_full_notice = notice["id"]
-                        st.rerun()
-        else:
-            st.write("공지가 없습니다.")
-
-    # 새 공지 슬라이드 알림
-    if st.session_state.new_notice and st.session_state.show_popup:
-        st.markdown(f"""
-        <div class="slide-alert">
-            <span>🔔 새 공지사항이 도착했습니다!</span>
-            <button onclick="document.querySelector('.slide-alert').remove(); 
-                            document.getElementById('close_popup_hidden').click();" 
-                    style="background:none;border:none;color:white;font-size:18px;cursor:pointer;">×</button>
-        </div>
-        <button id="close_popup_hidden" style="display:none;"></button>
-        """, unsafe_allow_html=True)
-        if st.button("", key="close_popup_hidden"):
-            st.session_state.show_popup = False
-            st.rerun()
-
-    # 공지현황 펼치면 슬라이드 알림 제거
-    if notice_expander:
-        st.markdown("""
-        <script>
-        setTimeout(() => {
-            document.querySelector('.slide-alert')?.remove();
-        }, 100);
-        </script>
-        """, unsafe_allow_html=True)
-
-    # 전체 화면 공지
-    if st.session_state.show_full_notice is not None:
-        notice = next((n for n in st.session_state.notice_data if n["id"] == st.session_state.show_full_notice), None)
-        if notice:
-            content = notice["content"]
-            if notice.get("file"):
-                content += f"<br><img src='data:image/png;base64,{notice['file']}' style='max-width:100%; border-radius:10px;'>"
-
-            st.button("", key="close_full_notice_hidden", on_click=lambda: None)
-            if st.session_state.get("close_full_notice_hidden"):
-                st.session_state.show_full_notice = None
-                st.rerun()
-
-            st.markdown(f"""
-            <div id="full-screen-notice">
-                <button id="new-exit-button" onclick="document.getElementById('close_full_notice_hidden').click();">나가기</button>
-                <div id="full-screen-notice-content">
-                    <h3>{notice['title']}</h3>
-                    <div>{content}</div>
+        for placeholder, notice, counter, idx in placeholders:
+            with placeholder.container():
+                unique_key = f"open_notice_{notice['id']}_{counter}_{idx}"
+                st.markdown(f"""
+                <div class="speech-bubble">
+                    <div style="font-weight: bold; color: #228B22;">{notice['title']}</div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-    st.stop()
+                """, unsafe_allow_html=True)
+                if st.button("열기", key=unique_key, use_container_width=True):
+                    st.session_state.show_full_notice = notice["id"]
+                    st.rerun()
+    else:
+        st.write("공지가 없습니다.")
 
 # =============================================
-# 관리자 모드
+# 새 공지 슬라이드 알림
 # =============================================
-if st.session_state.admin:
-    st.sidebar.success("🔐 관리자 모드")
+if st.session_state.new_notice and st.session_state.show_popup:
+    st.markdown(f"""
+    <div class="slide-alert">
+        <span>🔔 새 공지사항이 도착했습니다!</span>
+        <button onclick="document.querySelector('.slide-alert').remove(); 
+                        document.getElementById('close_popup_hidden').click();" 
+                style="background:none;border:none;color:white;font-size:18px;cursor:pointer;">×</button>
+    </div>
+    <button id="close_popup_hidden" style="display:none;"></button>
+    """, unsafe_allow_html=True)
+    if st.button("", key="close_popup_hidden"):
+        st.session_state.show_popup = False
+        st.rerun()
 
-    # 공지 입력
-    with st.form("notice_form"):
-        title = st.text_input("공지 제목", placeholder="중요 공지를 입력하세요")
-        content = st.text_area("공지 내용", placeholder="자세한 내용을 작성하세요")
-        file = st.file_uploader("이미지 첨부 (선택)", type=["png", "jpg", "jpeg"])
-        submitted = st.form_submit_button("공지 등록")
+# 공지현황 펼치면 슬라이드 알림 제거
+if notice_expander:
+    st.markdown("""
+    <script>
+    setTimeout(() => {
+        document.querySelector('.slide-alert')?.remove();
+    }, 100);
+    </script>
+    """, unsafe_allow_html=True)
 
-        if submitted and title.strip():
-            file_base64 = None
-            if file:
-                file_base64 = base64.b64encode(file.read()).decode()
+# =============================================
+# 전체 화면 공지
+# =============================================
+if st.session_state.show_full_notice is not None:
+    notice = next((n for n in st.session_state.notice_data if n["id"] == st.session_state.show_full_notice), None)
+    if notice:
+        content = notice["content"]
+        if notice.get("file"):
+            content += f"<br><img src='data:image/png;base64,{notice['file']}' style='max-width:100%; border-radius:10px;'>"
 
-            new_notice = {
-                "id": int(datetime.now().timestamp()),
-                "title": title.strip(),
-                "content": content.strip(),
-                "file": file_base64,
-                "timestamp": datetime.now().isoformat()
-            }
-            st.session_state.notice_data.insert(0, new_notice)
-            save_notice_data(st.session_state.notice_data)
-            st.success("공지가 등록되었습니다!")
+        st.button("", key="close_full_notice_hidden", on_click=lambda: None)
+        if st.session_state.get("close_full_notice_hidden"):
+            st.session_state.show_full_notice = None
             st.rerun()
 
-    st.markdown("---")
-
-    # 공지현황 (관리자)
-    with st.expander("공지현황", expanded=False):
-        if st.session_state.notice_data:
-            st.session_state.notice_counter += 1
-            counter = st.session_state.notice_counter
-            placeholders = []
-
-            for idx, notice in enumerate(st.session_state.notice_data):
-                placeholder = st.empty()
-                placeholders.append((placeholder, notice, counter, idx))
-
-            for placeholder, notice, counter, idx in placeholders:
-                with placeholder.container():
-                    unique_id = f"{notice['id']}_{counter}_{idx}"
-                    col1, col2 = st.columns([9, 1])
-                    with col1:
-                        if st.button(notice["title"], key=f"admin_notice_view_{unique_id}", use_container_width=True):
-                            st.session_state.show_full_notice = notice["id"]
-                            st.rerun()
-                    with col2:
-                        if st.button("🗑", key=f"admin_notice_delete_{unique_id}"):
-                            st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice["id"]]
-                            save_notice_data(st.session_state.notice_data)
-                            st.success("공지 삭제 완료")
-                            st.rerun()
-        else:
-            st.write("공지가 없습니다.")
-
-    # 전체 화면 공지 (관리자)
-    if st.session_state.show_full_notice is not None:
-        notice = next((n for n in st.session_state.notice_data if n["id"] == st.session_state.show_full_notice), None)
-        if notice:
-            content = notice["content"]
-            if notice.get("file"):
-                content += f"<br><img src='data:image/png;base64,{notice['file']}' style='max-width:100%; border-radius:10px;'>"
-
-            if st.button("닫기", key="admin_close_notice"):
-                st.session_state.show_full_notice = None
-                st.rerun()
-
-            st.markdown(f"""
-            <div style="background:#228B22; padding:20px; border-radius:15px; color:white;">
+        st.markdown(f"""
+        <div id="full-screen-notice">
+            <button id="new-exit-button" onclick="document.getElementById('close_full_notice_hidden').click();">나가기</button>
+            <div id="full-screen-notice-content">
                 <h3>{notice['title']}</h3>
                 <div>{content}</div>
             </div>
-            """, unsafe_allow_html=True)
+        </div>
+        """, unsafe_allow_html=True)
+
+# =============================================
+# 앱 종료
+# =============================================
+st.stop()
