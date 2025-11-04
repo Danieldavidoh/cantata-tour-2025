@@ -9,7 +9,7 @@ import re
 import json
 import os
 import base64
-import uuid  # 중복 키 방지
+import uuid
 
 # =============================================
 # PWA & 실시간 푸시 알림 설정
@@ -153,7 +153,7 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 스타일 (제목 흰색 + 1.3em 통일, 공지현황 위 구분선 제거)
+# 스타일
 # =============================================
 st.markdown("""
 <style>
@@ -163,7 +163,7 @@ h1 { color: #ff3333 !important; text-align: center; font-weight: 900; font-size:
 h1 span.year { color: #fff; font-size: 0.8em; vertical-align: super; }
 h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin-left: 5px; }
 
-/* 모든 제목: 흰색 + 1.3em 통일 */
+/* 제목: 흰색 + 1.3em 통일 */
 .notice-input-title, .notice-status-title, .city-input-title {
     color: white !important; 
     font-weight: bold; 
@@ -171,9 +171,15 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     margin-bottom: 15px;
 }
 
+/* 등록 버튼 오른쪽 끝 */
 .notice-input-header {
     display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
 }
+.register-btn {
+    background: #00c853; color: white; border: none; padding: 8px 20px; border-radius: 8px;
+    font-weight: bold; cursor: pointer; transition: all 0.2s;
+}
+.register-btn:hover { background: #00b140; transform: scale(1.05); }
 
 .refresh-btn {
     background: none; 
@@ -220,7 +226,7 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 
 @media (max-width: 768px) {
     .notice-input-header { flex-direction: column; align-items: flex-start; }
-    .refresh-btn { margin-top: 10px; }
+    .register-btn, .refresh-btn { margin-top: 10px; }
     .notice-list-item { flex-direction: column; align-items: flex-start; }
     .delete-btn { margin-top: 8px; }
 }
@@ -325,21 +331,26 @@ if not st.session_state.admin:
 # 관리자 모드
 # =============================================
 
-# 공지사항 입력 + 새로고침 버튼
+# 공지사항 입력 + 등록 버튼 + 새로고침 버튼 (같은 라인)
 st.markdown(f"""
 <div class="notice-input-header">
     <div class="notice-input-title">공지사항 입력</div>
-    <button class="refresh-btn" onclick="window.location.reload(); return false;" title="새로고침">
-        <div class="refresh-icon">{REFRESH_SVG}</div>
-    </button>
+    <div>
+        <button class="register-btn" onclick="this.closest('form').submit()">등록</button>
+        <button class="refresh-btn" onclick="window.location.reload(); return false;" title="새로고침" style="margin-left: 10px;">
+            <div class="refresh-icon">{REFRESH_SVG}</div>
+        </button>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-title = st.text_input(_["notice_title"])
-content = st.text_area(_["notice_content"])
-uploaded = st.file_uploader(_["upload_file"], type=["png", "jpg", "jpeg"])
+with st.form("notice_form"):
+    title = st.text_input(_["notice_title"])
+    content = st.text_area(_["notice_content"])
+    uploaded = st.file_uploader(_["upload_file"], type=["png", "jpg", "jpeg"])
+    submitted = st.form_submit_button("등록", use_container_width=False)
 
-if st.button("등록") and title:
+if submitted and title:
     new_notice = {
         "id": len(st.session_state.notice_data) + 1,
         "title": title,
@@ -348,37 +359,37 @@ if st.button("등록") and title:
     }
     if uploaded:
         new_notice["file"] = base64.b64encode(uploaded.read()).decode()
-    st.session_state.notice_data.insert(0, new_notice)  # 최신순
+    st.session_state.notice_data.insert(0, new_notice)
     save_json(NOTICE_FILE, st.session_state.notice_data)
     st.session_state.show_popup = True
     st.success("공지 등록 완료")
     st.rerun()
 
-# 공지현황 (구분선 제거, 제목 흰색 1.3em)
-st.markdown("<div class='notice-status-title'>공지현황</div>", unsafe_allow_html=True)
-if st.session_state.notice_data:
-    for n in st.session_state.notice_data:
-        unique_key = f"del_{n['id']}_{uuid.uuid4().hex[:8]}"
-        col1, col2 = st.columns([5, 1])
-        with col1:
-            st.markdown(f"""
-            <div class="notice-list-item">
-                <div>
-                    <div class="notice-list-title">📢 {n['title']}</div>
-                    <div class="notice-list-time">{n['timestamp'][:16].replace('T',' ')}</div>
+# 공지현황 (expander 버튼 + 클릭 시 내용 펼쳐짐)
+with st.expander("공지현황", expanded=False):
+    if st.session_state.notice_data:
+        for n in st.session_state.notice_data:
+            unique_key = f"del_{n['id']}_{uuid.uuid4().hex[:8]}"
+            col1, col2 = st.columns([5, 1])
+            with col1:
+                st.markdown(f"""
+                <div class="notice-list-item">
+                    <div>
+                        <div class="notice-list-title">📢 {n['title']}</div>
+                        <div class="notice-list-time">{n['timestamp'][:16].replace('T',' ')}</div>
+                    </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
-        with col2:
-            if st.button(_["delete"], key=unique_key):
-                delete_notice(n['id'])
-else:
-    st.write("등록된 공지가 없습니다.")
+                """, unsafe_allow_html=True)
+            with col2:
+                if st.button(_["delete"], key=unique_key):
+                    delete_notice(n['id'])
+    else:
+        st.write("등록된 공지가 없습니다.")
 
-# 구분선 (공지현황 아래)
+# 구분선
 st.markdown("<div style='height: 2px; background: linear-gradient(90deg, transparent, #ff6b6b, transparent); margin: 30px 0;'></div>", unsafe_allow_html=True)
 
-# 도시 입력 (제목 흰색 1.3em)
+# 도시 입력
 st.markdown(f"<div class='city-input-title'>{_['city_input']}</div>", unsafe_allow_html=True)
 with st.form("city_form", clear_on_submit=True):
     col1, col2 = st.columns([1, 1])
