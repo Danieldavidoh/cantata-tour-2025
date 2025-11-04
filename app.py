@@ -9,7 +9,6 @@ import re
 import json
 import os
 import base64
-import uuid
 
 # =============================================
 # PWA & 실시간 푸시 알림 설정
@@ -44,7 +43,7 @@ if ('Notification' in window && Notification.permission === 'default') {
 # =============================================
 defaults = {
     "lang": "ko", "admin": False, "route": [], "venue_data": {}, "notice_data": [],
-    "expanded_notice": None, "show_popup": True, "notice_counter": 0, "push_enabled": False
+    "show_popup": True, "notice_counter": 0
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -122,45 +121,21 @@ def notice_badge():
 # =============================================
 LANG = {
     "ko": {
-        "title": "칸타타 투어", "select_city": "도시 선택", "add_city": "추가", "register": "등록",
-        "venue": "공연장", "seats": "좌석 수", "indoor": "실내", "outdoor": "실외", "google": "구글 지도 링크",
-        "notes": "특이사항", "tour_map": "투어 지도", "tour_route": "경로", "password": "관리자 비밀번호",
-        "login": "로그인", "logout": "로그아웃", "date": "공연 날짜", "notice_title": "공지 제목",
-        "notice_content": "공지 내용", "upload_file": "사진/파일 업로드", "notice_status": "공지현황",
+        "title": "칸타타 투어", "password": "관리자 비밀번호", "login": "로그인", "logout": "로그아웃",
+        "notice_title": "공지 제목", "notice_content": "공지 내용", "upload_file": "사진/파일 업로드",
         "city_input": "도시 입력", "venue_name": "공연장 이름", "seats_count": "좌석 수", "venue_type": "공연장 유형",
-        "google_link": "구글 링크", "add_venue": "추가", "already_exists": "이미 존재하는 도시입니다.", "delete": "삭제"
-    },
-    "en": {
-        "title": "Cantata Tour", "select_city": "Select City", "add_city": "Add", "register": "Register",
-        "venue": "Venue", "seats": "Seats", "indoor": "Indoor", "outdoor": "Outdoor", "google": "Google Maps Link",
-        "notes": "Notes", "tour_map": "Tour Map", "tour_route": "Route", "password": "Admin Password",
-        "login": "Login", "logout": "Logout", "date": "Performance Date", "notice_title": "Notice Title",
-        "notice_content": "Notice Content", "upload_file": "Upload Photo/File", "notice_status": "Notice Board",
-        "city_input": "City Input", "venue_name": "Venue Name", "seats_count": "Seats Count", "venue_type": "Venue Type",
-        "google_link": "Google Link", "add_venue": "Add", "already_exists": "City already exists.", "delete": "Delete"
-    },
-    "hi": {
-        "title": "कांताता टूर", "select_city": "शहर चुनें", "add_city": "जोड़ें", "register": "रजिस्टर",
-        "venue": "स्थल", "seats": "सीटें", "indoor": "इनडोर", "outdoor": "आउटडोर", "google": "गूगल मैप लिंक",
-        "notes": "नोट्स", "tour_map": "टूर मैप", "tour_route": "रूट", "password": "एडमिन पासवर्ड",
-        "login": "लॉगिन", "logout": "लॉगआउट", "date": "प्रदर्शन तिथि", "notice_title": "सूचना शीर्षक",
-        "notice_content": "सूचना सामग्री", "upload_file": "फोटो/फ़ाइल अपलोड करें", "notice_status": "सूचना बोर्ड",
-        "city_input": "शहर इनपुट", "venue_name": "स्थल नाम", "seats_count": "सीटों की संख्या", "venue_type": "स्थल प्रकार",
-        "google_link": "गूगल लिंक", "add_venue": "जोड़ें", "already_exists": "शहर पहले से मौजूद है.", "delete": "हटाएं"
+        "google_link": "구글 링크", "add_venue": "추가", "already_exists": "이미 존재하는 도시입니다."
     }
 }
+_ = LANG[st.session_state.lang] if st.session_state.lang in LANG else LANG["ko"]
 
 # =============================================
 # 사이드바
 # =============================================
 with st.sidebar:
-    lang_selected = st.selectbox(
-        "Language", 
-        ["ko", "en", "hi"], 
-        format_func=lambda x: {"ko":"한국어","en":"English","hi":"हिन्दी"}[x]
-    )
+    lang_selected = st.selectbox("Language", ["ko", "en", "hi"], format_func=lambda x: {"ko":"한국어","en":"English","hi":"हिन्दी"}[x])
     st.session_state.lang = lang_selected if lang_selected in LANG else "ko"
-    _ = LANG[st.session_state.lang]
+    _ = LANG.get(st.session_state.lang, LANG["ko"])
 
     st.markdown("---")
     st.write("**Admin**")
@@ -177,7 +152,7 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 스타일
+# 스타일 (공지현황 관련 CSS 제거)
 # =============================================
 st.markdown("""
 <style>
@@ -187,11 +162,17 @@ h1 { color: #ff3333 !important; text-align: center; font-weight: 900; font-size:
 h1 span.year { color: #fff; font-size: 0.8em; vertical-align: super; }
 h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin-left: 5px; }
 
-/* 공지 입력 + 새로고침 버튼 가로 배치 */
-.notice-input-header {
-    display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
+.map-header {
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 10px;
 }
-.notice-input-title { color: #ff6b6b; font-weight: bold; font-size: 1.3em; }
+.map-title {
+    font-size: 1.5em; 
+    font-weight: bold; 
+    color: #ff6b6b;
+}
 
 .refresh-btn {
     background: none; 
@@ -220,40 +201,10 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     to { transform: rotate(360deg); }
 }
 
-.notice-accordion {
-    background:#1a1a1a; border:2px solid #333; border-radius:12px; margin:12px 0; 
-    overflow: hidden; transition: all 0.3s;
+.notice-input-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
 }
-.notice-header {
-    padding: 18px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
-    background: #222; transition: background 0.2s;
-    user-select: none; -webkit-user-select: none; touch-action: manipulation;
-}
-.notice-header:active { background: #2a2a2a; }
-.notice-title { color:#ff6b6b; font-weight:bold; font-size: 1.1em; }
-.notice-time { color:#888; font-size:0.85em; margin-top: 4px; }
-.notice-arrow {
-    width: 16px; height: 16px; transition: transform 0.3s;
-}
-.notice-arrow.open { transform: rotate(180deg); }
-
-.notice-content {
-    padding: 0 18px 18px; color: #ddd; line-height: 1.7; white-space: pre-line;
-    max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.4s ease;
-}
-.notice-content.open { max-height: 2000px; padding: 18px; }
-
-.close-btn {
-    background: none; border: none; color: #ff6b6b; font-size: 1.5em; font-weight: bold;
-    cursor: pointer; padding: 0 8px; line-height: 1; transition: all 0.2s;
-}
-.close-btn:hover { color: #ff3333; transform: scale(1.2); }
-
-.delete-btn {
-    background: #d32f2f; color: white; border: none; padding: 6px 12px; border-radius: 6px;
-    font-size: 0.9em; cursor: pointer; margin-left: 10px; transition: all 0.2s;
-}
-.delete-btn:hover { background: #b71c1c; transform: scale(1.05); }
+.notice-input-title { color: #ff6b6b; font-weight: bold; font-size: 1.3em; }
 
 .city-input-form {
     background: #1a1a1a; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0;
@@ -263,7 +214,6 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 @media (max-width: 768px) {
     .notice-input-header { flex-direction: column; align-items: flex-start; }
     .refresh-btn { margin-top: 10px; }
-    .delete-btn { font-size: 0.8em; padding: 4px 8px; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -275,13 +225,6 @@ REFRESH_SVG = """
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
   <path d="M23 4v6h-6"></path>
   <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-</svg>
-"""
-
-# 화살표 아래 SVG
-ARROW_DOWN_SVG = """
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <polyline points="6,9 12,15 18,9"></polyline>
 </svg>
 """
 
@@ -311,62 +254,7 @@ def distance_km(p1, p2):
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
-# 공지 삭제 함수
-# =============================================
-def delete_notice(notice_id):
-    st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
-    save_json(NOTICE_FILE, st.session_state.notice_data)
-    st.success("공지 삭제됨")
-    st.rerun()
-
-# =============================================
-# 공지 아코디언 UI + 삭제 버튼
-# =============================================
-def render_notice_list():
-    if st.session_state.notice_data:
-        for n in st.session_state.notice_data:
-            notice_id = n['id']
-            is_open = st.session_state.expanded_notice == notice_id
-            uid = f"notice_{notice_id}_{uuid.uuid4().hex[:8]}"
-            
-            image_html = f'<img src="data:image/png;base64,{n["file"]}" style="max-width:100%; margin-top:15px; border-radius:8px;">' if 'file' in n else ''
-            
-            st.markdown(f"""
-            <div class="notice-accordion">
-                <div class="notice-header" onclick="document.getElementById('{uid}_toggle').click()">
-                    <div>
-                        <div class="notice-title">📢 {n['title']}</div>
-                        <div class="notice-time">{n['timestamp'][:16].replace('T',' ')}</div>
-                    </div>
-                    <div class="notice-arrow {'open' if is_open else ''}">{ARROW_DOWN_SVG}</div>
-                </div>
-                <div class="notice-content {'open' if is_open else ''}">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <button class="close-btn" onclick="document.getElementById('{uid}_close').click()">×</button>
-                        <button class="delete-btn" onclick="document.getElementById('{uid}_delete').click()">{_['delete']}</button>
-                    </div>
-                    <div>{n['content']}</div>
-                    {image_html}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            col1, col2 = st.columns([1, 1])
-            with col1:
-                if st.button("", key=f"{uid}_toggle"):
-                    st.session_state.expanded_notice = notice_id if not is_open else None
-                    st.rerun()
-            with col2:
-                if st.button("", key=f"{uid}_delete"):
-                    delete_notice(notice_id)
-            if is_open and st.button("", key=f"{uid}_close"):
-                st.session_state.expanded_notice = None
-                st.rerun()
-    else:
-        st.write("공지가 없습니다.")
-
-# =============================================
-# 공통 투어지도 UI (새로고침 버튼 제거)
+# 투어지도 UI (공지현황 제거)
 # =============================================
 def render_tour_map():
     st.markdown(f"""
@@ -409,20 +297,17 @@ def render_tour_map():
         st_folium(m, width=900, height=600)
 
 # =============================================
-# 일반 사용자 UI
+# 일반 사용자 UI (공지현황 제거)
 # =============================================
 if not st.session_state.admin:
     render_tour_map()
-    st.markdown("---")
-    with st.expander("공지현황", expanded=False):
-        render_notice_list()
     st.stop()
 
 # =============================================
-# 관리자 모드 (레이아웃 재정렬 + 새로고침 오른쪽 + 삭제 버튼)
+# 관리자 모드 (공지현황 제거)
 # =============================================
 
-# 1. 공지사항 입력 + 새로고침 버튼 오른쪽
+# 공지사항 입력 + 새로고침 버튼
 st.markdown(f"""
 <div class="notice-input-header">
     <div class="notice-input-title">공지사항 입력</div>
@@ -451,14 +336,10 @@ if st.button("등록") and title:
     st.success("공지 등록 완료")
     st.rerun()
 
-# 2. 공지현황 (위 구분선 제거)
-with st.expander("공지현황", expanded=False):
-    render_notice_list()
-
-# 3. 구분선
+# 구분선
 st.markdown("<div style='height: 2px; background: linear-gradient(90deg, transparent, #ff6b6b, transparent); margin: 30px 0;'></div>", unsafe_allow_html=True)
 
-# 4. 도시 입력
+# 도시 입력
 st.markdown(f"<div class='city-input-title'>{_['city_input']}</div>", unsafe_allow_html=True)
 with st.form("city_form", clear_on_submit=True):
     col1, col2 = st.columns([1, 1])
@@ -491,6 +372,6 @@ with st.form("city_form", clear_on_submit=True):
             st.success(f"{new_city} 추가됨!")
             st.rerun()
 
-# 5. 투어지도 (새로고침 버튼 제거)
+# 투어지도
 st.markdown("---")
 render_tour_map()
