@@ -182,9 +182,12 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     margin-bottom: 15px;
 }
 
-/* 새로고침 버튼 오른쪽 끝 */
-.notice-input-header, .today-notice-header {
+/* 새로고침 버튼 (일반 모드 왼쪽, 관리자 오른쪽) */
+.notice-input-header {
     display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
+}
+.today-notice-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-direction: row-reverse;
 }
 .refresh-btn {
     background: none; 
@@ -216,7 +219,7 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 .notice-item {
     background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:12px; margin:8px 0; 
 }
-.notice-title { color:#ff6b6b; font-weight:bold; font-size: 1.1em; cursor: pointer; }
+.notice-title { color:#ff6b6b; font-weight:bold; font-size: 1.1em; }
 .notice-time { color:#888; font-size:0.85em; }
 .delete-btn {
     background: #d32f2f; color: white; border: none; padding: 6px 12px; border-radius: 6px;
@@ -347,16 +350,15 @@ def render_tour_map():
         st_folium(m, width=900, height=600)
 
 # =============================================
-# 일반 사용자 UI
+# 일반 사용자 UI (새로고침 아이콘 왼쪽)
 # =============================================
 if not st.session_state.admin:
-    # 오늘의 공지 + 새로고침 버튼
     st.markdown(f"""
     <div class="today-notice-header">
-        <div class="today-notice-title'>{_['today_notice']}</div>
         <button class="refresh-btn" onclick="window.location.reload(); return false;" title="새로고침">
             <div class="refresh-icon">{REFRESH_SVG}</div>
         </button>
+        <div class="today-notice-title'>{_['today_notice']}</div>
     </div>
     """, unsafe_allow_html=True)
     
