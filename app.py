@@ -36,6 +36,8 @@ if "exp_state" not in st.session_state:
     st.session_state.exp_state = {}
 if "notice_counter" not in st.session_state:
     st.session_state.notice_counter = 0
+if "rerun_counter" not in st.session_state:
+    st.session_state.rerun_counter = 0
 
 # =============================================
 # 데이터 저장 (실시간 반영)
@@ -210,13 +212,18 @@ if not st.session_state.admin:
     notice_expander = st.expander("공지현황", expanded=False)
     with notice_expander:
         if st.session_state.notice_data:
+            # 유니크 키를 위한 카운터
+            st.session_state.rerun_counter += 1
+            counter = st.session_state.rerun_counter
+
             for notice in st.session_state.notice_data:
+                unique_key = f"open_notice_{notice['id']}_{counter}"
                 st.markdown(f"""
                 <div class="speech-bubble">
-                    <button class="notice-title-btn" onclick="document.getElementById('open_notice_{notice['id']}').click();">{notice['title']}</button>
+                    <button class="notice-title-btn" onclick="document.getElementById('{unique_key}').click();">{notice['title']}</button>
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button("", key=f"open_notice_{notice['id']}"):
+                if st.button("", key=unique_key):
                     st.session_state.show_full_notice = notice["id"]
                     st.rerun()
         else:
@@ -226,9 +233,9 @@ if not st.session_state.admin:
     if st.session_state.new_notice and st.session_state.show_popup:
         st.markdown("""
         <div class="slide-alert">
-            <span>따끈한 공지가 도착했어요!</span>
-            <span>따끈한 공지가 도착했어요!</span>
-            <span>따끈한 공지가 도착했어요!</span>
+            <span>🎄 따끈한 공지가 도착했어요! 🎅</span>
+            <span>🎄 따끈한 공지가 도착했어요! 🎅</span>
+            <span>🎄 따끈한 공지가 도착했어요! 🎅</span>
         </div>
         <audio autoplay>
             <source src="https://www.soundjay.com/misc/sounds/bell-ringing-04.mp3" type="audio/mpeg">
