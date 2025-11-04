@@ -222,7 +222,7 @@ if not st.session_state.admin:
 
     # 전체 화면 공지
     if st.session_state.show_full_notice is not None:
-        notice = next(((n for n in st.session_state.notice_data if n["id"] == st.session_state.show_full_notice), None)
+        notice = next((n for n in st.session_state.notice_data if n["id"] == st.session_state.show_full_notice), None)
         if notice:
             content = notice["content"]
             if "file" in notice and notice["file"]:
@@ -243,7 +243,7 @@ if not st.session_state.admin:
     st.stop()  # 일반 모드 끝
 
 # =============================================
-# 관리자 모드 (전체 UI 복구)
+# 관리자 모드
 # =============================================
 if st.session_state.admin:
     # 공지 입력
