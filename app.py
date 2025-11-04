@@ -70,7 +70,7 @@ st.session_state.venue_data = load_json(VENUE_FILE, {})
 st.session_state.notice_data = load_json(NOTICE_FILE, [])
 
 # =============================================
-# 콜백 함수들 (버튼 작동 보장)
+# 콜백 함수들
 # =============================================
 def delete_notice(notice_id):
     st.session_state.notice_data = [x for x in st.session_state.notice_data if x["id"] != notice_id]
@@ -82,6 +82,11 @@ def delete_notice(notice_id):
 
 def open_notice(notice_id):
     st.session_state.show_full_notice = notice_id
+    st.rerun()
+
+def refresh_notices():
+    st.session_state.notice_data = load_json(NOTICE_FILE, [])
+    st.session_state.notice_counter = len(st.session_state.notice_data)
     st.rerun()
 
 # =============================================
@@ -120,7 +125,7 @@ def notice_badge():
         """, unsafe_allow_html=True)
 
 # =============================================
-# 언어 설정 (모든 언어 지원 + KeyError 방지)
+# 언어 설정
 # =============================================
 LANG = {
     "ko": {
@@ -182,6 +187,12 @@ h1 { color: #ff3333 !important; text-align: center; font-weight: 900; font-size:
      text-shadow: 0 0 25px #b71c1c, 0 0 15px #00ff99; }
 h1 span.year { color: #fff; font-size: 0.8em; vertical-align: super; }
 h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin-left: 5px; }
+.notice-card { background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:15px; margin:10px 0; display:flex; justify-content:space-between; align-items:center; }
+.notice-title { color:#ff6b6b; font-weight:bold; }
+.notice-time { color:#888; font-size:0.8em; }
+.btn-view { background:#ff6b6b; color:white; border:none; padding:8px 14px; border-radius:6px; margin:0 4px; cursor:pointer; font-size:0.9em; }
+.btn-del { background:#d32f2f; color:white; border:none; padding:8px 14px; border-radius:6px; margin:0 4px; cursor:pointer; font-size:0.9em; }
+.refresh-btn { background:#00c853; color:white; border:none; padding:6px 12px; border-radius:50%; font-weight:bold; cursor:pointer; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -208,6 +219,47 @@ def distance_km(p1, p2):
     dlat, dlon = lat2 - lat1, lon2 - lon1
     a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
+
+# =============================================
+# 공통 공지현황 UI (재사용)
+# =============================================
+def render_notice_list(is_admin=False):
+    col_title, col_refresh = st.columns([8, 1])
+    with col_title:
+        st.markdown(f"### 공지현황")
+    with col_refresh:
+        if st.button("새로고침", key=f"refresh_{'admin' if is_admin else 'user'}", help="공지 새로고침"):
+            refresh_notices()
+
+    if st.session_state.notice_data:
+        for n in st.session_state.notice_data:
+            uid = f"{'admin' if is_admin else 'user'}_notice_{n['id']}_{uuid.uuid4().hex[:8]}"
+            
+            # 카드 스타일
+            st.markdown(f"""
+            <div class="notice-card">
+                <div>
+                    <div class="notice-title">📢 {n['title']}</div>
+                    <div class="notice-time">{n['timestamp'][:16].replace('T',' ')}</div>
+                </div>
+                <div>
+                    <button class="btn-view" onclick="document.getElementById('{uid}_view').click()">보기</button>
+                    {'<button class="btn-del" onclick="document.getElementById(\'{uid}_del\').click()">삭제</button>' if is_admin else ''}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # 숨긴 버튼
+            col1, col2 = st.columns([1, 1] if is_admin else [1, 0])
+            with col1:
+                if st.button("", key=f"{uid}_view"):
+                    open_notice(n['id'])
+            if is_admin:
+                with col2:
+                    if st.button("", key=f"{uid}_del"):
+                        delete_notice(n['id'])
+    else:
+        st.write("공지가 없습니다.")
 
 # =============================================
 # 일반 사용자 모드
@@ -248,20 +300,7 @@ if not st.session_state.admin:
 
     st.markdown("---")
     with st.expander("공지현황", expanded=st.session_state.show_full_notice is not None):
-        if st.session_state.notice_data:
-            for n in st.session_state.notice_data:
-                uid = f"user_notice_{n['id']}_{uuid.uuid4().hex[:8]}"
-                st.markdown(f"""
-                <div style="background:#111;border:2px solid #333;border-radius:12px;padding:15px;margin:10px 0;cursor:pointer;"
-                     onclick="document.getElementById('{uid}_btn').click()">
-                    <strong style="color:#ff6b6b;">📢 {n['title']}</strong>
-                    <span style="float:right;color:#888;font-size:0.8em;">{n['timestamp'][:16].replace('T',' ')}</span>
-                </div>
-                """, unsafe_allow_html=True)
-                if st.button("", key=f"{uid}_btn"):
-                    open_notice(n['id'])
-        else:
-            st.write("공지가 없습니다.")
+        render_notice_list(is_admin=False)
 
     # 공지 상세 보기
     if st.session_state.show_full_notice:
@@ -307,38 +346,7 @@ if st.button("등록") and title:
 
 st.markdown("---")
 with st.expander("공지현황", expanded=st.session_state.show_full_notice is not None):
-    if st.session_state.notice_data:
-        for n in st.session_state.notice_data:
-            uid = f"admin_notice_{n['id']}_{uuid.uuid4().hex[:8]}"
-            st.markdown(f"""
-            <div style="background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:15px; margin:10px 0; 
-                        display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <strong style="color:#ff6b6b;">📢 {n['title']}</strong><br>
-                    <small style="color:#888;">{n['timestamp'][:16].replace('T',' ')}</small>
-                </div>
-                <div>
-                    <button onclick="document.getElementById('{uid}_view').click()" 
-                            style="background:#ff6b6b; color:white; border:none; padding:8px 12px; border-radius:6px; margin-right:5px; cursor:pointer;">
-                        보기
-                    </button>
-                    <button onclick="document.getElementById('{uid}_del').click()" 
-                            style="background:#d32f2f; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;">
-                        삭제
-                    </button>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            col_view, col_del = st.columns([1, 1])
-            with col_view:
-                if st.button("", key=f"{uid}_view"):
-                    open_notice(n['id'])
-            with col_del:
-                if st.button("", key=f"{uid}_del"):
-                    delete_notice(n['id'])
-    else:
-        st.write("공지가 없습니다.")
+    render_notice_list(is_admin=True)
 
 # 관리자도 공지 상세 보기
 if st.session_state.show_full_notice:
