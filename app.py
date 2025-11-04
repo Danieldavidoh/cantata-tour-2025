@@ -125,7 +125,8 @@ LANG = {
         "title": "칸타타 투어", "password": "관리자 비밀번호", "login": "로그인", "logout": "로그아웃",
         "notice_title": "공지 제목", "notice_content": "공지 내용", "upload_file": "사진/파일 업로드",
         "city_input": "도시 입력", "venue_name": "공연장 이름", "seats_count": "좌석 수", "venue_type": "공연장 유형",
-        "google_link": "구글 링크", "add_venue": "추가", "already_exists": "이미 존재하는 도시입니다.", "delete": "삭제"
+        "google_link": "구글 링크", "add_venue": "추가", "already_exists": "이미 존재하는 도시입니다.", "delete": "삭제",
+        "today_notice": "오늘의 공지"
     }
 }
 _ = LANG[st.session_state.lang] if st.session_state.lang in LANG else LANG["ko"]
@@ -164,7 +165,7 @@ h1 span.year { color: #fff; font-size: 0.8em; vertical-align: super; }
 h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin-left: 5px; }
 
 /* 제목: 흰색 + 1.3em 통일 */
-.notice-input-title, .notice-status-title, .city-input-title {
+.notice-input-title, .notice-status-title, .city-input-title, .today-notice-title {
     color: white !important; 
     font-weight: bold; 
     font-size: 1.3em; 
@@ -269,13 +270,37 @@ def distance_km(p1, p2):
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
-# 공지 삭제 함수
+# 공지 삭제 함수 (관리자 전용)
 # =============================================
 def delete_notice(notice_id):
     st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
     save_json(NOTICE_FILE, st.session_state.notice_data)
     st.success("공지 삭제됨")
     st.rerun()
+
+# =============================================
+# 공지현황 리스트 (공통 함수)
+# =============================================
+def render_notice_list(show_delete=False):
+    if st.session_state.notice_data:
+        for n in st.session_state.notice_data:
+            col1, col2 = st.columns([5, 1] if show_delete else [1, 0])
+            with col1:
+                st.markdown(f"""
+                <div class="notice-list-item">
+                    <div>
+                        <div class="notice-list-title">📢 {n['title']}</div>
+                        <div class="notice-list-time">{n['timestamp'][:16].replace('T',' ')}</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            if show_delete:
+                with col2:
+                    unique_key = f"del_{n['id']}_{uuid.uuid4().hex[:8]}"
+                    if st.button(_["delete"], key=unique_key):
+                        delete_notice(n['id'])
+    else:
+        st.write("등록된 공지가 없습니다.")
 
 # =============================================
 # 투어지도 UI
@@ -324,6 +349,12 @@ def render_tour_map():
 # 일반 사용자 UI
 # =============================================
 if not st.session_state.admin:
+    # 오늘의 공지
+    st.markdown(f"<div class='today-notice-title'>{_['today_notice']}</div>", unsafe_allow_html=True)
+    with st.expander("공지현황", expanded=False):
+        render_notice_list(show_delete=False)
+    
+    st.markdown("---")
     render_tour_map()
     st.stop()
 
@@ -331,7 +362,7 @@ if not st.session_state.admin:
 # 관리자 모드
 # =============================================
 
-# 공지사항 입력 + 등록 버튼 + 새로고침 버튼 (같은 라인)
+# 공지사항 입력 + 등록 + 새로고침 (같은 라인)
 st.markdown(f"""
 <div class="notice-input-header">
     <div class="notice-input-title">공지사항 입력</div>
@@ -365,26 +396,9 @@ if submitted and title:
     st.success("공지 등록 완료")
     st.rerun()
 
-# 공지현황 (expander 버튼 + 클릭 시 내용 펼쳐짐)
+# 공지현황 (expander + 터치 OK + 삭제 버튼)
 with st.expander("공지현황", expanded=False):
-    if st.session_state.notice_data:
-        for n in st.session_state.notice_data:
-            unique_key = f"del_{n['id']}_{uuid.uuid4().hex[:8]}"
-            col1, col2 = st.columns([5, 1])
-            with col1:
-                st.markdown(f"""
-                <div class="notice-list-item">
-                    <div>
-                        <div class="notice-list-title">📢 {n['title']}</div>
-                        <div class="notice-list-time">{n['timestamp'][:16].replace('T',' ')}</div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            with col2:
-                if st.button(_["delete"], key=unique_key):
-                    delete_notice(n['id'])
-    else:
-        st.write("등록된 공지가 없습니다.")
+    render_notice_list(show_delete=True)
 
 # 구분선
 st.markdown("<div style='height: 2px; background: linear-gradient(90deg, transparent, #ff6b6b, transparent); margin: 30px 0;'></div>", unsafe_allow_html=True)
