@@ -260,6 +260,10 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 }
 .city-input-title { color: #ff6b6b; font-weight: bold; font-size: 1.2em; margin-bottom: 15px; }
 
+.admin-divider {
+    height: 2px; background: linear-gradient(90deg, transparent, #ff6b6b, transparent); margin: 30px 0;
+}
+
 @media (max-width: 768px) {
     .map-header { padding: 0 12px; }
     .map-title { font-size: 1.3em; }
@@ -355,7 +359,7 @@ def render_notice_list():
         st.write("공지가 없습니다.")
 
 # =============================================
-# 공통 투어지도 UI (f-string 이스케이프 수정)
+# 공통 투어지도 UI
 # =============================================
 def render_tour_map():
     st.markdown(f"""
@@ -401,25 +405,49 @@ def render_tour_map():
         st_folium(m, width=900, height=600)
 
 # =============================================
-# 공통 UI: 투어지도 + 공지현황
+# 일반 사용자 UI
 # =============================================
-render_tour_map()
+if not st.session_state.admin:
+    render_tour_map()
+    st.markdown("---")
+    with st.expander("공지현황", expanded=False):
+        render_notice_list()
+    st.stop()
+
+# =============================================
+# 관리자 모드 레이아웃 (완전 재정렬)
+# =============================================
+
+# 1. 공지사항 입력 (제목 바로 아래)
+st.subheader("공지사항 입력")
+title = st.text_input(_["notice_title"])
+content = st.text_area(_["notice_content"])
+uploaded = st.file_uploader(_["upload_file"], type=["png", "jpg", "jpeg"])
+
+if st.button("등록") and title:
+    new_notice = {
+        "id": len(st.session_state.notice_data) + 1,
+        "title": title,
+        "content": content,
+        "timestamp": str(datetime.now())
+    }
+    if uploaded:
+        new_notice["file"] = base64.b64encode(uploaded.read()).decode()
+    st.session_state.notice_data.insert(0, new_notice)
+    save_json(NOTICE_FILE, st.session_state.notice_data)
+    st.session_state.show_popup = True
+    st.success("공지 등록 완료")
+    st.rerun()
+
+# 2. 공지현황
 st.markdown("---")
 with st.expander("공지현황", expanded=False):
     render_notice_list()
 
-# =============================================
-# 일반 사용자 → 여기서 끝
-# =============================================
-if not st.session_state.admin:
-    st.stop()
+# 3. 구분선
+st.markdown("<div class='admin-divider'></div>", unsafe_allow_html=True)
 
-# =============================================
-# 관리자 전용 UI
-# =============================================
-st.markdown("---")
-
-# 도시 입력 폼
+# 4. 도시 입력
 st.markdown(f"<div class='city-input-title'>{_['city_input']}</div>", unsafe_allow_html=True)
 with st.form("city_form", clear_on_submit=True):
     col1, col2 = st.columns([1, 1])
@@ -452,23 +480,6 @@ with st.form("city_form", clear_on_submit=True):
             st.success(f"{new_city} 추가됨!")
             st.rerun()
 
-# 공지사항 입력
-st.subheader("공지사항 입력")
-title = st.text_input(_["notice_title"])
-content = st.text_area(_["notice_content"])
-uploaded = st.file_uploader(_["upload_file"], type=["png", "jpg", "jpeg"])
-
-if st.button("등록") and title:
-    new_notice = {
-        "id": len(st.session_state.notice_data) + 1,
-        "title": title,
-        "content": content,
-        "timestamp": str(datetime.now())
-    }
-    if uploaded:
-        new_notice["file"] = base64.b64encode(uploaded.read()).decode()
-    st.session_state.notice_data.insert(0, new_notice)
-    save_json(NOTICE_FILE, st.session_state.notice_data)
-    st.session_state.show_popup = True
-    st.success("공지 등록 완료")
-    st.rerun()
+# 5. 투어지도 (맨 아래)
+st.markdown("---")
+render_tour_map()
