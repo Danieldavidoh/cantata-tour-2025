@@ -7,7 +7,7 @@ from math import radians, sin, cos, sqrt, atan2
 import re
 import json
 import os
-import base64  # 파일 인코딩
+import base64
 
 # =============================================
 # 데이터 저장
@@ -46,7 +46,20 @@ LANG = {
            "total": "총 거리 및 소요시간", "already_added": "이미 추가된 도시입니다.", "lang_name": "한국어",
            "notice_title": "공지 제목", "notice_content": "공지 내용", "notice_button": "공지", "new_notice": "새로운 공지",
            "notices": "이전 공지", "notice_save": "공지 추가", "upload_file": "사진/파일 업로드"},
-    # (en, hi 생략 – 동일)
+    "en": {"title": "Cantata Tour", "select_city": "Select City", "add_city": "Add",
+           "register": "Register", "venue": "Venue", "seats": "Seats", "indoor": "Indoor", "outdoor": "Outdoor",
+           "google": "Google Maps Link", "notes": "Notes", "tour_map": "Tour Map", "tour_route": "Route",
+           "password": "Admin Password", "login": "Log in", "logout": "Log out", "date": "Date",
+           "total": "Total Distance & Time", "already_added": "City already added.", "lang_name": "English",
+           "notice_title": "Notice Title", "notice_content": "Notice Content", "notice_button": "Notice", "new_notice": "New Notice",
+           "notices": "Previous Notices", "notice_save": "Add Notice", "upload_file": "Upload File/Photo"},
+    "hi": {"title": "कांटाटा टूर", "select_city": "शहर चुनें", "add_city": "जोड़ें",
+           "register": "पंजीकरण करें", "venue": "स्थान", "seats": "सीटें", "indoor": "इनडोर", "outdoor": "आउटडोर",
+           "google": "गूगल मानचित्र लिंक", "notes": "टिप्पणी", "tour_map": "टूर मानचित्र", "tour_route": "मार्ग",
+           "password": "व्यवस्थापक पासवर्ड", "login": "लॉगिन", "logout": "लॉगआउट", "date": "दिनांक",
+           "total": "कुल दूरी और समय", "already_added": "यह शहर पहले से जोड़ा गया है।", "lang_name": "हिन्दी",
+           "notice_title": "सूचना शीर्षक", "notice_content": "सूचना सामग्री", "notice_button": "सूचना", "new_notice": "नई सूचना",
+           "notices": "पिछली सूचनाएं", "notice_save": "सूचना जोड़ें", "upload_file": "फ़ाइल/तस्वीर अपलोड करें"}
 }
 
 # =============================================
@@ -102,6 +115,8 @@ with st.sidebar:
             if pw == "0691":
                 st.session_state.admin = True
                 st.rerun()
+            else:
+                st.error("비밀번호가 틀렸습니다.")
     else:
         if st.button(_["logout"]):
             st.session_state.admin = False
@@ -120,11 +135,16 @@ h1 span.subtitle { color: #cccccc; font-size: 0.45em; vertical-align: super; mar
     position: absolute; top: 10px; right: 10px; z-index: 1000; 
     background: linear-gradient(90deg, #ff3b3b, #228B22); color: white; 
     padding: 10px 15px; border-radius: 8px; font-weight: 700; cursor: pointer; 
-    box-shadow: 0 0 10px #ff4d4d; transition: 0.3s;
+    transition: 0.3s; box-shadow: 0 0 10px #ff4d4d;
 }
 #notice-button:hover { transform: scale(1.1); }
 #notice-button.neon { animation: neon 1.5s infinite alternate; }
 @keyframes neon { from { box-shadow: 0 0 5px #ff00ff; } to { box-shadow: 0 0 20px #ff00ff; } }
+#notice-list { 
+    position: fixed; top: 60px; right: 10px; z-index: 1000; 
+    background: #0a0a0f; padding: 10px; border-radius: 8px; max-height: 70vh; overflow-y: auto; 
+    box-shadow: 0 0 10px #ff4d4d;
+}
 #full-screen-notice { 
     position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
     background: rgba(0,0,0,0.95); z-index: 10000; display: flex; align-items: center; justify-content: center; 
@@ -135,6 +155,7 @@ h1 span.subtitle { color: #cccccc; font-size: 0.45em; vertical-align: super; mar
 .distance-label { background: rgba(255, 0, 0, 0.7); color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap; transform: rotate(-30deg); }
 @media (max-width: 768px) {
     #notice-button { top: 5px; right: 5px; font-size: 0.8em; padding: 8px 12px; }
+    #notice-list { top: 50px; right: 5px; max-height: 50vh; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -165,6 +186,7 @@ if not st.session_state.admin:
             st.session_state.new_notice = False
         st.rerun()
 
+    # 지도
     st.subheader(_["tour_map"])
     try:
         GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
@@ -209,14 +231,18 @@ if not st.session_state.admin:
 
     st_folium(m, width=900, height=650)
 
-    # 공지 리스트
+    # 공지 리스트 (지도 위 고정)
     if st.session_state.show_notice_list:
-        st.markdown("### 공지사항")
+        st.markdown(f"""
+        <div id="notice-list">
+            <h4>{_['notices']}</h4>
+        """, unsafe_allow_html=True)
         today_notices = [n for n in st.session_state.notice_data if datetime.strptime(n["timestamp"].split('.')[0], "%Y-%m-%d %H:%M:%S").date() == datetime.now().date()]
         for notice in today_notices:
             if st.button(notice["title"], key=f"notice_{notice['id']}"):
                 st.session_state.show_full_notice = notice["id"]
                 st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # 전체 화면 공지 (원터치 접힘)
     if st.session_state.show_full_notice is not None:
@@ -226,22 +252,33 @@ if not st.session_state.admin:
             if "file" in notice and notice["file"]:
                 content += f"<br><img src='data:image/png;base64,{notice['file']}' style='max-width:100%;'>"
             st.markdown(f"""
-            <div id="full-screen-notice" onclick="window.streamlit_rerun()">
-                <div id="full-screen-notice-content" onclick="event.stopPropagation();">
+            <div id="full-screen-notice" onclick="window.location.reload();">
+                <div id="full-screen-notice-content">
                     <h3>{notice['title']}</h3>
                     <div>{content}</div>
                 </div>
             </div>
-            <script>
-                function window.streamlit_rerun() {{
-                    Streamlit.setComponentValue(null);
-                    parent.location.reload();
-                }}
-            </script>
             """, unsafe_allow_html=True)
-            if st.button("닫기", key="close_full_notice"):
-                st.session_state.show_full_notice = None
-                st.rerun()
+
+    if st.session_state.new_notice and st.session_state.show_popup:
+        st.markdown("""
+        <audio autoplay>
+            <source src="https://www.soundjay.com/holiday/christmas-bells-1.mp3" type="audio/mpeg">
+        </audio>
+        <script>
+            setTimeout(() => { document.querySelector('audio').pause(); }, 5000);
+        </script>
+        """, unsafe_allow_html=True)
+        latest = st.session_state.notice_data[0]
+        st.markdown(f"""
+        <div id="full-screen-notice" onclick="window.location.reload();">
+            <div id="full-screen-notice-content">
+                <h3>{latest['title']}</h3>
+                <p>{latest['content']}</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.session_state.show_popup = False
 
     st.stop()
 
@@ -273,4 +310,103 @@ if st.session_state.admin:
             st.session_state.new_notice = True
             st.rerun()
 
-    # (이하 관리자 UI 동일 – 생략)
+    left, right = st.columns([1, 2])
+
+    with left:
+        c1, c2 = st.columns([3, 1])
+        with c1:
+            selected_city = st.selectbox(_["select_city"], cities)
+        with c2:
+            if st.button(_["add_city"]):
+                if selected_city not in st.session_state.route:
+                    st.session_state.route.append(selected_city)
+                    st.rerun()
+                else:
+                    st.warning(_["already_added"])
+
+        st.markdown("---")
+        st.subheader(_["tour_route"])
+
+        total_distance = 0.0
+        total_hours = 0.0
+
+        for i, c in enumerate(st.session_state.route):
+            expanded = st.session_state.exp_state.get(c, True)
+            with st.expander(f"{c}", expanded=expanded):
+                today = datetime.now().date()
+                date = st.date_input(_["date"], value=today, min_value=today, key=f"date_{c}")
+                venue = st.text_input(_["venue"], key=f"venue_{c}")
+                seats = st.number_input(_["seats"], min_value=0, step=50, key=f"seats_{c}")
+                google = st.text_input(_["google"], key=f"google_{c}")
+                notes = st.text_area(_["notes"], key=f"notes_{c}")
+                io = st.radio("Type", [_["indoor"], _["outdoor"]], key=f"io_{c}")
+
+                if st.button(_["register"], key=f"reg_{c}"):
+                    st.session_state.venue_data[c] = {
+                        "date": str(date), "venue": venue, "seats": seats,
+                        "type": io, "google": google, "notes": notes
+                    }
+                    save_venue_data(st.session_state.venue_data)
+                    st.success("저장되었습니다.")
+                    for city in st.session_state.route:
+                        st.session_state.exp_state[city] = False
+                    st.rerun()
+
+            if i > 0:
+                prev = st.session_state.route[i - 1]
+                if prev in coords and c in coords:
+                    dist = distance_km(coords[prev], coords[c])
+                    time_hr = dist / 60.0
+                    total_distance += dist
+                    total_hours += time_hr
+                    st.markdown(f"<p style='text-align:center; color:#90EE90; font-weight:bold;'>{dist:.1f} km / {time_hr:.1f} 시간</p>", unsafe_allow_html=True)
+
+        if len(st.session_state.route) > 1:
+            st.markdown("---")
+            st.markdown(f"### {_['total']}")
+            st.success(f"**{total_distance:.1f} km** | **{total_hours:.1f} 시간**")
+
+    with right:
+        st.subheader(_["tour_map"])
+        try:
+            GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+        except:
+            st.error("Google Maps API 키 없음")
+            st.stop()
+
+        m = folium.Map(location=(19.75, 75.71), zoom_start=6,
+                       tiles=f"https://mt1.google.com/vt/lyrs=m&x={{x}}&y={{y}}&z={{z}}&key={GOOGLE_API_KEY}",
+                       attr="Google")
+
+        points = [coords[c] for c in st.session_state.route if c in coords]
+        if len(points) >= 2:
+            for i in range(len(points) - 1):
+                p1, p2 = points[i], points[i + 1]
+                dist = distance_km(p1, p2)
+                time_hr = dist / 60.0
+                mid_lat = (p1[0] + p2[0]) / 2
+                mid_lng = (p1[1] + p2[1]) / 2
+                folium.Marker(
+                    location=[mid_lat, mid_lng],
+                    icon=folium.DivIcon(html=f"""
+                        <div class="distance-label">
+                            {dist:.1f} km / {time_hr:.1f} h
+                        </div>
+                    """)
+                ).add_to(m)
+            AntPath(points, color="red", weight=4, delay=800).add_to(m)
+
+        for c in st.session_state.route:
+            if c in coords:
+                data = st.session_state.venue_data.get(c, {})
+                popup = f"<b>{c}</b><br>"
+                if "date" in data:
+                    popup += f"{data['date']}<br>{data['venue']}<br>Seats: {data['seats']}<br>{data['type']}<br>"
+                if "google" in data and data["google"]:
+                    lat, lng = re.search(r'@(\d+\.\d+),(\d+\.\d+)', data["google"]) or (None, None)
+                    nav_link = f"https://www.google.com/maps/dir/?api=1&destination={lat.group(1)},{lng.group(1)}" if lat and lng else data["google"]
+                    popup += f"<a href='{nav_link}' target='_blank'>네비 시작</a>"
+                folium.Marker(coords[c], popup=popup,
+                              icon=folium.Icon(color="red", icon="music", prefix="fa")).add_to(m)
+
+        st_folium(m, width=900, height=650)
