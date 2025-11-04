@@ -8,6 +8,235 @@ import re
 import json
 import os
 import base64
+import uuid  # 고유 키 생성을 위해 추가
+
+# =============================================
+# 기본 설정
+# =============================================
+st.set_page_config(page_title="Cantata Tour", layout="wide")
+
+# 세션 상태 초기화
+default_states = {
+    "lang": "ko",
+    "admin": False,
+    "route": [],
+    "venue_data": {},
+    "notice_data": [],
+    "new_notice": False,
+    "show_notice_list": False,
+    "show_full_notice": None,
+    "show_popup": True,
+    "exp_state": {}
+}
+for k, v in default_states.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
+
+# =============================================
+# 데이터 파일
+# =============================================
+VENUE_FILE = "venue_data.json"
+NOTICE_FILE = "notice_data.json"
+
+def load_json(file):
+    if os.path.exists(file):
+        with open(file, "r") as f:
+            return json.load(f)
+    return [] if "notice" in file else {}
+
+def save_json(file, data):
+    with open(file, "w") as f:
+        json.dump(data, f, indent=2)
+
+# 로드
+st.session_state.venue_data = load_json(VENUE_FILE)
+st.session_state.notice_data = load_json(NOTICE_FILE)
+st.session_state.new_notice = len(st.session_state.notice_data) > 0
+
+# =============================================
+# 언어
+# =============================================
+LANG = {
+    "ko": {
+        "title": "칸타타 투어", "select_city": "도시 선택", "add_city": "추가", "register": "등록",
+        "venue": "공연장", "seats": "좌석 수", "indoor": "실내", "outdoor": "실외",
+        "google": "구글 지도 링크", "notes": "특이사항", "tour_map": "투어 지도", "tour_route": "경로",
+        "password": "관리자 비밀번호", "login": "로그인", "logout": "로그아웃", "date": "공연 날짜",
+        "total": "총 거리 및 소요시간", "already_added": "이미 추가된 도시입니다.", "lang_name": "한국어",
+        "notice_title": "공지 제목", "notice_content": "공지 내용", "notice_button": "공지 보기",
+        "new_notice": "새로운 공지", "notice_save": "공지 추가", "upload_file": "사진/파일 업로드"
+    }
+}
+
+_ = LANG[st.session_state.lang]
+
+# =============================================
+# 도시 데이터
+# =============================================
+cities = ["Mumbai", "Pune", "Nagpur"]
+coords = {
+    "Mumbai": (19.0760, 72.8777),
+    "Pune": (18.5204, 73.8567),
+    "Nagpur": (21.1458, 79.0882)
+}
+
+# =============================================
+# 거리 계산
+# =============================================
+def distance_km(p1, p2):
+    R = 6371
+    lat1, lon1 = radians(p1[0]), radians(p1[1])
+    lat2, lon2 = radians(p2[0]), radians(p2[1])
+    dlat, dlon = lat2 - lat1, lon2 - lon1
+    a = sin(dlat/2)**2 + cos(lat1)*cos(lat2)*sin(dlon/2)**2
+    return R * 2 * atan2(sqrt(a), sqrt(1 - a))
+
+# =============================================
+# 사이드바 (언어, 관리자 로그인)
+# =============================================
+with st.sidebar:
+    lang_options = {"ko": "한국어", "en": "English"}
+    lang_selected = st.selectbox("Language", options=list(lang_options.keys()), format_func=lambda x: lang_options[x])
+    st.session_state.lang = lang_selected
+    _ = LANG[st.session_state.lang]
+
+    st.markdown("---")
+    st.write("**Admin**")
+    if not st.session_state.admin:
+        pw = st.text_input(_["password"], type="password")
+        if st.button(_["login"]):
+            if pw == "0691":
+                st.session_state.admin = True
+                st.rerun()
+            else:
+                st.error("비밀번호가 틀렸습니다.")
+    else:
+        if st.button(_["logout"]):
+            st.session_state.admin = False
+            st.rerun()
+
+# =============================================
+# 메인 타이틀
+# =============================================
+st.markdown("""
+<style>
+.stApp { background: radial-gradient(circle at 20% 20%, #0a0a0f 0%, #000000 100%); color: #ffffff; }
+h1 { color: #ff3333 !important; text-align: center; font-weight: 900; font-size: 4.3em;
+     text-shadow: 0 0 25px #b71c1c, 0 0 15px #00ff99; }
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown(f"<h1>{_['title']} 2025 🎄</h1>", unsafe_allow_html=True)
+
+# =============================================
+# 일반 사용자 모드
+# =============================================
+if not st.session_state.admin:
+    button_label = f"{_['new_notice']} 📢" if st.session_state.new_notice else _["notice_button"]
+    if st.button(button_label, key="notice_btn_main"):
+        st.session_state.show_notice_list = True
+        st.session_state.new_notice = False
+        st.rerun()
+
+    # 지도 표시
+    GOOGLE_API_KEY = st.secrets.get("GOOGLE_API_KEY", "")
+    if not GOOGLE_API_KEY:
+        st.error("Google Maps API 키 없음")
+        st.stop()
+
+    m = folium.Map(location=(19.75, 75.71), zoom_start=6,
+                   tiles=f"https://mt1.google.com/vt/lyrs=m&x={{x}}&y={{y}}&z={{z}}&key={GOOGLE_API_KEY}",
+                   attr="Google")
+
+    # 경로 표시
+    points = [coords[c] for c in st.session_state.route if c in coords]
+    if len(points) >= 2:
+        for i in range(len(points) - 1):
+            p1, p2 = points[i], points[i + 1]
+            dist = distance_km(p1, p2)
+            AntPath([p1, p2], color="red", weight=4, delay=800).add_to(m)
+
+    for c in st.session_state.route:
+        if c in coords:
+            data = st.session_state.venue_data.get(c, {})
+            popup = f"<b>{c}</b><br>"
+            if "google" in data and data["google"]:
+                match = re.search(r'@([\d\.]+),([\d\.]+)', data["google"])
+                if match:
+                    lat, lng = match.groups()
+                    nav_link = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lng}"
+                else:
+                    nav_link = data["google"]
+                popup += f"<a href='{nav_link}' target='_blank'>네비 시작</a>"
+            folium.Marker(coords[c], popup=popup,
+                          icon=folium.Icon(color="red", icon="music", prefix="fa")).add_to(m)
+
+    st_folium(m, width=900, height=650)
+
+    # 공지사항 표시
+    if st.session_state.show_notice_list:
+        st.markdown("<h3>📢 오늘의 공지</h3>", unsafe_allow_html=True)
+        for idx, notice in enumerate(st.session_state.notice_data):
+            unique_key = f"open_notice_{notice['id']}_{uuid.uuid4().hex}"
+            if st.button(f"{notice['title']}", key=unique_key):
+                st.session_state.show_full_notice = notice["id"]
+                st.rerun()
+
+    if st.session_state.show_full_notice is not None:
+        notice = next((n for n in st.session_state.notice_data if n["id"] == st.session_state.show_full_notice), None)
+        if notice:
+            st.markdown(f"### {notice['title']}")
+            st.write(notice["content"])
+            if "file" in notice and notice["file"]:
+                st.image(base64.b64decode(notice["file"]), use_column_width=True)
+            if st.button("닫기", key=f"close_{uuid.uuid4().hex}"):
+                st.session_state.show_full_notice = None
+                st.rerun()
+    st.stop()
+
+# =============================================
+# 관리자 모드
+# =============================================
+if st.session_state.admin:
+    st.subheader("공지사항 입력")
+    title = st.text_input(_["notice_title"])
+    content = st.text_area(_["notice_content"])
+    uploaded_file = st.file_uploader(_["upload_file"], type=["png", "jpg", "jpeg"])
+
+    if st.button(_["notice_save"]):
+        if title and content:
+            file_b64 = base64.b64encode(uploaded_file.read()).decode() if uploaded_file else None
+            new_notice = {
+                "id": len(st.session_state.notice_data) + 1,
+                "title": title,
+                "content": content,
+                "file": file_b64,
+                "timestamp": str(datetime.now())
+            }
+            st.session_state.notice_data.insert(0, new_notice)
+            save_json(NOTICE_FILE, st.session_state.notice_data)
+            st.success("공지 추가 완료")
+            st.session_state.new_notice = True
+            st.rerun()
+
+    st.markdown("---")
+    st.subheader(_["tour_route"])
+    selected_city = st.selectbox(_["select_city"], cities)
+    if st.button(_["add_city"]):
+        if selected_city not in st.session_state.route:
+            st.session_state.route.append(selected_city)
+            st.rerun()
+        else:
+            st.warning(_["already_added"])import streamlit as st
+from datetime import datetime
+import folium
+from streamlit_folium import st_folium
+from folium.plugins import AntPath
+from math import radians, sin, cos, sqrt, atan2
+import re
+import json
+import os
+import base64
 
 # =============================================
 # Streamlit state 초기화 (최상단!)
