@@ -355,7 +355,7 @@ def render_notice_list():
         st.write("공지가 없습니다.")
 
 # =============================================
-# 공통 투어지도 UI (st.stop() 제거)
+# 공통 투어지도 UI
 # =============================================
 def render_tour_map():
     st.markdown(f"""
@@ -372,7 +372,7 @@ def render_tour_map():
             GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
         except:
             st.error("Google Maps API 키 없음")
-            return  # 중단하지 말고 계속
+            return
 
         m = folium.Map(location=(19.75, 75.71), zoom_start=6,
                        tiles=f"https://mt1.google.com/vt/lyrs=m&x={{x}}&y={{y}}&z={{z}}&key={GOOGLE_API_KEY}",
@@ -401,74 +401,71 @@ def render_tour_map():
         st_folium(m, width=900, height=600)
 
 # =============================================
-# 일반 사용자 모드 (st.stop() 제거)
+# 공통 UI (투어지도 + 공지현황)
+# =============================================
+render_tour_map()
+st.markdown("---")
+with st.expander("공지현황", expanded=False):
+    render_notice_list()
+
+# =============================================
+# 일반 사용자 → 여기서 끝
 # =============================================
 if not st.session_state.admin:
-    render_tour_map()
-
-    st.markdown("---")
-    with st.expander("공지현황", expanded=False):
-        render_notice_list()
+    st.stop()
 
 # =============================================
-# 관리자 모드 (st.stop() 제거)
+# 관리자 모드 전용 UI (여기서부터 보임)
 # =============================================
-else:
-    render_tour_map()
+st.markdown("---")
+st.markdown(f"<div class='city-input-title'>{_['city_input']}</div>", unsafe_allow_html=True)
+with st.form("city_form", clear_on_submit=True):
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        new_city = st.text_input("도시 이름", placeholder="예: Delhi")
+    with col2:
+        venue_name = st.text_input(_["venue_name"], placeholder="공연장 이름")
 
-    # 도시 입력 폼
-    st.markdown(f"<div class='city-input-title'>{_['city_input']}</div>", unsafe_allow_html=True)
-    with st.form("city_form", clear_on_submit=True):
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            new_city = st.text_input("도시 이름", placeholder="예: Delhi")
-        with col2:
-            venue_name = st.text_input(_["venue_name"], placeholder="공연장 이름")
+    col3, col4 = st.columns([1, 1])
+    with col3:
+        seats = st.number_input(_["seats_count"], min_value=1, step=1)
+    with col4:
+        venue_type = st.selectbox(_["venue_type"], ["실내", "실외"])
 
-        col3, col4 = st.columns([1, 1])
-        with col3:
-            seats = st.number_input(_["seats_count"], min_value=1, step=1)
-        with col4:
-            venue_type = st.selectbox(_["venue_type"], ["실내", "실외"])
+    google_link = st.text_input(_["google_link"], placeholder="구글 링크 (선택)")
 
-        google_link = st.text_input(_["google_link"], placeholder="구글 링크 (선택)")
+    if st.form_submit_button(_["add_venue"]):
+        if new_city in st.session_state.venue_data:
+            st.error(_["already_exists"])
+        else:
+            st.session_state.venue_data[new_city] = {
+                "venue": venue_name,
+                "seats": seats,
+                "type": venue_type,
+                "google": google_link
+            }
+            save_json(VENUE_FILE, st.session_state.venue_data)
+            if new_city not in st.session_state.route:
+                st.session_state.route.append(new_city)
+            st.success(f"{new_city} 추가됨!")
+            st.rerun()
 
-        if st.form_submit_button(_["add_venue"]):
-            if new_city in st.session_state.venue_data:
-                st.error(_["already_exists"])
-            else:
-                st.session_state.venue_data[new_city] = {
-                    "venue": venue_name,
-                    "seats": seats,
-                    "type": venue_type,
-                    "google": google_link
-                }
-                save_json(VENUE_FILE, st.session_state.venue_data)
-                if new_city not in st.session_state.route:
-                    st.session_state.route.append(new_city)
-                st.success(f"{new_city} 추가됨!")
-                st.rerun()
+st.subheader("공지사항 입력")
+title = st.text_input(_["notice_title"])
+content = st.text_area(_["notice_content"])
+uploaded = st.file_uploader(_["upload_file"], type=["png", "jpg", "jpeg"])
 
-    st.subheader("공지사항 입력")
-    title = st.text_input(_["notice_title"])
-    content = st.text_area(_["notice_content"])
-    uploaded = st.file_uploader(_["upload_file"], type=["png", "jpg", "jpeg"])
-
-    if st.button("등록") and title:
-        new_notice = {
-            "id": len(st.session_state.notice_data) + 1,
-            "title": title,
-            "content": content,
-            "timestamp": str(datetime.now())
-        }
-        if uploaded:
-            new_notice["file"] = base64.b64encode(uploaded.read()).decode()
-        st.session_state.notice_data.insert(0, new_notice)
-        save_json(NOTICE_FILE, st.session_state.notice_data)
-        st.session_state.show_popup = True
-        st.success("공지 등록 완료")
-        st.rerun()
-
-    st.markdown("---")
-    with st.expander("공지현황", expanded=False):
-        render_notice_list()
+if st.button("등록") and title:
+    new_notice = {
+        "id": len(st.session_state.notice_data) + 1,
+        "title": title,
+        "content": content,
+        "timestamp": str(datetime.now())
+    }
+    if uploaded:
+        new_notice["file"] = base64.b64encode(uploaded.read()).decode()
+    st.session_state.notice_data.insert(0, new_notice)
+    save_json(NOTICE_FILE, st.session_state.notice_data)
+    st.session_state.show_popup = True
+    st.success("공지 등록 완료")
+    st.rerun()
