@@ -44,7 +44,7 @@ if ('Notification' in window && Notification.permission === 'default') {
 # =============================================
 defaults = {
     "lang": "ko", "admin": False, "route": [], "venue_data": {}, "notice_data": [],
-    "show_popup": True, "notice_counter": 0
+    "show_popup": True, "notice_counter": 0, "expanded_notices": {}
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -183,7 +183,7 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 }
 
 /* 새로고침 버튼 오른쪽 끝 */
-.notice-input-header {
+.notice-input-header, .today-notice-header {
     display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
 }
 .refresh-btn {
@@ -213,12 +213,23 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     to { transform: rotate(360deg); }
 }
 
+.notice-item {
+    background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:12px; margin:8px 0; 
+}
+.notice-title { color:#ff6b6b; font-weight:bold; font-size: 1.1em; cursor: pointer; }
+.notice-time { color:#888; font-size:0.85em; }
+.delete-btn {
+    background: #d32f2f; color: white; border: none; padding: 6px 12px; border-radius: 6px;
+    font-size: 0.9em; cursor: pointer; transition: all 0.2s;
+}
+.delete-btn:hover { background: #b71c1c; transform: scale(1.05); }
+
 .city-input-form {
     background: #1a1a1a; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0;
 }
 
 @media (max-width: 768px) {
-    .notice-input-header { flex-direction: column; align-items: flex-start; }
+    .notice-input-header, .today-notice-header { flex-direction: column; align-items: flex-start; }
     .refresh-btn { margin-top: 10px; }
 }
 </style>
@@ -257,27 +268,38 @@ def distance_km(p1, p2):
 def delete_notice(notice_id):
     st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
     save_json(NOTICE_FILE, st.session_state.notice_data)
+    if notice_id in st.session_state.expanded_notices:
+        del st.session_state.expanded_notices[notice_id]
     st.success("공지 삭제됨")
     st.rerun()
 
 # =============================================
-# 공지현황 리스트 (터치/삭제 100% OK)
+# 공지현황 리스트 (제목 클릭 → 내용 펼쳐짐 + 삭제 OK)
 # =============================================
 def render_notice_list(show_delete=False):
     if st.session_state.notice_data:
         for n in st.session_state.notice_data:
-            if show_delete:
-                col1, col2 = st.columns([6, 1])
-                with col1:
-                    st.write(f"**📢 {n['title']}**")
-                    st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
-                with col2:
-                    unique_key = f"del_{n['id']}_{uuid.uuid4().hex[:8]}"
-                    if st.button(_["delete"], key=unique_key):
-                        delete_notice(n['id'])
-            else:
-                st.write(f"**📢 {n['title']}**")
-                st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
+            notice_id = n["id"]
+            is_expanded = st.session_state.expanded_notices.get(notice_id, False)
+            toggle_key = f"toggle_{notice_id}_{uuid.uuid4().hex[:8]}"
+            
+            # 제목 클릭으로 펼치기
+            if st.button(f"📢 {n['title']}", key=toggle_key):
+                st.session_state.expanded_notices[notice_id] = not is_expanded
+                st.rerun()
+            
+            st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
+            
+            # 내용 펼쳐짐
+            if is_expanded:
+                with st.container():
+                    st.write(n["content"])
+                    if "file" in n and n["file"]:
+                        st.image(base64.b64decode(n["file"]), use_column_width=True)
+                    if show_delete:
+                        del_key = f"del_{notice_id}_{uuid.uuid4().hex[:8]}"
+                        if st.button(_["delete"], key=del_key):
+                            delete_notice(notice_id)
     else:
         st.write("등록된 공지가 없습니다.")
 
@@ -288,9 +310,6 @@ def render_tour_map():
     st.markdown(f"""
     <div class="map-header">
         <div class="map-title">투어지도</div>
-        <button class="refresh-btn" onclick="window.location.reload(); return false;" title="새로고침" style="margin-left: 10px;">
-            <div class="refresh-icon">{REFRESH_SVG}</div>
-        </button>
     </div>
     """, unsafe_allow_html=True)
 
@@ -328,12 +347,22 @@ def render_tour_map():
         st_folium(m, width=900, height=600)
 
 # =============================================
-# 일반 사용자 UI (새로고침 버튼 복구)
+# 일반 사용자 UI
 # =============================================
 if not st.session_state.admin:
-    st.markdown(f"<div class='today-notice-title'>{_['today_notice']}</div>", unsafe_allow_html=True)
+    # 오늘의 공지 + 새로고침 버튼
+    st.markdown(f"""
+    <div class="today-notice-header">
+        <div class="today-notice-title'>{_['today_notice']}</div>
+        <button class="refresh-btn" onclick="window.location.reload(); return false;" title="새로고침">
+            <div class="refresh-icon">{REFRESH_SVG}</div>
+        </button>
+    </div>
+    """, unsafe_allow_html=True)
+    
     with st.expander("공지현황", expanded=False):
         render_notice_list(show_delete=False)
+    
     st.markdown("---")
     render_tour_map()
     st.stop()
