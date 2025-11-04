@@ -375,7 +375,7 @@ def render_tour_map():
             return
 
         m = folium.Map(location=(19.75, 75.71), zoom_start=6,
-                       tiles=f"https://mt1.google.com/vt/lyrs=m&x={{{x}}}&y={{{y}}}&z={{{z}}}&key={GOOGLE_API_KEY}",
+                       tiles=f"https://mt1.google.com/vt/lyrs=m&x={{x}}&y={{y}}&z={{z}}&key={GOOGLE_API_KEY}",
                        attr="Google")
         points = [coords[c] for c in st.session_state.route if c in coords]
         if len(points) >= 2:
@@ -401,7 +401,7 @@ def render_tour_map():
         st_folium(m, width=900, height=600)
 
 # =============================================
-# 공통 UI: 투어지도 + 공지현황 (모두에게 보임)
+# 공통 UI: 투어지도 + 공지현황
 # =============================================
 render_tour_map()
 st.markdown("---")
@@ -415,7 +415,7 @@ if not st.session_state.admin:
     st.stop()
 
 # =============================================
-# 관리자 전용 UI (여기서부터 보임)
+# 관리자 전용 UI
 # =============================================
 st.markdown("---")
 
