@@ -14,17 +14,26 @@ import base64
 # =============================================
 st.set_page_config(page_title="Cantata Tour", layout="wide")
 
-if "lang" not in st.session_state: st.session_state.lang = "ko"
-if "admin" not in st.session_state: st.session_state.admin = False
-if "route" not in st.session_state: st.session_state.route = []
-if "venue_data" not in st.session_state: st.session_state.venue_data = {}
-if "notice_data" not in st.session_state: st.session_state.notice_data = []
-if "new_notice" not in st.session_state: st.session_state.new_notice = False
-if "show_notice_list" not in st.session_state: st.session_state.show_notice_list = False
-if "show_full_notice" not in st.session_state: st.session_state.show_full_notice = None
-if "show_popup" not in st.session_state: st.session_state.show_popup = True
-if "exp_state" not in st.session_state: st.session_state.exp_state = {}
-if "show_notice_status" not in st.session_state: st.session_state.show_notice_status = False
+if "lang" not in st.session_state:
+    st.session_state.lang = "ko"
+if "admin" not in st.session_state:
+    st.session_state.admin = False
+if "route" not in st.session_state:
+    st.session_state.route = []
+if "venue_data" not in st.session_state:
+    st.session_state.venue_data = {}
+if "notice_data" not in st.session_state:
+    st.session_state.notice_data = []
+if "new_notice" not in st.session_state:
+    st.session_state.new_notice = False
+if "show_notice_list" not in st.session_state:
+    st.session_state.show_notice_list = False
+if "show_full_notice" not in st.session_state:
+    st.session_state.show_full_notice = None
+if "show_popup" not in st.session_state:
+    st.session_state.show_popup = True
+if "exp_state" not in st.session_state:
+    st.session_state.exp_state = {}
 
 # =============================================
 # 데이터 저장 (실시간 반영)
@@ -61,27 +70,15 @@ st.session_state.new_notice = len(st.session_state.notice_data) > 0
 # 언어팩
 # =============================================
 LANG = {
-    "ko": {"title": "칸타타 투어", "subtitle": "마하라스트라", "select_city": "도시 선택", "add_city": "추가",
-           "register": "등록", "venue": "공연장", "seats": "좌석 수", "indoor": "실내", "outdoor": "실외",
-           "google": "구글 지도 링크", "notes": "특이사항", "tour_map": "투어 지도", "tour_route": "경로",
-           "password": "관리자 비밀번호", "login": "로그인", "logout": "로그아웃", "date": "공연 날짜",
-           "total": "총 거리 및 소요시간", "already_added": "이미 추가된 도시입니다.", "lang_name": "한국어",
-           "notice_title": "공지 제목", "notice_content": "공지 내용", "notice_button": "공지", "new_notice": "새로운 공지",
-           "notice_save": "공지 추가", "upload_file": "사진/파일 업로드", "notice_status": "공지현황"},
-    "en": {"title": "Cantata Tour", "subtitle": "Maharashtra", "select_city": "Select City", "add_city": "Add",
-           "register": "Register", "venue": "Venue", "seats": "Seats", "indoor": "Indoor", "outdoor": "Outdoor",
-           "google": "Google Maps Link", "notes": "Notes", "tour_map": "Tour Map", "tour_route": "Route",
-           "password": "Admin Password", "login": "Login", "logout": "Logout", "date": "Date",
-           "total": "Total Distance & Time", "already_added": "City already added.", "lang_name": "English",
-           "notice_title": "Notice Title", "notice_content": "Notice Content", "notice_button": "Notice", "new_notice": "New Notice",
-           "notice_save": "Add Notice", "upload_file": "Upload File", "notice_status": "Notice Status"},
-    "hi": {"title": "कांटाटा टूर", "subtitle": "महाराष्ट्र", "select_city": "शहर चुनें", "add_city": "जोड़ें",
-           "register": "पंजीकरण करें", "venue": "स्थान", "seats": "सीटें", "indoor": "इनडोर", "outdoor": "आउटडोर",
-           "google": "गूगल मानचित्र लिंक", "notes": "टिप्पणी", "tour_map": "टूर मानचित्र", "tour_route": "मार्ग",
-           "password": "व्यवस्थापक पासवर्ड", "login": "लॉगिन", "logout": "लॉगआउट", "date": "दिनांक",
-           "total": "कुल दूरी और समय", "already_added": "यह शहर पहले से जोड़ा गया है।", "lang_name": "हिन्दी",
-           "notice_title": "सूचना शीर्षक", "notice_content": "सूचना सामग्री", "notice_button": "सूचना", "new_notice": "नई सूचना",
-           "notice_save": "सूचना जोड़ें", "upload_file": "फ़ाइल/तस्वीर अपलोड करें", "notice_status": "सूचना स्थिति"}
+    "ko": {
+        "title": "칸타타 투어", "select_city": "도시 선택", "add_city": "추가",
+        "register": "등록", "venue": "공연장", "seats": "좌석 수", "indoor": "실내", "outdoor": "실외",
+        "google": "구글 지도 링크", "notes": "특이사항", "tour_map": "투어 지도", "tour_route": "경로",
+        "password": "관리자 비밀번호", "login": "로그인", "logout": "로그아웃", "date": "공연 날짜",
+        "total": "총 거리 및 소요시간", "already_added": "이미 추가된 도시입니다.",
+        "notice_title": "공지 제목", "notice_content": "공지 내용", "notice_button": "공지", "new_notice": "새로운 공지",
+        "upload_file": "사진/파일 업로드", "notice_status": "공지현황"
+    },
 }
 
 # =============================================
@@ -223,7 +220,7 @@ if not st.session_state.admin:
                 st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # 전체 화면 공지
+    # 전체 화면 공지 + 알림음
     if st.session_state.show_full_notice is not None:
         notice = next((n for n in st.session_state.notice_data if n["id"] == st.session_state.show_full_notice), None)
         if notice:
@@ -242,6 +239,18 @@ if not st.session_state.admin:
             if st.button("", key="close_full_notice_hidden"):
                 st.session_state.show_full_notice = None
                 st.rerun()
+
+    # 새 공지 알림음 (5초)
+    if st.session_state.new_notice and st.session_state.show_popup:
+        st.markdown("""
+        <audio autoplay>
+            <source src="https://www.soundjay.com/misc/sounds/bell-ringing-04.mp3" type="audio/mpeg">
+        </audio>
+        <script>
+            setTimeout(() => { document.querySelector('audio').pause(); }, 5000);
+        </script>
+        """, unsafe_allow_html=True)
+        st.session_state.show_popup = False
 
     st.stop()
 
@@ -282,8 +291,21 @@ if st.session_state.admin:
             else:
                 st.error("제목과 내용을 입력하세요.")
 
-    # 공지현황 토글
-    show_status = st.toggle(_["notice_status"], key="show_notice_status")
+    # 공지현황 박스 (클릭 시 열림)
+    with st.expander("공지현황", expanded=False):
+        if st.session_state.notice_data:
+            for notice in st.session_state.notice_data:
+                col1, col2 = st.columns([9, 1])
+                with col1:
+                    st.write(f"**{notice['title']}**")
+                with col2:
+                    if st.button("X", key=f"delete_notice_{notice['id']}"):
+                        st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice["id"]]
+                        save_notice_data(st.session_state.notice_data)
+                        st.success("공지 삭제 완료")
+                        st.rerun()
+        else:
+            st.write("공지가 없습니다.")
 
     left, right = st.columns([1, 2])
 
@@ -385,21 +407,3 @@ if st.session_state.admin:
                               icon=folium.Icon(color="red", icon="music", prefix="fa")).add_to(m)
 
         st_folium(m, width=900, height=650)
-
-        # 공지현황 창
-        if show_status:
-            st.markdown("---")
-            st.subheader("공지 현황")
-            if st.session_state.notice_data:
-                for notice in st.session_state.notice_data:
-                    col1, col2 = st.columns([9, 1])
-                    with col1:
-                        st.write(f"**{notice['title']}**")
-                    with col2:
-                        if st.button("X", key=f"delete_notice_{notice['id']}"):
-                            st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice["id"]]
-                            save_notice_data(st.session_state.notice_data)
-                            st.success("공지 삭제 완료")
-                            st.rerun()
-            else:
-                st.write("공지가 없습니다.")
