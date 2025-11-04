@@ -153,7 +153,7 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 스타일
+# 스타일 (제목 흰색 + 1.3em 통일, 공지현황 위 구분선 제거)
 # =============================================
 st.markdown("""
 <style>
@@ -163,10 +163,17 @@ h1 { color: #ff3333 !important; text-align: center; font-weight: 900; font-size:
 h1 span.year { color: #fff; font-size: 0.8em; vertical-align: super; }
 h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin-left: 5px; }
 
+/* 모든 제목: 흰색 + 1.3em 통일 */
+.notice-input-title, .notice-status-title, .city-input-title {
+    color: white !important; 
+    font-weight: bold; 
+    font-size: 1.3em; 
+    margin-bottom: 15px;
+}
+
 .notice-input-header {
     display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
 }
-.notice-input-title { color: #ff6b6b; font-weight: bold; font-size: 1.3em; }
 
 .refresh-btn {
     background: none; 
@@ -210,7 +217,6 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 .city-input-form {
     background: #1a1a1a; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0;
 }
-.city-input-title { color: #ff6b6b; font-weight: bold; font-size: 1.2em; margin-bottom: 15px; }
 
 @media (max-width: 768px) {
     .notice-input-header { flex-direction: column; align-items: flex-start; }
@@ -348,9 +354,8 @@ if st.button("등록") and title:
     st.success("공지 등록 완료")
     st.rerun()
 
-# 공지현황 (등록 버튼 바로 아래 + 삭제 버튼 + 고유 키)
-st.markdown("---")
-st.markdown("### 공지현황")
+# 공지현황 (구분선 제거, 제목 흰색 1.3em)
+st.markdown("<div class='notice-status-title'>공지현황</div>", unsafe_allow_html=True)
 if st.session_state.notice_data:
     for n in st.session_state.notice_data:
         unique_key = f"del_{n['id']}_{uuid.uuid4().hex[:8]}"
@@ -370,10 +375,10 @@ if st.session_state.notice_data:
 else:
     st.write("등록된 공지가 없습니다.")
 
-# 구분선
+# 구분선 (공지현황 아래)
 st.markdown("<div style='height: 2px; background: linear-gradient(90deg, transparent, #ff6b6b, transparent); margin: 30px 0;'></div>", unsafe_allow_html=True)
 
-# 도시 입력
+# 도시 입력 (제목 흰색 1.3em)
 st.markdown(f"<div class='city-input-title'>{_['city_input']}</div>", unsafe_allow_html=True)
 with st.form("city_form", clear_on_submit=True):
     col1, col2 = st.columns([1, 1])
