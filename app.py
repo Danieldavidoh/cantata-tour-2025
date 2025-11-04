@@ -124,7 +124,7 @@ LANG = {
         "title": "칸타타 투어", "password": "관리자 비밀번호", "login": "로그인", "logout": "로그아웃",
         "notice_title": "공지 제목", "notice_content": "공지 내용", "upload_file": "사진/파일 업로드",
         "city_input": "도시 입력", "venue_name": "공연장 이름", "seats_count": "좌석 수", "venue_type": "공연장 유형",
-        "google_link": "구글 링크", "add_venue": "추가", "already_exists": "이미 존재하는 도시입니다."
+        "google_link": "구글 링크", "add_venue": "추가", "already_exists": "이미 존재하는 도시입니다.", "delete": "삭제"
     }
 }
 _ = LANG[st.session_state.lang] if st.session_state.lang in LANG else LANG["ko"]
@@ -152,7 +152,7 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 스타일 (공지현황 관련 CSS 제거)
+# 스타일
 # =============================================
 st.markdown("""
 <style>
@@ -162,17 +162,10 @@ h1 { color: #ff3333 !important; text-align: center; font-weight: 900; font-size:
 h1 span.year { color: #fff; font-size: 0.8em; vertical-align: super; }
 h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin-left: 5px; }
 
-.map-header {
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    margin-bottom: 10px;
+.notice-input-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
 }
-.map-title {
-    font-size: 1.5em; 
-    font-weight: bold; 
-    color: #ff6b6b;
-}
+.notice-input-title { color: #ff6b6b; font-weight: bold; font-size: 1.3em; }
 
 .refresh-btn {
     background: none; 
@@ -201,10 +194,17 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     to { transform: rotate(360deg); }
 }
 
-.notice-input-header {
-    display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
+.notice-list-item {
+    background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:12px; margin:8px 0; 
+    display: flex; justify-content: space-between; align-items: center;
 }
-.notice-input-title { color: #ff6b6b; font-weight: bold; font-size: 1.3em; }
+.notice-list-title { color:#ff6b6b; font-weight:bold; font-size: 1.1em; }
+.notice-list-time { color:#888; font-size:0.85em; }
+.delete-btn {
+    background: #d32f2f; color: white; border: none; padding: 6px 12px; border-radius: 6px;
+    font-size: 0.9em; cursor: pointer; transition: all 0.2s;
+}
+.delete-btn:hover { background: #b71c1c; transform: scale(1.05); }
 
 .city-input-form {
     background: #1a1a1a; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0;
@@ -214,6 +214,8 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 @media (max-width: 768px) {
     .notice-input-header { flex-direction: column; align-items: flex-start; }
     .refresh-btn { margin-top: 10px; }
+    .notice-list-item { flex-direction: column; align-items: flex-start; }
+    .delete-btn { margin-top: 8px; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -254,7 +256,15 @@ def distance_km(p1, p2):
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
-# 투어지도 UI (공지현황 제거)
+# 공지 삭제 함수
+# =============================================
+def delete_notice(notice_id):
+    st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
+    save_json(NOTICE_FILE, st.session_state.notice_data)
+    st.rerun()
+
+# =============================================
+# 투어지도 UI
 # =============================================
 def render_tour_map():
     st.markdown(f"""
@@ -297,14 +307,14 @@ def render_tour_map():
         st_folium(m, width=900, height=600)
 
 # =============================================
-# 일반 사용자 UI (공지현황 제거)
+# 일반 사용자 UI
 # =============================================
 if not st.session_state.admin:
     render_tour_map()
     st.stop()
 
 # =============================================
-# 관리자 모드 (공지현황 제거)
+# 관리자 모드
 # =============================================
 
 # 공지사항 입력 + 새로고침 버튼
@@ -330,11 +340,32 @@ if st.button("등록") and title:
     }
     if uploaded:
         new_notice["file"] = base64.b64encode(uploaded.read()).decode()
-    st.session_state.notice_data.insert(0, new_notice)
+    st.session_state.notice_data.insert(0, new_notice)  # 최신순
     save_json(NOTICE_FILE, st.session_state.notice_data)
     st.session_state.show_popup = True
     st.success("공지 등록 완료")
     st.rerun()
+
+# 공지현황 (등록 버튼 바로 아래)
+st.markdown("---")
+st.markdown("### 공지현황")
+if st.session_state.notice_data:
+    for n in st.session_state.notice_data:
+        col1, col2 = st.columns([5, 1])
+        with col1:
+            st.markdown(f"""
+            <div class="notice-list-item">
+                <div>
+                    <div class="notice-list-title">📢 {n['title']}</div>
+                    <div class="notice-list-time">{n['timestamp'][:16].replace('T',' ')}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        with col2:
+            if st.button(_["delete"], key=f"del_{n['id']}"):
+                delete_notice(n['id'])
+else:
+    st.write("등록된 공지가 없습니다.")
 
 # 구분선
 st.markdown("<div style='height: 2px; background: linear-gradient(90deg, transparent, #ff6b6b, transparent); margin: 30px 0;'></div>", unsafe_allow_html=True)
