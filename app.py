@@ -62,7 +62,7 @@ LANG = {
 }
 
 # =============================================
-# 3개 도시 + 좌표
+# 3개 도시 + 좌표 (Ahmadnagar 제거)
 # =============================================
 cities = ["Mumbai", "Pune", "Nagpur"]
 
@@ -132,14 +132,14 @@ h1 { color: #ff3333 !important; text-align: center; font-weight: 900; font-size:
 h1 span.year { color: #ffffff; font-weight: 800; font-size: 0.8em; vertical-align: super; }
 h1 span.subtitle { color: #cccccc; font-size: 0.45em; vertical-align: super; margin-left: 5px; }
 h2 { text-align: center; color: #cccccc; margin-top: 0; }
-div[data-testid="stButton"] > button { background: linear-gradient(90deg, #ff3b3b, #228B22); color: white; font-weight: 700; border-radius: 8px; transition: 0.3s; }
-div[data-testid="stButton"] > button:hover { transform: scale(1.05); box-shadow: 0 0 15px #ff4d4d; }
-#notice-button.neon { animation: neon 1.5s infinite alternate; border: 2px solid #ff00ff; border-radius: 8px; }
+#notice-button { background: linear-gradient(90deg, #ff3b3b, #228B22); color: white; font-weight: 700; border-radius: 8px; padding: 10px 20px; text-align: center; cursor: pointer; transition: 0.3s; }
+#notice-button:hover { transform: scale(1.05); box-shadow: 0 0 15px #ff4d4d; }
+#notice-button.neon { animation: neon 1.5s infinite alternate; }
 @keyframes neon { from { box-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff; } to { box-shadow: 0 0 15px #ff00ff, 0 0 20px #ff00ff; } }
 #notice-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #228B22; padding: 20px; border-radius: 10px; box-shadow: 0 0 20px #ff3b3b; z-index: 9999; max-width: 80%; cursor: pointer; }
-#notice-popup h3 { color: #ff3333; }
-#full-screen-notice { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; overflow-y: auto; }
-#full-screen-notice-content { color: #fff; padding: 20px; }
+#full-screen-notice { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; overflow-y: auto; display: flex; align-items: center; justify-content: center; }
+#full-screen-notice-content { background: #228B22; padding: 30px; border-radius: 15px; max-width: 90%; max-height: 90%; overflow-y: auto; }
+.distance-label { background: rgba(255, 0, 0, 0.7); color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap; transform: rotate(-30deg); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -152,7 +152,7 @@ st.markdown(
 )
 
 # =============================================
-# 일반 모드: 제목 + 지도 + 오른쪽 위 공지 버튼
+# 일반 모드
 # =============================================
 if not st.session_state.admin:
     map_col, notice_col = st.columns([4, 1])
@@ -170,14 +170,21 @@ if not st.session_state.admin:
 
         points = [coords[c] for c in st.session_state.route if c in coords]
         if len(points) >= 2:
-            distances = []
             for i in range(len(points) - 1):
-                dist = distance_km(points[i], points[i + 1])
+                p1, p2 = points[i], points[i + 1]
+                dist = distance_km(p1, p2)
                 time_hr = dist / 60.0
-                distances.append((points[i], points[i + 1], dist, time_hr))
-                folium.Marker(location=[(points[i][0] + points[i + 1][0]) / 2, (points[i][1] + points[i + 1][1]) / 2],
-                              popup=f"{dist:.1f} km / {time_hr:.1f} 시간",
-                              icon=folium.DivIcon(html=f"<div style='color:red;font-weight:bold'>{dist:.1f} km</div>")).add_to(m)
+                mid_lat = (p1[0] + p2[0]) / 2
+                mid_lng = (p1[1] + p2[1]) / 2
+                # 평행 표기 (rotate -30도)
+                folium.Marker(
+                    location=[mid_lat, mid_lng],
+                    icon=folium.DivIcon(html=f"""
+                        <div class="distance-label" style="transform: rotate(-30deg);">
+                            {dist:.1f} km / {time_hr:.1f} h
+                        </div>
+                    """)
+                ).add_to(m)
             AntPath(points, color="red", weight=4, delay=800).add_to(m)
 
         for c in st.session_state.route:
@@ -189,7 +196,7 @@ if not st.session_state.admin:
                 if "google" in data and data["google"]:
                     lat, lng = re.search(r'@(\d+\.\d+),(\d+\.\d+)', data["google"]) or (None, None)
                     nav_link = f"https://www.google.com/maps/dir/?api=1&destination={lat.group(1)},{lng.group(1)}" if lat and lng else data["google"]
-                    popup += f"<a href='{nav_link}' target='_blank'>🚗 네비 시작</a>"
+                    popup += f"<a href='{nav_link}' target='_blank'>네비 시작</a>"
                 folium.Marker(coords[c], popup=popup,
                               icon=folium.Icon(color="red", icon="music", prefix="fa")).add_to(m)
 
@@ -197,9 +204,14 @@ if not st.session_state.admin:
 
     with notice_col:
         st.write("")
-        button_class = "neon" if st.session_state.new_notice else ""
+        neon_class = "neon" if st.session_state.new_notice else ""
         button_label = f"{_['new_notice']} 📢" if st.session_state.new_notice else _["notice_button"]
-        if st.button(button_label, key="notice_btn", help="Click to view notices", class_=button_class):
+        st.markdown(f"""
+        <div id="notice-button" class="{neon_class}" onclick="document.getElementById('notice_btn_hidden').click();">
+            {button_label}
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("", key="notice_btn_hidden", help=None):
             st.session_state.show_notice_list = not st.session_state.show_notice_list
             if st.session_state.new_notice:
                 st.session_state.new_notice = False
@@ -207,12 +219,12 @@ if not st.session_state.admin:
 
     if st.session_state.show_notice_list:
         st.markdown("### 공지사항")
-        today_notices = [n for n in st.session_state.notice_data if datetime.strptime(n["timestamp"], "%Y-%m-%d %H:%M:%S.%f").date() == datetime.now().date()]
+        today_notices = [n for n in st.session_state.notice_data if datetime.strptime(n["timestamp"].split('.')[0], "%Y-%m-%d %H:%M:%S").date() == datetime.now().date()]
         for notice in today_notices:
             if st.button(notice["title"], key=f"notice_{notice['id']}"):
                 st.markdown(f"""
                 <div id="full-screen-notice" onclick="this.style.display='none';">
-                    <div id="notice-popup" style="position: relative; max-height: 80vh; overflow-y: auto;">
+                    <div id="full-screen-notice-content">
                         <h3>{notice['title']}</h3>
                         <p>{notice['content']}</p>
                     </div>
@@ -231,7 +243,7 @@ if not st.session_state.admin:
         latest = st.session_state.notice_data[0]
         st.markdown(f"""
         <div id="full-screen-notice" onclick="this.style.display='none';">
-            <div id="notice-popup">
+            <div id="full-screen-notice-content">
                 <h3>{latest['title']}</h3>
                 <p>{latest['content']}</p>
             </div>
@@ -242,7 +254,7 @@ if not st.session_state.admin:
     st.stop()
 
 # =============================================
-# 관리자 모드: 전체 UI
+# 관리자 모드
 # =============================================
 if st.session_state.admin:
     st.markdown("---")
@@ -328,14 +340,20 @@ if st.session_state.admin:
 
         points = [coords[c] for c in st.session_state.route if c in coords]
         if len(points) >= 2:
-            distances = []
             for i in range(len(points) - 1):
-                dist = distance_km(points[i], points[i + 1])
+                p1, p2 = points[i], points[i + 1]
+                dist = distance_km(p1, p2)
                 time_hr = dist / 60.0
-                distances.append((points[i], points[i + 1], dist, time_hr))
-                mid_point = [(points[i][0] + points[i + 1][0]) / 2, (points[i][1] + points[i + 1][1]) / 2]
-                folium.Marker(location=mid_point, popup=f"{dist:.1f} km / {time_hr:.1f} 시간",
-                              icon=folium.DivIcon(html=f"<div style='color:red;font-weight:bold'>{dist:.1f} km</div>")).add_to(m)
+                mid_lat = (p1[0] + p2[0]) / 2
+                mid_lng = (p1[1] + p2[1]) / 2
+                folium.Marker(
+                    location=[mid_lat, mid_lng],
+                    icon=folium.DivIcon(html=f"""
+                        <div class="distance-label">
+                            {dist:.1f} km / {time_hr:.1f} h
+                        </div>
+                    """)
+                ).add_to(m)
             AntPath(points, color="red", weight=4, delay=800).add_to(m)
 
         for c in st.session_state.route:
@@ -347,7 +365,7 @@ if st.session_state.admin:
                 if "google" in data and data["google"]:
                     lat, lng = re.search(r'@(\d+\.\d+),(\d+\.\d+)', data["google"]) or (None, None)
                     nav_link = f"https://www.google.com/maps/dir/?api=1&destination={lat.group(1)},{lng.group(1)}" if lat and lng else data["google"]
-                    popup += f"<a href='{nav_link}' target='_blank'>🚗 네비 시작</a>"
+                    popup += f"<a href='{nav_link}' target='_blank'>네비 시작</a>"
                 folium.Marker(coords[c], popup=popup,
                               icon=folium.Icon(color="red", icon="music", prefix="fa")).add_to(m)
 
