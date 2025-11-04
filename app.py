@@ -186,11 +186,9 @@ st.markdown(f"<h1>{_['title']} <span class='year'>2025</span><span class='subtit
 # 일반 모드
 # =============================================
 if not st.session_state.admin:
-    # 공지 버튼
-    button_label = f"{_['new_notice']} 📢" if st.session_state.new_notice else _["notice_button"]
-    if st.button(button_label, key="notice_btn"):
+    # 공지현황 버튼
+    if st.button("공지현황", key="notice_status_btn"):
         st.session_state.show_notice_list = True
-        st.session_state.new_notice = False
         st.rerun()
 
     # 지도
@@ -238,23 +236,23 @@ if not st.session_state.admin:
 
     st_folium(m, width=900, height=650)
 
-    # 공지 리스트 박스 (아래 열림, X 없음)
+    # 공지현황 박스 (아래 열림, X 삭제 없음)
     if st.session_state.show_notice_list:
         st.markdown(f"""
         <div id="notice-box">
-            <button id="exit-button" onclick="document.getElementById('close_notice_list_hidden').click();">✖</button>
+            <button id="exit-button" onclick="document.getElementById('close_notice_list_hidden').click();">X</button>
             """, unsafe_allow_html=True)
         today_notices = [n for n in st.session_state.notice_data if datetime.strptime(n["timestamp"].split('.')[0], "%Y-%m-%d %H:%M:%S").date() == datetime.now().date()]
         for notice in today_notices:
-            st.write(f"**{notice['title']}**")
-        st.markdown("""
-            </div>
-            """, unsafe_allow_html=True)
+            if st.button(notice["title"], key=f"notice_title_{notice['id']}"):
+                st.session_state.show_full_notice = notice["id"]
+                st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
         if st.button("", key="close_notice_list_hidden"):
             st.session_state.show_notice_list = False
             st.rerun()
 
-    # 전체 화면 공지 + 알림음
+    # 전체 화면 공지
     if st.session_state.show_full_notice is not None:
         notice = next((n for n in st.session_state.notice_data if n["id"] == st.session_state.show_full_notice), None)
         if notice:
@@ -262,7 +260,6 @@ if not st.session_state.admin:
             if "file" in notice and notice["file"]:
                 content += f"<br><img src='data:image/png;base64,{notice['file']}' style='max-width:100%;'>"
 
-            # 숨겨진 버튼 (작동 보장)
             close_clicked = st.button("", key="close_full_notice_hidden")
             if close_clicked:
                 st.session_state.show_full_notice = None
@@ -270,7 +267,7 @@ if not st.session_state.admin:
 
             st.markdown(f"""
             <div id="full-screen-notice" onclick="document.getElementById('close_full_notice_hidden').click();">
-                <button id="exit-button" onclick="event.stopPropagation(); document.getElementById('close_full_notice_hidden').click();">✖</button>
+                <button id="exit-button" onclick="event.stopPropagation(); document.getElementById('close_full_notice_hidden').click();">X</button>
                 <div id="full-screen-notice-content" onclick="event.stopPropagation();">
                     <h3>{notice['title']}</h3>
                     <div>{content}</div>
@@ -335,7 +332,9 @@ if st.session_state.admin:
             for notice in st.session_state.notice_data:
                 col1, col2 = st.columns([9, 1])
                 with col1:
-                    st.write(f"**{notice['title']}**")
+                    if st.button(notice["title"], key=f"admin_notice_{notice['id']}"):
+                        st.session_state.show_full_notice = notice["id"]
+                        st.rerun()
                 with col2:
                     if st.button("X", key=f"delete_notice_{notice['id']}"):
                         st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice["id"]]
@@ -344,6 +343,29 @@ if st.session_state.admin:
                         st.rerun()
         else:
             st.write("공지가 없습니다.")
+
+    # 전체 화면 공지 (관리자 클릭 시)
+    if st.session_state.show_full_notice is not None:
+        notice = next((n for n in st.session_state.notice_data if n["id"] == st.session_state.show_full_notice), None)
+        if notice:
+            content = notice["content"]
+            if "file" in notice and notice["file"]:
+                content += f"<br><img src='data:image/png;base64,{notice['file']}' style='max-width:100%;'>"
+
+            close_clicked = st.button("", key="close_full_notice_hidden")
+            if close_clicked:
+                st.session_state.show_full_notice = None
+                st.rerun()
+
+            st.markdown(f"""
+            <div id="full-screen-notice" onclick="document.getElementById('close_full_notice_hidden').click();">
+                <button id="exit-button" onclick="event.stopPropagation(); document.getElementById('close_full_notice_hidden').click();">X</button>
+                <div id="full-screen-notice-content" onclick="event.stopPropagation();">
+                    <h3>{notice['title']}</h3>
+                    <div>{content}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
     left, right = st.columns([1, 2])
 
