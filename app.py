@@ -9,6 +9,7 @@ import re
 import json
 import os
 import base64
+import uuid  # 중복 키 방지
 
 # =============================================
 # PWA & 실시간 푸시 알림 설정
@@ -261,6 +262,7 @@ def distance_km(p1, p2):
 def delete_notice(notice_id):
     st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
     save_json(NOTICE_FILE, st.session_state.notice_data)
+    st.success("공지 삭제됨")
     st.rerun()
 
 # =============================================
@@ -346,11 +348,12 @@ if st.button("등록") and title:
     st.success("공지 등록 완료")
     st.rerun()
 
-# 공지현황 (등록 버튼 바로 아래)
+# 공지현황 (등록 버튼 바로 아래 + 삭제 버튼 + 고유 키)
 st.markdown("---")
 st.markdown("### 공지현황")
 if st.session_state.notice_data:
     for n in st.session_state.notice_data:
+        unique_key = f"del_{n['id']}_{uuid.uuid4().hex[:8]}"
         col1, col2 = st.columns([5, 1])
         with col1:
             st.markdown(f"""
@@ -362,7 +365,7 @@ if st.session_state.notice_data:
             </div>
             """, unsafe_allow_html=True)
         with col2:
-            if st.button(_["delete"], key=f"del_{n['id']}"):
+            if st.button(_["delete"], key=unique_key):
                 delete_notice(n['id'])
 else:
     st.write("등록된 공지가 없습니다.")
