@@ -14,31 +14,20 @@ import base64
 # =============================================
 st.set_page_config(page_title="Cantata Tour", layout="wide")
 
-if "lang" not in st.session_state:
-    st.session_state.lang = "ko"
-if "admin" not in st.session_state:
-    st.session_state.admin = False
-if "route" not in st.session_state:
-    st.session_state.route = []
-if "venue_data" not in st.session_state:
-    st.session_state.venue_data = {}
-if "notice_data" not in st.session_state:
-    st.session_state.notice_data = []
-if "new_notice" not in st.session_state:
-    st.session_state.new_notice = False
-if "show_notice_list" not in st.session_state:
-    st.session_state.show_notice_list = False
-if "show_full_notice" not in st.session_state:
-    st.session_state.show_full_notice = None
-if "show_popup" not in st.session_state:
-    st.session_state.show_popup = True
-if "exp_state" not in st.session_state:
-    st.session_state.exp_state = {}
-if "show_notice_status" not in st.session_state:
-    st.session_state.show_notice_status = False
+if "lang" not in st.session_state: st.session_state.lang = "ko"
+if "admin" not in st.session_state: st.session_state.admin = False
+if "route" not in st.session_state: st.session_state.route = []
+if "venue_data" not in st.session_state: st.session_state.venue_data = {}
+if "notice_data" not in st.session_state: st.session_state.notice_data = []
+if "new_notice" not in st.session_state: st.session_state.new_notice = False
+if "show_notice_list" not in st.session_state: st.session_state.show_notice_list = False
+if "show_full_notice" not in st.session_state: st.session_state.show_full_notice = None
+if "show_popup" not in st.session_state: st.session_state.show_popup = True
+if "exp_state" not in st.session_state: st.session_state.exp_state = {}
+if "show_notice_status" not in st.session_state: st.session_state.show_notice_status = False
 
 # =============================================
-# 데이터 저장
+# 데이터 저장 (실시간 반영)
 # =============================================
 VENUE_FILE = "venue_data.json"
 NOTICE_FILE = "notice_data.json"
@@ -63,7 +52,7 @@ def save_notice_data(data):
     with open(NOTICE_FILE, "w") as f:
         json.dump(data, f, indent=2)
 
-# 데이터 로드
+# 데이터 로드 (실시간 반영)
 st.session_state.venue_data = load_venue_data()
 st.session_state.notice_data = load_notice_data()
 st.session_state.new_notice = len(st.session_state.notice_data) > 0
@@ -72,13 +61,27 @@ st.session_state.new_notice = len(st.session_state.notice_data) > 0
 # 언어팩
 # =============================================
 LANG = {
-    "ko": {"title": "칸타타 투어", "select_city": "도시 선택", "add_city": "추가",
+    "ko": {"title": "칸타타 투어", "subtitle": "마하라스트라", "select_city": "도시 선택", "add_city": "추가",
            "register": "등록", "venue": "공연장", "seats": "좌석 수", "indoor": "실내", "outdoor": "실외",
            "google": "구글 지도 링크", "notes": "특이사항", "tour_map": "투어 지도", "tour_route": "경로",
            "password": "관리자 비밀번호", "login": "로그인", "logout": "로그아웃", "date": "공연 날짜",
            "total": "총 거리 및 소요시간", "already_added": "이미 추가된 도시입니다.", "lang_name": "한국어",
            "notice_title": "공지 제목", "notice_content": "공지 내용", "notice_button": "공지", "new_notice": "새로운 공지",
            "notice_save": "공지 추가", "upload_file": "사진/파일 업로드", "notice_status": "공지현황"},
+    "en": {"title": "Cantata Tour", "subtitle": "Maharashtra", "select_city": "Select City", "add_city": "Add",
+           "register": "Register", "venue": "Venue", "seats": "Seats", "indoor": "Indoor", "outdoor": "Outdoor",
+           "google": "Google Maps Link", "notes": "Notes", "tour_map": "Tour Map", "tour_route": "Route",
+           "password": "Admin Password", "login": "Login", "logout": "Logout", "date": "Date",
+           "total": "Total Distance & Time", "already_added": "City already added.", "lang_name": "English",
+           "notice_title": "Notice Title", "notice_content": "Notice Content", "notice_button": "Notice", "new_notice": "New Notice",
+           "notice_save": "Add Notice", "upload_file": "Upload File", "notice_status": "Notice Status"},
+    "hi": {"title": "कांटाटा टूर", "subtitle": "महाराष्ट्र", "select_city": "शहर चुनें", "add_city": "जोड़ें",
+           "register": "पंजीकरण करें", "venue": "स्थान", "seats": "सीटें", "indoor": "इनडोर", "outdoor": "आउटडोर",
+           "google": "गूगल मानचित्र लिंक", "notes": "टिप्पणी", "tour_map": "टूर मानचित्र", "tour_route": "मार्ग",
+           "password": "व्यवस्थापक पासवर्ड", "login": "लॉगिन", "logout": "लॉगआउट", "date": "दिनांक",
+           "total": "कुल दूरी और समय", "already_added": "यह शहर पहले से जोड़ा गया है।", "lang_name": "हिन्दी",
+           "notice_title": "सूचना शीर्षक", "notice_content": "सूचना सामग्री", "notice_button": "सूचना", "new_notice": "नई सूचना",
+           "notice_save": "सूचना जोड़ें", "upload_file": "फ़ाइल/तस्वीर अपलोड करें", "notice_status": "सूचना स्थिति"}
 }
 
 # =============================================
@@ -240,7 +243,7 @@ if not st.session_state.admin:
                 st.session_state.show_full_notice = None
                 st.rerun()
 
-    st.stop()  # 일반 모드 끝
+    st.stop()
 
 # =============================================
 # 관리자 모드
