@@ -182,7 +182,7 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     margin-bottom: 15px;
 }
 
-/* 새로고침 버튼만 오른쪽 끝 */
+/* 새로고침 버튼 오른쪽 끝 */
 .notice-input-header {
     display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
 }
@@ -266,16 +266,18 @@ def delete_notice(notice_id):
 def render_notice_list(show_delete=False):
     if st.session_state.notice_data:
         for n in st.session_state.notice_data:
-            with st.container():
-                col1, col2 = st.columns([6, 1]) if show_delete else st.columns([1])
+            if show_delete:
+                col1, col2 = st.columns([6, 1])
                 with col1:
                     st.write(f"**📢 {n['title']}**")
                     st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
-                if show_delete:
-                    with col2:
-                        unique_key = f"del_{n['id']}_{uuid.uuid4().hex[:8]}"
-                        if st.button(_["delete"], key=unique_key):
-                            delete_notice(n['id'])
+                with col2:
+                    unique_key = f"del_{n['id']}_{uuid.uuid4().hex[:8]}"
+                    if st.button(_["delete"], key=unique_key):
+                        delete_notice(n['id'])
+            else:
+                st.write(f"**📢 {n['title']}**")
+                st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
     else:
         st.write("등록된 공지가 없습니다.")
 
@@ -286,6 +288,9 @@ def render_tour_map():
     st.markdown(f"""
     <div class="map-header">
         <div class="map-title">투어지도</div>
+        <button class="refresh-btn" onclick="window.location.reload(); return false;" title="새로고침" style="margin-left: 10px;">
+            <div class="refresh-icon">{REFRESH_SVG}</div>
+        </button>
     </div>
     """, unsafe_allow_html=True)
 
@@ -323,7 +328,7 @@ def render_tour_map():
         st_folium(m, width=900, height=600)
 
 # =============================================
-# 일반 사용자 UI
+# 일반 사용자 UI (새로고침 버튼 복구)
 # =============================================
 if not st.session_state.admin:
     st.markdown(f"<div class='today-notice-title'>{_['today_notice']}</div>", unsafe_allow_html=True)
@@ -370,7 +375,7 @@ if submitted and title:
     st.success("공지 등록 완료")
     st.rerun()
 
-# 공지현황 (터치/삭제 100% OK)
+# 공지현황
 with st.expander("공지현황", expanded=False):
     render_notice_list(show_delete=True)
 
