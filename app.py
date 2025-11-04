@@ -172,7 +172,7 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     margin-bottom: 15px;
 }
 
-/* 등록 버튼 오른쪽 끝 */
+/* 등록 버튼 오른쪽 끝 (새로고침 제거) */
 .notice-input-header {
     display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
 }
@@ -181,33 +181,6 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     font-weight: bold; cursor: pointer; transition: all 0.2s;
 }
 .register-btn:hover { background: #00b140; transform: scale(1.05); }
-
-.refresh-btn {
-    background: none; 
-    border: 2px solid #00c853; 
-    border-radius: 50%; 
-    width: 44px; height: 44px; 
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; 
-    transition: all 0.3s;
-}
-.refresh-btn:hover {
-    background: rgba(0,200,83,0.1); 
-    border-color: #00b140;
-    transform: scale(1.15);
-}
-.refresh-icon {
-    width: 24px; height: 24px; 
-    animation: rotate 1.5s linear infinite paused;
-    stroke: #00c853;
-}
-.refresh-btn:hover .refresh-icon {
-    animation-play-state: running;
-}
-@keyframes rotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
 
 .notice-list-item {
     background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:12px; margin:8px 0; 
@@ -226,20 +199,12 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 
 @media (max-width: 768px) {
     .notice-input-header { flex-direction: column; align-items: flex-start; }
-    .register-btn, .refresh-btn { margin-top: 10px; }
+    .register-btn { margin-top: 10px; }
 }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown(f"<h1>{_['title']} <span class='year'>2025</span><span class='subtitle'>마하라스트라</span> 🎄</h1>", unsafe_allow_html=True)
-
-# 서클 화살표 SVG
-REFRESH_SVG = """
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M23 4v6h-6"></path>
-  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-</svg>
-"""
 
 # =============================================
 # 실시간 알림 활성화
@@ -276,7 +241,7 @@ def delete_notice(notice_id):
     st.rerun()
 
 # =============================================
-# 공지현황 리스트 (공통 함수)
+# 공지현황 리스트 (공통 함수) - 터치 OK
 # =============================================
 def render_notice_list(show_delete=False):
     if st.session_state.notice_data:
@@ -284,27 +249,15 @@ def render_notice_list(show_delete=False):
             if show_delete:
                 col1, col2 = st.columns([5, 1])
                 with col1:
-                    st.markdown(f"""
-                    <div class="notice-list-item">
-                        <div>
-                            <div class="notice-list-title">📢 {n['title']}</div>
-                            <div class="notice-list-time">{n['timestamp'][:16].replace('T',' ')}</div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.markdown(f"**📢 {n['title']}**")
+                    st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
                 with col2:
                     unique_key = f"del_{n['id']}_{uuid.uuid4().hex[:8]}"
                     if st.button(_["delete"], key=unique_key):
                         delete_notice(n['id'])
             else:
-                st.markdown(f"""
-                <div class="notice-list-item">
-                    <div>
-                        <div class="notice-list-title">📢 {n['title']}</div>
-                        <div class="notice-list-time">{n['timestamp'][:16].replace('T',' ')}</div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f"**📢 {n['title']}**")
+                st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
     else:
         st.write("등록된 공지가 없습니다.")
 
@@ -368,15 +321,12 @@ if not st.session_state.admin:
 # 관리자 모드
 # =============================================
 
-# 공지사항 입력 + 등록 + 새로고침 (같은 라인)
+# 공지사항 입력 + 등록 버튼 (새로고침 제거)
 st.markdown(f"""
 <div class="notice-input-header">
     <div class="notice-input-title">공지사항 입력</div>
     <div>
         <button class="register-btn" onclick="this.closest('form').submit()">등록</button>
-        <button class="refresh-btn" onclick="window.location.reload(); return false;" title="새로고침" style="margin-left: 10px;">
-            <div class="refresh-icon">{REFRESH_SVG}</div>
-        </button>
     </div>
 </div>
 """, unsafe_allow_html=True)
