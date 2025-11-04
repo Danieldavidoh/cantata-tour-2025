@@ -128,7 +128,7 @@ LANG = {
         "login": "로그인", "logout": "로그아웃", "date": "공연 날짜", "notice_title": "공지 제목",
         "notice_content": "공지 내용", "upload_file": "사진/파일 업로드", "notice_status": "공지현황",
         "city_input": "도시 입력", "venue_name": "공연장 이름", "seats_count": "좌석 수", "venue_type": "공연장 유형",
-        "google_link": "구글 링크", "add_venue": "추가", "already_exists": "이미 존재하는 도시입니다."
+        "google_link": "구글 링크", "add_venue": "추가", "already_exists": "이미 존재하는 도시입니다.", "delete": "삭제"
     },
     "en": {
         "title": "Cantata Tour", "select_city": "Select City", "add_city": "Add", "register": "Register",
@@ -137,7 +137,7 @@ LANG = {
         "login": "Login", "logout": "Logout", "date": "Performance Date", "notice_title": "Notice Title",
         "notice_content": "Notice Content", "upload_file": "Upload Photo/File", "notice_status": "Notice Board",
         "city_input": "City Input", "venue_name": "Venue Name", "seats_count": "Seats Count", "venue_type": "Venue Type",
-        "google_link": "Google Link", "add_venue": "Add", "already_exists": "City already exists."
+        "google_link": "Google Link", "add_venue": "Add", "already_exists": "City already exists.", "delete": "Delete"
     },
     "hi": {
         "title": "कांताता टूर", "select_city": "शहर चुनें", "add_city": "जोड़ें", "register": "रजिस्टर",
@@ -146,7 +146,7 @@ LANG = {
         "login": "लॉगिन", "logout": "लॉगआउट", "date": "प्रदर्शन तिथि", "notice_title": "सूचना शीर्षक",
         "notice_content": "सूचना सामग्री", "upload_file": "फोटो/फ़ाइल अपलोड करें", "notice_status": "सूचना बोर्ड",
         "city_input": "शहर इनपुट", "venue_name": "स्थल नाम", "seats_count": "सीटों की संख्या", "venue_type": "स्थल प्रकार",
-        "google_link": "गूगल लिंक", "add_venue": "जोड़ें", "already_exists": "शहर पहले से मौजूद है."
+        "google_link": "गूगल लिंक", "add_venue": "जोड़ें", "already_exists": "शहर पहले से मौजूद है.", "delete": "हटाएं"
     }
 }
 
@@ -187,17 +187,11 @@ h1 { color: #ff3333 !important; text-align: center; font-weight: 900; font-size:
 h1 span.year { color: #fff; font-size: 0.8em; vertical-align: super; }
 h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin-left: 5px; }
 
-.map-header {
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    margin-bottom: 10px;
+/* 공지 입력 + 새로고침 버튼 가로 배치 */
+.notice-input-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
 }
-.map-title {
-    font-size: 1.5em; 
-    font-weight: bold; 
-    color: #ff6b6b;
-}
+.notice-input-title { color: #ff6b6b; font-weight: bold; font-size: 1.3em; }
 
 .refresh-btn {
     background: none; 
@@ -255,23 +249,21 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 }
 .close-btn:hover { color: #ff3333; transform: scale(1.2); }
 
+.delete-btn {
+    background: #d32f2f; color: white; border: none; padding: 6px 12px; border-radius: 6px;
+    font-size: 0.9em; cursor: pointer; margin-left: 10px; transition: all 0.2s;
+}
+.delete-btn:hover { background: #b71c1c; transform: scale(1.05); }
+
 .city-input-form {
     background: #1a1a1a; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0;
 }
 .city-input-title { color: #ff6b6b; font-weight: bold; font-size: 1.2em; margin-bottom: 15px; }
 
-.admin-divider {
-    height: 2px; background: linear-gradient(90deg, transparent, #ff6b6b, transparent); margin: 30px 0;
-}
-
 @media (max-width: 768px) {
-    .map-header { padding: 0 12px; }
-    .map-title { font-size: 1.3em; }
-    .refresh-btn { width: 40px; height: 40px; }
-    .notice-header { padding: 15px; }
-    .notice-title { font-size: 1em; }
-    .close-btn { font-size: 1.3em; }
-    .city-input-form { padding: 15px; }
+    .notice-input-header { flex-direction: column; align-items: flex-start; }
+    .refresh-btn { margin-top: 10px; }
+    .delete-btn { font-size: 0.8em; padding: 4px 8px; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -319,7 +311,16 @@ def distance_km(p1, p2):
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
-# 공지 아코디언 UI
+# 공지 삭제 함수
+# =============================================
+def delete_notice(notice_id):
+    st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
+    save_json(NOTICE_FILE, st.session_state.notice_data)
+    st.success("공지 삭제됨")
+    st.rerun()
+
+# =============================================
+# 공지 아코디언 UI + 삭제 버튼
 # =============================================
 def render_notice_list():
     if st.session_state.notice_data:
@@ -340,8 +341,9 @@ def render_notice_list():
                     <div class="notice-arrow {'open' if is_open else ''}">{ARROW_DOWN_SVG}</div>
                 </div>
                 <div class="notice-content {'open' if is_open else ''}">
-                    <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                         <button class="close-btn" onclick="document.getElementById('{uid}_close').click()">×</button>
+                        <button class="delete-btn" onclick="document.getElementById('{uid}_delete').click()">{_['delete']}</button>
                     </div>
                     <div>{n['content']}</div>
                     {image_html}
@@ -349,9 +351,14 @@ def render_notice_list():
             </div>
             """, unsafe_allow_html=True)
             
-            if st.button("", key=f"{uid}_toggle"):
-                st.session_state.expanded_notice = notice_id if not is_open else None
-                st.rerun()
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                if st.button("", key=f"{uid}_toggle"):
+                    st.session_state.expanded_notice = notice_id if not is_open else None
+                    st.rerun()
+            with col2:
+                if st.button("", key=f"{uid}_delete"):
+                    delete_notice(notice_id)
             if is_open and st.button("", key=f"{uid}_close"):
                 st.session_state.expanded_notice = None
                 st.rerun()
@@ -359,15 +366,12 @@ def render_notice_list():
         st.write("공지가 없습니다.")
 
 # =============================================
-# 공통 투어지도 UI
+# 공통 투어지도 UI (새로고침 버튼 제거)
 # =============================================
 def render_tour_map():
     st.markdown(f"""
     <div class="map-header">
         <div class="map-title">투어지도</div>
-        <button class="refresh-btn" onclick="window.location.reload(); return false;" title="새로고침">
-            <div class="refresh-icon">{REFRESH_SVG}</div>
-        </button>
     </div>
     """, unsafe_allow_html=True)
 
@@ -415,11 +419,19 @@ if not st.session_state.admin:
     st.stop()
 
 # =============================================
-# 관리자 모드 레이아웃 (완전 재정렬)
+# 관리자 모드 (레이아웃 재정렬 + 새로고침 오른쪽 + 삭제 버튼)
 # =============================================
 
-# 1. 공지사항 입력 (제목 바로 아래)
-st.subheader("공지사항 입력")
+# 1. 공지사항 입력 + 새로고침 버튼 오른쪽
+st.markdown(f"""
+<div class="notice-input-header">
+    <div class="notice-input-title">공지사항 입력</div>
+    <button class="refresh-btn" onclick="window.location.reload(); return false;" title="새로고침">
+        <div class="refresh-icon">{REFRESH_SVG}</div>
+    </button>
+</div>
+""", unsafe_allow_html=True)
+
 title = st.text_input(_["notice_title"])
 content = st.text_area(_["notice_content"])
 uploaded = st.file_uploader(_["upload_file"], type=["png", "jpg", "jpeg"])
@@ -439,13 +451,12 @@ if st.button("등록") and title:
     st.success("공지 등록 완료")
     st.rerun()
 
-# 2. 공지현황
-st.markdown("---")
+# 2. 공지현황 (위 구분선 제거)
 with st.expander("공지현황", expanded=False):
     render_notice_list()
 
 # 3. 구분선
-st.markdown("<div class='admin-divider'></div>", unsafe_allow_html=True)
+st.markdown("<div style='height: 2px; background: linear-gradient(90deg, transparent, #ff6b6b, transparent); margin: 30px 0;'></div>", unsafe_allow_html=True)
 
 # 4. 도시 입력
 st.markdown(f"<div class='city-input-title'>{_['city_input']}</div>", unsafe_allow_html=True)
@@ -480,6 +491,6 @@ with st.form("city_form", clear_on_submit=True):
             st.success(f"{new_city} 추가됨!")
             st.rerun()
 
-# 5. 투어지도 (맨 아래)
+# 5. 투어지도 (새로고침 버튼 제거)
 st.markdown("---")
 render_tour_map()
