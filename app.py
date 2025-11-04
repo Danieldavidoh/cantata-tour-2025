@@ -134,7 +134,7 @@ st.markdown("""
 .stApp { 
     background: radial-gradient(circle at 20% 20%, #0a0a0f 0%, #000000 100%); 
     color: #ffffff; 
-    margin-top: 0;  /* 기본 위치 */
+    margin-top: 0;
 }
 h1 { 
     color: #ff3333 !important; 
@@ -237,38 +237,38 @@ if not st.session_state.admin:
                 </div>
             </div>
             <style>
-            #full-screen-notice-content {
-                position: relative;
-                background: #228B22;
-                padding: 30px;
-                border-radius: 15px;
-                max-width: 90%;
-                max-height: 90%;
-                overflow-y: auto;
-            }
-            #exit-button {
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                background: #ff3b3b;
-                color: white;
-                border: none;
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                font-weight: bold;
-                font-size: 18px;
-                cursor: pointer;
-                box-shadow: 0 0 10px rgba(255, 59, 59, 0.8);
-            }
-            #exit-button:hover {
-                background: #cc0000;
-                transform: scale(1.1);
-            }
+                #full-screen-notice-content {{
+                    position: relative;
+                    background: #228B22;
+                    padding: 30px;
+                    border-radius: 15px;
+                    max-width: 90%;
+                    max-height: 90%;
+                    overflow-y: auto;
+                }}
+                #exit-button {{
+                    position: absolute;
+                    top: 10px;
+                    right: 10px;
+                    background: #ff3b3b;
+                    color: white;
+                    border: none;
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    font-weight: bold;
+                    font-size: 18px;
+                    cursor: pointer;
+                    box-shadow: 0 0 10px rgba(255, 59, 59, 0.8);
+                }}
+                #exit-button:hover {{
+                    background: #cc0000;
+                    transform: scale(1.1);
+                }}
             </style>
             """, unsafe_allow_html=True)
 
-    st.stop()  # 일반 모드 끝
+    st.stop()
 
 # =============================================
 # 관리자 모드
@@ -351,34 +351,34 @@ if st.session_state.admin:
                 </div>
             </div>
             <style>
-            #full-screen-notice-content {
-                position: relative;
-                background: #228B22;
-                padding: 30px;
-                border-radius: 15px;
-                max-width: 90%;
-                max-height: 90%;
-                overflow-y: auto;
-            }
-            #exit-button {
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                background: #ff3b3b;
-                color: white;
-                border: none;
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                font-weight: bold;
-                font-size: 18px;
-                cursor: pointer;
-                box-shadow: 0 0 10px rgba(255, 59, 59, 0.8);
-            }
-            #exit-button:hover {
-                background: #cc0000;
-                transform: scale(1.1);
-            }
+                #full-screen-notice-content {{
+                    position: relative;
+                    background: #228B22;
+                    padding: 30px;
+                    border-radius: 15px;
+                    max-width: 90%;
+                    max-height: 90%;
+                    overflow-y: auto;
+                }}
+                #exit-button {{
+                    position: absolute;
+                    top: 10px;
+                    right: 10px;
+                    background: #ff3b3b;
+                    color: white;
+                    border: none;
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    font-weight: bold;
+                    font-size: 18px;
+                    cursor: pointer;
+                    box-shadow: 0 0 10px rgba(255, 59, 59, 0.8);
+                }}
+                #exit-button:hover {{
+                    background: #cc0000;
+                    transform: scale(1.1);
+                }}
             </style>
             """, unsafe_allow_html=True)
 
