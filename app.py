@@ -129,7 +129,7 @@ LANG = {
         "today_notice": "오늘의 공지"
     }
 }
-_ = LANG[st.session_state.lang] if st.session_state.lang in LANG else LANG["ko"]
+_ = LANG.get(st.session_state.lang, LANG["ko"])
 
 # =============================================
 # 사이드바
@@ -175,19 +175,16 @@ h1 span.year { color: #fff; font-size: 0.8em; vertical-align: super; }
 h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin-left: 5px; }
 
 /* 제목: 흰색 + 1.3em 통일 */
-.notice-input-title, .notice-status-title, .city-input-title, .today-notice-title {
+.notice-input-title, .city-input-title, .today-notice-title {
     color: white !important; 
     font-weight: bold; 
     font-size: 1.3em; 
     margin-bottom: 15px;
 }
 
-/* 새로고침 버튼 (일반 모드 왼쪽, 관리자 오른쪽) */
-.notice-input-header {
+/* 새로고침 버튼 */
+.notice-input-header, .today-notice-header {
     display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
-}
-.today-notice-header {
-    display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-direction: row-reverse;
 }
 .refresh-btn {
     background: none; 
@@ -216,15 +213,19 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     to { transform: rotate(360deg); }
 }
 
+/* 공지 아이템 */
 .notice-item {
     background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:12px; margin:8px 0; 
 }
+.notice-header {
+    display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+}
 .notice-title { color:#ff6b6b; font-weight:bold; font-size: 1.1em; }
 .notice-time { color:#888; font-size:0.85em; }
-.notice-content { color: #ddd; margin-top: 8px; white-space: pre-line; }
+.notice-content { color: #ddd; margin-top: 12px; white-space: pre-line; }
 .delete-btn {
     background: #d32f2f; color: white; border: none; padding: 6px 12px; border-radius: 6px;
-    font-size: 0.9em; cursor: pointer; transition: all 0.2s; margin-top: 8px;
+    font-size: 0.9em; cursor: pointer; transition: all 0.2s;
 }
 .delete-btn:hover { background: #b71c1c; transform: scale(1.05); }
 
@@ -278,37 +279,37 @@ def delete_notice(notice_id):
     st.rerun()
 
 # =============================================
-# 공지현황 리스트 (제목 클릭 → 내용 펼쳐짐 + 삭제 항상 표시)
+# 새로운 공지현황 (accordion 스타일, 터치 100%)
 # =============================================
 def render_notice_list(show_delete=False):
-    if st.session_state.notice_data:
-        for n in st.session_state.notice_data:
-            notice_id = n["id"]
-            is_expanded = st.session_state.expanded_notices.get(notice_id, False)
-            toggle_key = f"toggle_{notice_id}_{uuid.uuid4().hex[:8]}"
-            
-            # 제목 클릭으로 펼치기/닫기
-            if st.button(f"📢 {n['title']}", key=toggle_key):
-                st.session_state.expanded_notices[notice_id] = not is_expanded
-                st.rerun()  # 반드시 rerun!
-            
-            # 시간 표시
-            st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
-            
-            # 삭제 버튼 (항상 표시)
-            if show_delete:
-                del_key = f"del_{notice_id}_{uuid.uuid4().hex[:8]}"
-                if st.button(_["delete"], key=del_key):
-                    delete_notice(notice_id)
-            
-            # 내용 펼침
-            if is_expanded:
-                with st.container():
-                    st.write(n["content"])
-                    if "file" in n and n["file"]:
-                        st.image(base64.b64decode(n["file"]), use_column_width=True)
-    else:
+    if not st.session_state.notice_data:
         st.write("등록된 공지가 없습니다.")
+        return
+
+    for n in st.session_state.notice_data:
+        notice_id = n["id"]
+        is_expanded = st.session_state.expanded_notices.get(notice_id, False)
+        toggle_key = f"toggle_{notice_id}_{uuid.uuid4().hex[:8]}"
+
+        with st.container():
+            # 헤더 (제목 + 삭제 버튼)
+            col1, col2 = st.columns([6, 1]) if show_delete else st.columns([1])
+            with col1:
+                if st.button(f"📢 {n['title']}", key=toggle_key, use_container_width=True):
+                    st.session_state.expanded_notices[notice_id] = not is_expanded
+                    st.rerun()
+                st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
+            if show_delete:
+                with col2:
+                    del_key = f"del_{notice_id}_{uuid.uuid4().hex[:8]}"
+                    if st.button("삭제", key=del_key):
+                        delete_notice(notice_id)
+
+            # 내용 (펼쳐졌을 때만)
+            if is_expanded:
+                st.markdown(f"<div class='notice-content'>{n['content']}</div>", unsafe_allow_html=True)
+                if "file" in n and n["file"]:
+                    st.image(base64.b64decode(n["file"]), use_column_width=True)
 
 # =============================================
 # 투어지도 UI
@@ -354,7 +355,7 @@ def render_tour_map():
         st_folium(m, width=900, height=600)
 
 # =============================================
-# 일반 사용자 UI (새로고침 왼쪽)
+# 일반 사용자 UI
 # =============================================
 if not st.session_state.admin:
     st.markdown(f"""
@@ -366,8 +367,7 @@ if not st.session_state.admin:
     </div>
     """, unsafe_allow_html=True)
     
-    with st.expander("공지현황", expanded=False):
-        render_notice_list(show_delete=False)
+    render_notice_list(show_delete=False)
     
     st.markdown("---")
     render_tour_map()
@@ -410,9 +410,8 @@ if submitted and title:
     st.success("공지 등록 완료")
     st.rerun()
 
-# 공지현황
-with st.expander("공지현황", expanded=False):
-    render_notice_list(show_delete=True)
+# 공지현황 (새로운 방식)
+render_notice_list(show_delete=True)
 
 # 구분선
 st.markdown("<div style='height: 2px; background: linear-gradient(90deg, transparent, #ff6b6b, transparent); margin: 30px 0;'></div>", unsafe_allow_html=True)
