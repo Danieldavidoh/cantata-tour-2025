@@ -154,7 +154,7 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 서클 화살표 SVG (위로 이동!)
+# 서클 화살표 SVG
 # =============================================
 REFRESH_SVG = """
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -213,17 +213,6 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     to { transform: rotate(360deg); }
 }
 
-.notice-list-item {
-    background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:12px; margin:8px 0; 
-}
-.notice-list-title { color:#ff6b6b; font-weight:bold; font-size: 1.1em; }
-.notice-list-time { color:#888; font-size:0.85em; }
-.delete-btn {
-    background: #d32f2f; color: white; border: none; padding: 6px 12px; border-radius: 6px;
-    font-size: 0.9em; cursor: pointer; transition: all 0.2s; margin-top: 8px;
-}
-.delete-btn:hover { background: #b71c1c; transform: scale(1.05); }
-
 .city-input-form {
     background: #1a1a1a; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0;
 }
@@ -263,7 +252,7 @@ def distance_km(p1, p2):
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
-# 공지 삭제 함수 (관리자 전용)
+# 공지 삭제 함수
 # =============================================
 def delete_notice(notice_id):
     st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
@@ -272,17 +261,19 @@ def delete_notice(notice_id):
     st.rerun()
 
 # =============================================
-# 공지현황 리스트 (공통 함수) - 터치/삭제 100% OK
+# 공지현황 리스트 (터치/삭제 100% OK)
 # =============================================
 def render_notice_list(show_delete=False):
     if st.session_state.notice_data:
         for n in st.session_state.notice_data:
-            with st.container():
-                st.write(f"**📢 {n['title']}**")
+            col1, col2 = st.columns([6, 1]) if show_delete else st.columns([1])
+            with col1:
+                st.markdown(f"**📢 {n['title']}**")
                 st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
-                if show_delete:
+            if show_delete:
+                with col2:
                     unique_key = f"del_{n['id']}_{uuid.uuid4().hex[:8]}"
-                    if st.button(_["delete"], key=unique_key):
+                    if st.button("삭제", key=unique_key):
                         delete_notice(n['id'])
     else:
         st.write("등록된 공지가 없습니다.")
@@ -334,11 +325,9 @@ def render_tour_map():
 # 일반 사용자 UI
 # =============================================
 if not st.session_state.admin:
-    # 오늘의 공지
     st.markdown(f"<div class='today-notice-title'>{_['today_notice']}</div>", unsafe_allow_html=True)
     with st.expander("공지현황", expanded=False):
         render_notice_list(show_delete=False)
-    
     st.markdown("---")
     render_tour_map()
     st.stop()
@@ -347,7 +336,7 @@ if not st.session_state.admin:
 # 관리자 모드
 # =============================================
 
-# 공지사항 입력 + 새로고침 버튼 (등록 제거)
+# 공지사항 입력 + 새로고침 버튼
 st.markdown(f"""
 <div class="notice-input-header">
     <div class="notice-input-title">공지사항 입력</div>
@@ -363,7 +352,7 @@ with st.form("notice_form"):
     title = st.text_input(_["notice_title"])
     content = st.text_area(_["notice_content"])
     uploaded = st.file_uploader(_["upload_file"], type=["png", "jpg", "jpeg"])
-    submitted = st.form_submit_button("등록", use_container_width=False)
+    submitted = st.form_submit_button("등록")
 
 if submitted and title:
     new_notice = {
@@ -380,7 +369,7 @@ if submitted and title:
     st.success("공지 등록 완료")
     st.rerun()
 
-# 공지현황 (expander + 터치/삭제 100% OK)
+# 공지현황 (터치/삭제 100% OK)
 with st.expander("공지현황", expanded=False):
     render_notice_list(show_delete=True)
 
