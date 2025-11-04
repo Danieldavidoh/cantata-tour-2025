@@ -17,10 +17,10 @@ LANG = {
     "en": {"title": "Cantata Tour", "subtitle": "Maharashtra", "select_city": "Select City", "add_city": "Add",
            "register": "Register", "venue": "Venue", "seats": "Seats", "indoor": "Indoor", "outdoor": "Outdoor",
            "google": "Google Maps Link", "notes": "Notes", "tour_map": "Tour Map", "tour_route": "Route",
-           "password": "Admin Password", "login": "Login", "logout": "Logout", "date": "Date",
+           "password": "Admin Password", "login": "Log in", "logout": "Log out", "date": "Date",
            "total": "Total Distance & Time", "already_added": "City already added."},
     "hi": {"title": "कांटाटा टूर", "subtitle": "महाराष्ट्र", "select_city": "शहर चुनें", "add_city": "जोड़ें",
-           "register": "पंजीकरण करें", "venue": "स्थान", "seats": "सीटें", "indoor": "इनडोर", "outdoor": "आउटडोर",
+           "register": "पंजीकरण करें", "venue": "स्थान", "seats": "सीटें", "indoor": "इनडोर", "outdoor": "आ우टडोर",
            "google": "गूगल मानचित्र लिंक", "notes": "टिप्पणी", "tour_map": "टूर मानचित्र", "tour_route": "मार्ग",
            "password": "व्यवस्थापक पासवर्ड", "login": "लॉगिन", "logout": "लॉगआउट", "date": "दिनांक",
            "total": "कुल दूरी और समय", "already_added": "यह शहर पहले से जोड़ा गया है।"}
@@ -101,17 +101,16 @@ st.markdown("""
   font-family: 'Noto Sans KR', sans-serif;
 }
 
-/* 제목: 마하라스트라 작은 글씨로 2025와 트리 사이 */
+/* 제목: 칸타타 투어 빨간색 */
 h1 {
   color: #ff3333 !important;
   text-align: center;
-  font-weight: 900;
-  font-size: 4.3em;
+  font-weight: 900
+font-size: 4.3em;
   text-shadow: 0 0 25px #b71c1c, 0 0 15px #00ff99;
   margin-bottom: 0;
 }
-h1 span.year {color: #ffffff; font-weight: 800; font-size: 0.8em; vertical-align: super;}
-h1 span.subtitle {color: #cccccc; font-size: 0.45em; vertical-align: super; margin-left: 5px;}
+h1 span.year {color: #ffffff; font-weight: 800;}
 h2 {text-align: center; color: #cccccc; margin-top: 0;}
 
 /* 버튼 */
@@ -134,7 +133,8 @@ div[data-testid="stButton"] > button:hover {
 # Title
 # =============================================
 st.markdown(
-    f"<h1>{_['title']} <span class='year'>2025</span><span class='subtitle'>{_['subtitle']}</span> 🎄</h1>",
+    f"<h1>{_['title']} <span class='year'>2025 🎄</span></h1>"
+    f"<h2>{_['subtitle']}</h2>",
     unsafe_allow_html=True
 )
 
