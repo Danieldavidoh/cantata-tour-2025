@@ -158,7 +158,7 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 스타일
+# 스타일 (아코디언 + 터치 완벽 + 화살표 회전)
 # =============================================
 st.markdown("""
 <style>
@@ -207,6 +207,7 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     to { transform: rotate(360deg); }
 }
 
+/* 공지 아코디언 (터치 완벽 + 화살표 회전) */
 .notice-accordion {
     background:#1a1a1a; border:2px solid #333; border-radius:12px; margin:12px 0; 
     overflow: hidden; transition: all 0.3s;
@@ -214,18 +215,24 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 .notice-header {
     padding: 18px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
     background: #222; transition: background 0.2s;
+    user-select: none; -webkit-user-select: none; touch-action: manipulation;
 }
-.notice-header:hover { background: #2a2a2a; }
+.notice-header:active { background: #2a2a2a; }
 .notice-title { color:#ff6b6b; font-weight:bold; font-size: 1.1em; }
-.notice-time { color:#888; font-size:0.85em; }
+.notice-time { color:#888; font-size:0.85em; margin-top: 4px; }
+.notice-arrow {
+    width: 16px; height: 16px; transition: transform 0.3s;
+}
+.notice-arrow.open { transform: rotate(180deg); }
+
 .notice-content {
     padding: 0 18px 18px; color: #ddd; line-height: 1.7; white-space: pre-line;
     max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.4s ease;
 }
-.notice-content.open { max-height: 1000px; padding: 18px; }
+.notice-content.open { max-height: 2000px; padding: 18px; }
 
 .close-btn {
-    background: none; border: none; color: #ff6b6b; font-size: 1.4em; font-weight: bold;
+    background: none; border: none; color: #ff6b6b; font-size: 1.5em; font-weight: bold;
     cursor: pointer; padding: 0 8px; line-height: 1; transition: all 0.2s;
 }
 .close-btn:hover { color: #ff3333; transform: scale(1.2); }
@@ -236,7 +243,7 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     .refresh-btn { width: 40px; height: 40px; }
     .notice-header { padding: 15px; }
     .notice-title { font-size: 1em; }
-    .close-btn { font-size: 1.2em; }
+    .close-btn { font-size: 1.3em; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -248,6 +255,13 @@ REFRESH_SVG = """
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
   <path d="M23 4v6h-6"></path>
   <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+</svg>
+"""
+
+# 화살표 아래 SVG
+ARROW_DOWN_SVG = """
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <polyline points="6,9 12,15 18,9"></polyline>
 </svg>
 """
 
@@ -274,7 +288,7 @@ def distance_km(p1, p2):
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
-# 공지 아코디언 UI (이미지 src 수정)
+# 공지 아코디언 UI (터치 완벽 + 화살표 회전)
 # =============================================
 def render_notice_list():
     if st.session_state.notice_data:
@@ -283,7 +297,7 @@ def render_notice_list():
             is_open = st.session_state.expanded_notice == notice_id
             uid = f"notice_{notice_id}_{uuid.uuid4().hex[:8]}"
             
-            # 이미지 src 안전하게 f-string
+            # 이미지 src 안전하게
             image_html = f'<img src="data:image/png;base64,{n["file"]}" style="max-width:100%; margin-top:15px; border-radius:8px;">' if 'file' in n else ''
             
             st.markdown(f"""
@@ -293,9 +307,9 @@ def render_notice_list():
                         <div class="notice-title">📢 {n['title']}</div>
                         <div class="notice-time">{n['timestamp'][:16].replace('T',' ')}</div>
                     </div>
-                    <div style="margin-left: auto; color: #888;">{'▲' if is_open else '▼'}</div>
+                    <div class="notice-arrow {'open' if is_open else ''}">{ARROW_DOWN_SVG}</div>
                 </div>
-                <div id="{uid}_content" class="notice-content {'open' if is_open else ''}">
+                <div class="notice-content {'open' if is_open else ''}">
                     <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
                         <button class="close-btn" onclick="document.getElementById('{uid}_close').click()">×</button>
                     </div>
@@ -305,10 +319,11 @@ def render_notice_list():
             </div>
             """, unsafe_allow_html=True)
             
+            # 숨긴 버튼 (터치 보장)
             if st.button("", key=f"{uid}_toggle"):
                 st.session_state.expanded_notice = notice_id if not is_open else None
                 st.rerun()
-            if st.button("", key=f"{uid}_close"):
+            if is_open and st.button("", key=f"{uid}_close"):
                 st.session_state.expanded_notice = None
                 st.rerun()
     else:
