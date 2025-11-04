@@ -1,12 +1,22 @@
-# ... (이전 코드 동일 – state, data, lang, cities, sidebar, theme 생략)
+# ... (이전 코드 동일 – state, data, lang, cities, sidebar 생략)
 
 # =============================================
 # Theme (화면 위로 올리기)
 # =============================================
 st.markdown("""
 <style>
-.stApp { background: radial-gradient(circle at 20% 20%, #0a0a0f 0%, #000000 100%); color: #ffffff; margin-top: -150px; }  /* 화면 위로 150px 올림 */
-h1 { color: #ff3333 !important; text-align: center; font-weight: 900; font-size: 4.3em; text-shadow: 0 0 25px #b71c1c, 0 0 15px #00ff99; }
+.stApp { 
+    background: radial-gradient(circle at 20% 20%, #0a0a0f 0%, #000000 100%); 
+    color: #ffffff; 
+    margin-top: -120px;  /* 칸타타투어 반만큼 위로 올림 */
+}
+h1 { 
+    color: #ff3333 !important; 
+    text-align: center; 
+    font-weight: 900; 
+    font-size: 4.3em; 
+    text-shadow: 0 0 25px #b71c1c, 0 0 15px #00ff99; 
+}
 h1 span.year { color: #ffffff; font-weight: 800; font-size: 0.8em; vertical-align: super; }
 h1 span.subtitle { color: #cccccc; font-size: 0.45em; vertical-align: super; margin-left: 5px; }
 /* ... (기존 스타일 생략) */
@@ -68,7 +78,7 @@ if not st.session_state.admin:
 
         st_folium(m, width=900, height=650)
 
-    # 공지현황 버튼 (투어지도 아래)
+    # 투어지도 아래 공지현황 버튼 (X 삭제 없음)
     st.markdown("---")
     with st.expander("공지현황", expanded=False):
         if st.session_state.notice_data:
