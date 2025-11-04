@@ -70,21 +70,6 @@ st.session_state.venue_data = load_json(VENUE_FILE, {})
 st.session_state.notice_data = load_json(NOTICE_FILE, [])
 
 # =============================================
-# 콜백 함수들
-# =============================================
-def delete_notice(notice_id):
-    st.session_state.notice_data = [x for x in st.session_state.notice_data if x["id"] != notice_id]
-    save_json(NOTICE_FILE, st.session_state.notice_data)
-    if st.session_state.show_full_notice == notice_id:
-        st.session_state.show_full_notice = None
-    st.success("삭제됨")
-    st.rerun()
-
-def open_notice(notice_id):
-    st.session_state.show_full_notice = notice_id
-    st.rerun()
-
-# =============================================
 # 실시간 알림 시스템
 # =============================================
 ALERT_SOUND = """
@@ -173,7 +158,7 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 스타일
+# 스타일 (서클 화살표 새로고침 + 공지 버튼 완전 삭제)
 # =============================================
 st.markdown("""
 <style>
@@ -183,6 +168,7 @@ h1 { color: #ff3333 !important; text-align: center; font-weight: 900; font-size:
 h1 span.year { color: #fff; font-size: 0.8em; vertical-align: super; }
 h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin-left: 5px; }
 
+/* 투어지도 헤더 */
 .map-header {
     display: flex; 
     justify-content: space-between; 
@@ -195,23 +181,26 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     color: #ff6b6b;
 }
 
+/* 서클 화살표 새로고침 버튼 */
 .refresh-btn {
     background: none; 
-    border: none; 
-    cursor: pointer; 
-    padding: 8px; 
+    border: 2px solid #00c853; 
     border-radius: 50%; 
-    transition: all 0.2s;
+    width: 44px; height: 44px; 
     display: flex; align-items: center; justify-content: center;
-    width: 40px; height: 40px;
+    cursor: pointer; 
+    transition: all 0.3s;
+    padding: 0;
 }
 .refresh-btn:hover {
-    background: rgba(0,200,83,0.2); 
-    transform: scale(1.1);
+    background: rgba(0,200,83,0.1); 
+    border-color: #00b140;
+    transform: scale(1.15);
 }
 .refresh-icon {
     width: 24px; height: 24px; 
-    animation: rotate 2s linear infinite paused;
+    animation: rotate 1.5s linear infinite paused;
+    stroke: #00c853;
 }
 .refresh-btn:hover .refresh-icon {
     animation-play-state: running;
@@ -221,39 +210,31 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
     to { transform: rotate(360deg); }
 }
 
+/* 공지 카드 (버튼 완전 삭제) */
 .notice-card { 
-    background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:15px; margin:10px 0; 
-    display:flex; justify-content:space-between; align-items:center; 
-    gap: 10px;
+    background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:18px; margin:12px 0; 
+    display: block;
 }
-.notice-title { color:#ff6b6b; font-weight:bold; flex: 1; }
-.notice-time { color:#888; font-size:0.8em; margin-top: 4px; }
-.notice-buttons { display: flex; gap: 8px; align-items: center; }
-.btn-view, .btn-del { 
-    background: #ff6b6b; color:white; border:none; padding:8px 14px; border-radius:6px; 
-    cursor:pointer; font-size:0.9em; transition: all 0.2s; white-space: nowrap;
-}
-.btn-del { background: #d32f2f !important; }
-.btn-view:hover, .btn-del:hover { transform: scale(1.05); opacity: 0.9; }
+.notice-title { color:#ff6b6b; font-weight:bold; font-size: 1.1em; }
+.notice-time { color:#888; font-size:0.85em; margin-top: 6px; }
 
+/* 모바일 반응형 */
 @media (max-width: 768px) {
-    .map-header { flex-direction: row; justify-content: space-between; padding: 0 10px; }
+    .map-header { padding: 0 12px; }
     .map-title { font-size: 1.3em; }
-    .refresh-btn { width: 36px; height: 36px; }
-    .notice-card { flex-direction: column; text-align: center; gap: 10px; }
-    .notice-buttons { justify-content: center; width: 100%; }
-    .btn-view, .btn-del { flex: 1; max-width: 120px; }
+    .refresh-btn { width: 40px; height: 40px; }
+    .notice-card { padding: 15px; margin: 8px 0; }
 }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown(f"<h1>{_['title']} <span class='year'>2025</span><span class='subtitle'>마하라스트라</span> 🎄</h1>", unsafe_allow_html=True)
 
-# 구글 새로고침 SVG
+# 서클 화살표 SVG (구글 스타일)
 REFRESH_SVG = """
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#00c853" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <polyline points="23,4 23,10 17,10"></polyline>
-  <path d="M20.49,15A17.28,17.28,0,0,0,15.36,3.29L16.51,4.44a9,9,0,1,1-2.9,16.28A9,9,0,0,1,2.52,9"></path>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M23 4v6h-6"></path>
+  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
 </svg>
 """
 
@@ -280,39 +261,17 @@ def distance_km(p1, p2):
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
-# 공통 공지현황 UI (컬럼 0 금지)
+# 공지현황 UI (버튼 완전 삭제)
 # =============================================
-def render_notice_list(is_admin=False):
+def render_notice_list():
     if st.session_state.notice_data:
         for n in st.session_state.notice_data:
-            uid = f"{'admin' if is_admin else 'user'}_notice_{n['id']}_{uuid.uuid4().hex[:8]}"
-            
             st.markdown(f"""
             <div class="notice-card">
-                <div style="flex: 1;">
-                    <div class="notice-title">📢 {n['title']}</div>
-                    <div class="notice-time">{n['timestamp'][:16].replace('T',' ')}</div>
-                </div>
-                <div class="notice-buttons">
-                    <button class="btn-view" onclick="document.getElementById('{uid}_view').click(); return false;">보기</button>
-                    {'<button class="btn-del" onclick="document.getElementById(\'{uid}_del\').click(); return false;">삭제</button>' if is_admin else ''}
-                </div>
+                <div class="notice-title">📢 {n['title']}</div>
+                <div class="notice-time">{n['timestamp'][:16].replace('T',' ')}</div>
             </div>
             """, unsafe_allow_html=True)
-            
-            if is_admin:
-                col1, col2 = st.columns([1, 1])
-                with col1:
-                    if st.button(" ", key=f"{uid}_view"):
-                        open_notice(n['id'])
-                with col2:
-                    if st.button(" ", key=f"{uid}_del"):
-                        delete_notice(n['id'])
-            else:
-                col1, _ = st.columns([1, 10])
-                with col1:
-                    if st.button(" ", key=f"{uid}_view"):
-                        open_notice(n['id'])
     else:
         st.write("공지가 없습니다.")
 
@@ -320,6 +279,7 @@ def render_notice_list(is_admin=False):
 # 일반 사용자 모드
 # =============================================
 if not st.session_state.admin:
+    # 투어지도 + 서클 화살표 새로고침
     st.markdown(f"""
     <div class="map-header">
         <div class="map-title">투어지도</div>
@@ -363,24 +323,8 @@ if not st.session_state.admin:
         st_folium(m, width=900, height=600)
 
     st.markdown("---")
-    with st.expander("공지현황", expanded=st.session_state.show_full_notice is not None):
-        render_notice_list(is_admin=False)
-
-    if st.session_state.show_full_notice:
-        notice = next((x for x in st.session_state.notice_data if x["id"] == st.session_state.show_full_notice), None)
-        if notice:
-            st.markdown(f"""
-            <div style="background:rgba(10,10,15,0.95);padding:25px;border-radius:15px;border:2px solid #ff1744;margin:20px 0;box-shadow:0 0 30px rgba(255,23,68,0.4);">
-                <h3 style="color:#ff6b6b;margin-top:0;">📢 {notice['title']}</h3>
-                <p style="white-space:pre-line;line-height:1.8;">{notice['content']}</p>
-                <small style="color:#888;">{notice['timestamp'][:16].replace('T',' ')}</small>
-            </div>
-            """, unsafe_allow_html=True)
-            if 'file' in notice:
-                st.image(base64.b64decode(notice['file']), use_column_width=True)
-            if st.button("닫기"):
-                st.session_state.show_full_notice = None
-                st.rerun()
+    with st.expander("공지현황", expanded=False):
+        render_notice_list()
 
     st.stop()
 
@@ -450,21 +394,5 @@ if st.button("등록") and title:
     st.rerun()
 
 st.markdown("---")
-with st.expander("공지현황", expanded=st.session_state.show_full_notice is not None):
-    render_notice_list(is_admin=True)
-
-if st.session_state.show_full_notice:
-    notice = next((x for x in st.session_state.notice_data if x["id"] == st.session_state.show_full_notice), None)
-    if notice:
-        st.markdown(f"""
-        <div style="background:rgba(10,10,15,0.95);padding:25px;border-radius:15px;border:2px solid #ff1744;margin:20px 0;box-shadow:0 0 30px rgba(255,23,68,0.4);">
-            <h3 style="color:#ff6b6b;margin-top:0;">📢 {notice['title']}</h3>
-            <p style="white-space:pre-line;line-height:1.8;">{notice['content']}</p>
-            <small style="color:#888;">{notice['timestamp'][:16].replace('T',' ')}</small>
-        </div>
-        """, unsafe_allow_html=True)
-        if 'file' in notice:
-            st.image(base64.b64decode(notice['file']), use_column_width=True)
-        if st.button("닫기"):
-            st.session_state.show_full_notice = None
-            st.rerun()
+with st.expander("공지현황", expanded=False):
+    render_notice_list()
