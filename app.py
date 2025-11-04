@@ -77,7 +77,20 @@ LANG = {
            "total": "총 거리 및 소요시간", "already_added": "이미 추가된 도시입니다.", "lang_name": "한국어",
            "notice_title": "공지 제목", "notice_content": "공지 내용", "notice_button": "공지", "new_notice": "새로운 공지",
            "notice_save": "공지 추가", "upload_file": "사진/파일 업로드"},
-    # (en, hi 생략 – 필요 시 추가)
+    "en": {"title": "Cantata Tour", "select_city": "Select City", "add_city": "Add",
+           "register": "Register", "venue": "Venue", "seats": "Seats", "indoor": "Indoor", "outdoor": "Outdoor",
+           "google": "Google Maps Link", "notes": "Notes", "tour_map": "Tour Map", "tour_route": "Route",
+           "password": "Admin Password", "login": "Log in", "logout": "Log out", "date": "Date",
+           "total": "Total Distance & Time", "already_added": "City already added.", "lang_name": "English",
+           "notice_title": "Notice Title", "notice_content": "Notice Content", "notice_button": "Notice", "new_notice": "New Notice",
+           "notice_save": "Add Notice", "upload_file": "Upload File/Photo"},
+    "hi": {"title": "कांटाटा टूर", "select_city": "शहर चुनें", "add_city": "जोड़ें",
+           "register": "पंजीकरण करें", "venue": "स्थान", "seats": "सीटें", "indoor": "इनडोर", "outdoor": "आउटडोर",
+           "google": "गूगल मानचित्र लिंक", "notes": "टिप्पणी", "tour_map": "टूर मानचित्र", "tour_route": "मार्ग",
+           "password": "व्यवस्थापक पासवर्ड", "login": "लॉगिन", "logout": "लॉगआउट", "date": "दिनांक",
+           "total": "कुल दूरी और समय", "already_added": "यह शहर पहले से जोड़ा गया है।", "lang_name": "हिन्दी",
+           "notice_title": "सूचना शीर्षक", "notice_content": "सूचना सामग्री", "notice_button": "सूचना", "new_notice": "नई सूचना",
+           "notice_save": "सूचना जोड़ें", "upload_file": "फ़ाइल/तस्वीर अपलोड करें"}
 }
 
 # =============================================
@@ -115,7 +128,7 @@ with st.sidebar:
     if not st.session_state.admin:
         pw = st.text_input(_["password"], type="password")
         if st.button(_["login"]):
-            if pw == "0000":  # 비번 변경
+            if pw == "0000":
                 st.session_state.admin = True
                 st.rerun()
             else:
@@ -137,9 +150,10 @@ h1 span.subtitle { color: #cccccc; font-size: 0.45em; vertical-align: super; mar
 #notice-button { position: absolute; top: 10px; right: 10px; z-index: 1000; background: linear-gradient(90deg, #ff3b3b, #228B22); color: white; padding: 10px 15px; border-radius: 8px; font-weight: 700; cursor: pointer; }
 #notice-button.neon { animation: neon 1.5s infinite alternate; }
 @keyframes neon { from { box-shadow: 0 0 5px #ff00ff; } to { box-shadow: 0 0 20px #ff00ff; } }
-#notice-list { position: fixed; top: 60px; right: 10px; z-index: 1000; background: #0a0a_run; padding: 10px; border-radius: 8px; max-height: 70vh; overflow-y: auto; box-shadow: 0 0 10px #ff4d4d; }
+#notice-list { position: fixed; top: 60px; right: 10px; z-index: 1000; background: #0a0a0f; padding: 10px; border-radius: 8px; max-height: 70vh; overflow-y: auto; box-shadow: 0 0 10px #ff4d4d; }
 #full-screen-notice { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; align-items: center; justify-content: center; }
 #full-screen-notice-content { background: #228B22; padding: 30px; border-radius: 15px; max-width: 90%; max-height: 90%; overflow-y: auto; }
+#close-button { position: fixed; bottom: 20px; right: 20px; z-index: 10001; background: rgba(255, 255, 255, 0.1); border: none; color: #fff; padding: 10px; border-radius: 50%; font-size: 20px; cursor: pointer; }
 .distance-label { background: rgba(255, 0, 0, 0.7); color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap; transform: rotate(-30deg); }
 </style>
 """, unsafe_allow_html=True)
@@ -217,7 +231,7 @@ if not st.session_state.admin:
                 st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # 전체 화면 공지 (원터치 닫힘)
+    # 전체 화면 공지 (원터치 닫힘 + 투명 닫기 버튼)
     if st.session_state.show_full_notice is not None:
         notice = next((n for n in st.session_state.notice_data if n["id"] == st.session_state.show_full_notice), None)
         if notice:
@@ -230,6 +244,7 @@ if not st.session_state.admin:
                     <h3>{notice['title']}</h3>
                     <div>{content}</div>
                 </div>
+                <button id="close-button" onclick="document.getElementById('close_full_notice_hidden').click();">✖</button>
             </div>
             """, unsafe_allow_html=True)
             if st.button("", key="close_full_notice_hidden"):
@@ -368,19 +383,20 @@ if st.session_state.admin:
 
         st_folium(m, width=900, height=650)
 
-        # 오른쪽 최신순 공지 리스트 + X 삭제
-        st.markdown("---")
-        st.subheader("최신순 공지")
-        if st.session_state.notice_data:
-            for notice in st.session_state.notice_data:
-                col1, col2 = st.columns([9, 1])
-                with col1:
-                    st.write(f"**{notice['title']}**")
-                with col2:
-                    if st.button("X", key=f"delete_{notice['id']}"):
-                        st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice["id"]]
-                        save_notice_data(st.session_state.notice_data)
-                        st.success("공지 삭제 완료")
-                        st.rerun()
-        else:
-            st.write("공지가 없습니다.")
+        # 공지 현황 창 (오른쪽)
+        with st.container():
+            st.markdown("---")
+            st.subheader("공지 현황")
+            if st.session_state.notice_data:
+                for notice in st.session_state.notice_data:
+                    col1, col2 = st.columns([9, 1])
+                    with col1:
+                        st.write(f"**{notice['title']}**")
+                    with col2:
+                        if st.button("X", key=f"delete_notice_{notice['id']}"):
+                            st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice["id"]]
+                            save_notice_data(st.session_state.notice_data)
+                            st.success("공지 삭제 완료")
+                            st.rerun()
+            else:
+                st.write("공지가 없습니다.")
