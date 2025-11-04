@@ -33,7 +33,7 @@ if "show_full_notice" not in st.session_state:
 if "show_popup" not in st.session_state:
     st.session_state.show_popup = True
 if "exp_state" not in st.session_state:
-    st.session_state.exp_state = {}
+    st.session_state.exp_state = {}  # 기본 닫힘
 
 # =============================================
 # 데이터 저장
@@ -166,9 +166,8 @@ st.markdown(f"<h1>{_['title']} <span class='year'>2025</span><span class='subtit
 # 일반 모드
 # =============================================
 if not st.session_state.admin:
-    # 공지 버튼 (새로운 공지 시만 "새로운 공지")
+    # 공지 버튼
     button_label = f"{_['new_notice']} 📢" if st.session_state.new_notice else _["notice_button"]
-    neon_class = "neon" if st.session_state.new_notice else ""
     if st.button(button_label, key="notice_btn"):
         st.session_state.show_notice_list = True
         st.session_state.new_notice = False
@@ -219,7 +218,7 @@ if not st.session_state.admin:
 
     st_folium(m, width=900, height=650)
 
-    # 공지 리스트 (지도 위 고정, "이전 공지" 제거)
+    # 공지 리스트
     if st.session_state.show_notice_list:
         st.markdown(f"""
         <div id="notice-list">
@@ -231,24 +230,25 @@ if not st.session_state.admin:
                 st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # 전체 화면 공지 (전체 클릭 시 닫힘)
+    # 전체 화면 공지 (원터치 닫힘 – 버튼 없음)
     if st.session_state.show_full_notice is not None:
         notice = next((n for n in st.session_state.notice_data if n["id"] == st.session_state.show_full_notice), None)
         if notice:
             content = notice["content"]
             if "file" in notice and notice["file"]:
                 content += f"<br><img src='data:image/png;base64,{notice['file']}' style='max-width:100%;'>"
+            # 전체 클릭 시 닫힘
+            if st.button("", key="close_full_notice_anywhere"):
+                st.session_state.show_full_notice = None
+                st.rerun()
             st.markdown(f"""
-            <div id="full-screen-notice" onclick="document.getElementById('close_full_notice_hidden').click();">
+            <div id="full-screen-notice" onclick="document.getElementById('close_full_notice_anywhere').click();">
                 <div id="full-screen-notice-content" onclick="event.stopPropagation();">
                     <h3>{notice['title']}</h3>
                     <div>{content}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("", key="close_full_notice_hidden"):
-                st.session_state.show_full_notice = None
-                st.rerun()
 
     st.stop()
 
@@ -256,6 +256,7 @@ if not st.session_state.admin:
 # 관리자 모드
 # =============================================
 if st.session_state.admin:
+    # 공지 입력 (최상단)
     st.markdown("---")
     st.subheader("공지사항 입력")
     notice_title = st.text_input(_["notice_title"])
@@ -290,6 +291,7 @@ if st.session_state.admin:
             if st.button(_["add_city"]):
                 if selected_city not in st.session_state.route:
                     st.session_state.route.append(selected_city)
+                    st.session_state.exp_state[selected_city] = False  # 추가 시 닫힘
                     st.rerun()
                 else:
                     st.warning(_["already_added"])
@@ -301,7 +303,7 @@ if st.session_state.admin:
         total_hours = 0.0
 
         for i, c in enumerate(st.session_state.route):
-            expanded = st.session_state.exp_state.get(c, True)
+            expanded = st.session_state.exp_state.get(c, False)  # 기본 닫힘
             with st.expander(f"{c}", expanded=expanded):
                 today = datetime.now().date()
                 date = st.date_input(_["date"], value=today, min_value=today, key=f"date_{c}")
@@ -318,8 +320,7 @@ if st.session_state.admin:
                     }
                     save_venue_data(st.session_state.venue_data)
                     st.success("저장되었습니다.")
-                    for city in st.session_state.route:
-                        st.session_state.exp_state[city] = False
+                    st.session_state.exp_state[c] = False  # 저장 후 닫힘
                     st.rerun()
 
             if i > 0:
