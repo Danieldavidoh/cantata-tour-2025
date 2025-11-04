@@ -266,15 +266,16 @@ def delete_notice(notice_id):
 def render_notice_list(show_delete=False):
     if st.session_state.notice_data:
         for n in st.session_state.notice_data:
-            col1, col2 = st.columns([6, 1]) if show_delete else st.columns([1])
-            with col1:
-                st.markdown(f"**📢 {n['title']}**")
-                st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
-            if show_delete:
-                with col2:
-                    unique_key = f"del_{n['id']}_{uuid.uuid4().hex[:8]}"
-                    if st.button("삭제", key=unique_key):
-                        delete_notice(n['id'])
+            with st.container():
+                col1, col2 = st.columns([6, 1]) if show_delete else st.columns([1])
+                with col1:
+                    st.write(f"**📢 {n['title']}**")
+                    st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
+                if show_delete:
+                    with col2:
+                        unique_key = f"del_{n['id']}_{uuid.uuid4().hex[:8]}"
+                        if st.button(_["delete"], key=unique_key):
+                            delete_notice(n['id'])
     else:
         st.write("등록된 공지가 없습니다.")
 
