@@ -1,0 +1,12 @@
+{
+  "name": "Cantata Tour 2025",
+  "short_name": "Cantata",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#ff1744",
+  "icons": [
+    { "src": "https://via.placeholder.com/192x192/ff1744/ffffff?text=🎄", "sizes": "192x192", "type": "image/png" },
+    { "src": "https://via.placeholder.com/512x512/ff1744/ffffff?text=🎄", "sizes": "512x512", "type": "image/png" }
+  ]
+}
