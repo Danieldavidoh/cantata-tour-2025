@@ -211,13 +211,12 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 
 .notice-list-item {
     background:#1a1a1a; border:2px solid #333; border-radius:12px; padding:12px; margin:8px 0; 
-    display: flex; justify-content: space-between; align-items: center;
 }
 .notice-list-title { color:#ff6b6b; font-weight:bold; font-size: 1.1em; }
 .notice-list-time { color:#888; font-size:0.85em; }
 .delete-btn {
     background: #d32f2f; color: white; border: none; padding: 6px 12px; border-radius: 6px;
-    font-size: 0.9em; cursor: pointer; transition: all 0.2s;
+    font-size: 0.9em; cursor: pointer; transition: all 0.2s; margin-top: 8px;
 }
 .delete-btn:hover { background: #b71c1c; transform: scale(1.05); }
 
@@ -228,8 +227,6 @@ h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin
 @media (max-width: 768px) {
     .notice-input-header { flex-direction: column; align-items: flex-start; }
     .register-btn, .refresh-btn { margin-top: 10px; }
-    .notice-list-item { flex-direction: column; align-items: flex-start; }
-    .delete-btn { margin-top: 8px; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -284,8 +281,22 @@ def delete_notice(notice_id):
 def render_notice_list(show_delete=False):
     if st.session_state.notice_data:
         for n in st.session_state.notice_data:
-            col1, col2 = st.columns([5, 1] if show_delete else [1, 0])
-            with col1:
+            if show_delete:
+                col1, col2 = st.columns([5, 1])
+                with col1:
+                    st.markdown(f"""
+                    <div class="notice-list-item">
+                        <div>
+                            <div class="notice-list-title">📢 {n['title']}</div>
+                            <div class="notice-list-time">{n['timestamp'][:16].replace('T',' ')}</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with col2:
+                    unique_key = f"del_{n['id']}_{uuid.uuid4().hex[:8]}"
+                    if st.button(_["delete"], key=unique_key):
+                        delete_notice(n['id'])
+            else:
                 st.markdown(f"""
                 <div class="notice-list-item">
                     <div>
@@ -294,11 +305,6 @@ def render_notice_list(show_delete=False):
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-            if show_delete:
-                with col2:
-                    unique_key = f"del_{n['id']}_{uuid.uuid4().hex[:8]}"
-                    if st.button(_["delete"], key=unique_key):
-                        delete_notice(n['id'])
     else:
         st.write("등록된 공지가 없습니다.")
 
