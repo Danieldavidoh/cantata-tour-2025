@@ -131,6 +131,7 @@ def add_notice(title, content, image_file=None, upload_file=None):
     save_json(NOTICE_FILE, data)
     st.session_state.last_update = os.path.getmtime(NOTICE_FILE)
     st.toast("✅ 공지가 등록되었습니다.")
+    st.rerun()  # ✅ 등록 후 바로 새로고침
 
 def delete_notice(notice_id):
     data = load_json(NOTICE_FILE)
@@ -144,7 +145,7 @@ def delete_notice(notice_id):
     save_json(NOTICE_FILE, data)
     st.session_state.last_update = os.path.getmtime(NOTICE_FILE)
     st.toast("🗑️ 공지가 삭제되었습니다.")
-    st.rerun()  # ✅ 삭제 시 바로 새로고침
+    st.rerun()  # ✅ 삭제 후 바로 새로고침
 
 # =============================================
 # 공지 리스트
@@ -184,22 +185,17 @@ def render_map():
     st_folium(m, width=900, height=550)
 
 # =============================================
-# 자동 새로고침 (일반 사용자만)
+# 일반 사용자 자동 새로고침 (10초)
 # =============================================
 if not st.session_state.admin:
-    import streamlit.runtime.scriptrunner as stsr
-    from streamlit.runtime.scriptrunner import add_script_run_ctx
-    from streamlit.runtime.scriptrunner import get_script_run_ctx
-    from streamlit.runtime.legacy_caching import caching
-
-    st_autorefresh = st.experimental_rerun  # 대체: 10초마다 실행
     if os.path.exists(NOTICE_FILE):
         last_update = os.path.getmtime(NOTICE_FILE)
         if last_update != st.session_state.last_update:
-            st.toast("🔔 새 공지가 등록되었습니다!")
             st.session_state.last_update = last_update
-            st.rerun()
+            st.toast("🔔 새 공지가 등록되었습니다!")
+            st.experimental_rerun()
     time.sleep(10)
+    st.experimental_rerun()
 
 # =============================================
 # 사이드바
@@ -253,7 +249,6 @@ with tab1:
         if submitted:
             if t.strip() and c.strip():
                 add_notice(t, c, img, f)
-                st.rerun()  # ✅ 폼 바깥 rerun → 즉시 갱신됨
             else:
                 st.warning(_["warning"])
         render_notice_list(show_delete=True)
