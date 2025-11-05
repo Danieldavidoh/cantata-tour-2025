@@ -136,7 +136,7 @@ def delete_notice(notice_id):
     st.rerun()
 
 # =============================================
-# 공지 리스트 (먼저 정의!)
+# 공지 리스트
 # =============================================
 def render_notice_list(show_delete=False):
     data = load_json(NOTICE_FILE)
@@ -155,8 +155,30 @@ def render_notice_list(show_delete=False):
                     delete_notice(n["id"])
 
 # =============================================
-# 도시/좌표 정의
+# 도시/좌표 정의 (알파벳 순 정렬 + 공연없음 제거)
 # =============================================
+raw_cities = [
+    "Mumbai","Pune","Nagpur","Nashik","Thane","Aurangabad","Solapur","Kolhapur",
+    "Amravati","Jalgaon","Akola","Latur","Ahmednagar","Dhule","Chandrapur","Parbhani",
+    "Jalna","Bhusawal","Satara","Beed","Yavatmal","Gondia","Wardha","Nandurbar","Osmanabad",
+    "Hingoli","Buldhana","Washim","Gadchiroli","Sangli","Ratnagiri","Sindhudurg","Nanded",
+    "Palghar","Raigad","Baramati","Karad","Pandharpur","Malegaon","Ichalkaranji","Bhiwandi",
+    "Ambarnath","Ulhasnagar","Panvel","Kalyan","Vasai","Virar","Mira-Bhayandar","Khopoli",
+    "Alibag","Boisar","Dombivli","Badlapur","Talegaon","Chiplun","Mahad","Roha","Pen",
+    "Murbad","Khed","Satana","Sinnar","Shirdi","Sangamner","Manmad","Shahada","Bodwad",
+    "Raver","Malkapur","Nandura","Shegaon","Daryapur","Mangrulpir","Pusad","Umarkhed",
+    "Wani","Ballarpur","Bhandara","Tumsar","Deoli","Selu","Pathri","Gangakhed","Ambajogai",
+    "Majalgaon","Parli","Nilanga","Ausa","Udgir","Loha","Hadgaon","Kinwat","Pusad","Mehkar",
+    "Chikhli","Deulgaon Raja","Lonar","Risod","Malegaon Camp","Ozar","Lasalgaon","Yeola",
+    "Trimbak","Surgana","Dahanu","Jawhar","Talasari","Vikramgad","Mokhada","Khalapur",
+    "Mhasla","Shrivardhan","Dapoli","Guhagar","Lanja","Rajapur","Deogad","Kankavli",
+    "Kudal","Sawantwadi","Dodamarg","Vita","Khanapur","Islampur","Tasgaon","Miraj","Uran",
+    "Murbad","Karjat","Ambegaon","Junnar","Rajgurunagar","Daund","Indapur","Karmala","Barshi",
+    "Madha","Mohol","Malshiras","Akkalkot","Phaltan","Patan","Khatav","Koregaon","Man","Wai"
+]
+
+CITIES = sorted(set(raw_cities))  # 중복 제거 + 알파벳 정렬
+
 coords = {
     "Mumbai": (19.07, 72.88), "Pune": (18.52, 73.86), "Nagpur": (21.15, 79.08), "Nashik": (20.00, 73.79),
     "Thane": (19.22, 72.98), "Aurangabad": (19.88, 75.34), "Solapur": (17.67, 75.91), "Amravati": (20.93, 77.75),
@@ -231,28 +253,7 @@ with tab1:
 # 투어 경로 탭
 # =============================================
 with tab2:
-    # 도시 리스트
-    CITIES = [
-        "공연없음","Mumbai","Pune","Nagpur","Nashik","Thane","Aurangabad","Solapur","Kolhapur",
-        "Amravati","Jalgaon","Akola","Latur","Ahmednagar","Dhule","Chandrapur","Parbhani",
-        "Jalna","Bhusawal","Satara","Beed","Yavatmal","Gondia","Wardha","Nandurbar","Osmanabad",
-        "Hingoli","Buldhana","Washim","Gadchiroli","Sangli","Ratnagiri","Sindhudurg","Nanded",
-        "Palghar","Raigad","Baramati","Karad","Pandharpur","Malegaon","Ichalkaranji","Bhiwandi",
-        "Ambarnath","Ulhasnagar","Panvel","Kalyan","Vasai","Virar","Mira-Bhayandar","Khopoli",
-        "Alibag","Boisar","Dombivli","Badlapur","Talegaon","Chiplun","Mahad","Roha","Pen",
-        "Murbad","Khed","Satana","Sinnar","Shirdi","Sangamner","Manmad","Shahada","Bodwad",
-        "Raver","Malkapur","Nandura","Shegaon","Daryapur","Mangrulpir","Pusad","Umarkhed",
-        "Wani","Ballarpur","Bhandara","Tumsar","Deoli","Selu","Pathri","Gangakhed","Ambajogai",
-        "Majalgaon","Parli","Nilanga","Ausa","Udgir","Loha","Hadgaon","Kinwat","Pusad","Mehkar",
-        "Chikhli","Deulgaon Raja","Lonar","Risod","Malegaon Camp","Ozar","Lasalgaon","Yeola",
-        "Trimbak","Surgana","Dahanu","Jawhar","Talasari","Vikramgad","Mokhada","Khalapur",
-        "Mhasla","Shrivardhan","Dapoli","Guhagar","Lanja","Rajapur","Deogad","Kankavli",
-        "Kudal","Sawantwadi","Dodamarg","Vita","Khanapur","Islampur","Tasgaon","Miraj","Uran",
-        "Murbad","Karjat","Ambegaon","Junnar","Rajgurunagar","Daund","Indapur","Karmala","Barshi",
-        "Madha","Mohol","Malshiras","Akkalkot","Phaltan","Patan","Khatav","Koregaon","Man","Wai"
-    ]
-
-    # 관리자 전용 도시 추가
+    # 관리자 전용 도시 추가 (공연없음 제거 + 알파벳 정렬)
     if st.session_state.admin:
         with st.expander("도시 추가", expanded=False):
             st.markdown("#### 공연 도시 입력")
@@ -266,9 +267,7 @@ with tab2:
             notes = st.text_area(_["special_notes"])
             indoor_outdoor = st.radio("형태", [_["indoor"], _["outdoor"]], horizontal=True)
             if st.button(_["register"], key="register_city_main"):
-                if selected_city == "공연없음":
-                    st.warning("도시를 선택해주세요.")
-                elif not venue_input:
+                if not venue_input:
                     st.error(_["enter_venue_name"])
                 else:
                     if selected_city not in st.session_state.route:
@@ -285,7 +284,7 @@ with tab2:
                     st.success(_["venue_registered"])
                     st.rerun()
 
-    # 투어 경로 표시
+    # 투어 경로 표시 (이전 단계 기준)
     st.subheader(_["tour_route"])
     for city in st.session_state.route:
         venues = st.session_state.venues.get(city, [])
@@ -302,7 +301,7 @@ with tab2:
                     if v["Google Maps Link"].startswith("http"):
                         st.markdown(f'<div style="text-align:right">[자동차]({v["Google Maps Link"]})</div>', unsafe_allow_html=True)
 
-    # 지도 (툴팁 제거 + 말풍선 넓게)
+    # 지도 (이전 단계 기준)
     st.subheader("Tour Map")
     if st.session_state.route:
         center = (19.75, 75.71)
@@ -327,7 +326,7 @@ with tab2:
                 color="#90EE90",
                 fill_color="#8B0000",
                 popup=folium.Popup(popup_html, max_width=450),
-                tooltip=None  # 툴팁 제거
+                tooltip=None
             ).add_to(m)
         if len(points) > 1:
             folium.PolyLine(points, color="red", weight=4).add_to(m)
