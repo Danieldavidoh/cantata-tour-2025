@@ -7,7 +7,6 @@ import json
 import os
 import uuid
 import base64
-import time
 
 # =============================================
 # 기본 설정
@@ -17,6 +16,9 @@ st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 NOTICE_FILE = "notice.json"
 UPLOAD_DIR = "uploads"
 
+# =============================================
+# 폴더 준비
+# =============================================
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # =============================================
@@ -130,20 +132,8 @@ if "notice_data" not in st.session_state:
     st.session_state.notice_data = load_json(NOTICE_FILE)
 if "last_notice_count" not in st.session_state:
     st.session_state.last_notice_count = len(st.session_state.notice_data)
-if "last_modified" not in st.session_state:
-    st.session_state.last_modified = os.path.getmtime(NOTICE_FILE) if os.path.exists(NOTICE_FILE) else 0
 
 _ = LANG[st.session_state.lang]
-
-# =============================================
-# 자동 새로고침 (3초 간격)
-# =============================================
-st.markdown(
-    """
-    <meta http-equiv="refresh" content="3">
-    """,
-    unsafe_allow_html=True
-)
 
 # =============================================
 # 공지 관리 함수
@@ -173,7 +163,6 @@ def add_notice(title, content, image_file=None, upload_file=None):
     st.session_state.notice_data.insert(0, new_notice)
     save_json(NOTICE_FILE, st.session_state.notice_data)
     st.session_state.last_notice_count = len(st.session_state.notice_data)
-    st.session_state.last_modified = os.path.getmtime(NOTICE_FILE)
     st.rerun()
 
 def delete_notice(notice_id):
@@ -186,7 +175,6 @@ def delete_notice(notice_id):
     st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
     save_json(NOTICE_FILE, st.session_state.notice_data)
     st.session_state.last_notice_count = len(st.session_state.notice_data)
-    st.session_state.last_modified = os.path.getmtime(NOTICE_FILE)
     st.rerun()
 
 def render_notice_list(show_delete=False):
@@ -274,13 +262,11 @@ with st.sidebar:
 st.markdown(f"# {_['title']} 🎄")
 st.caption(_['caption'])
 
-# 파일 수정시간을 감시하여 공지 변경 감지
-if os.path.exists(NOTICE_FILE):
-    current_mtime = os.path.getmtime(NOTICE_FILE)
-    if current_mtime != st.session_state.last_modified:
-        st.toast("🔔 새 공지가 등록되었습니다!", icon="📢")
-        st.session_state.notice_data = load_json(NOTICE_FILE)
-        st.session_state.last_modified = current_mtime
+# 새로운 공지 감지 시 알림
+current_count = len(load_json(NOTICE_FILE))
+if current_count > st.session_state.last_notice_count:
+    st.toast("🔔 새 공지가 등록되었습니다!")
+    st.session_state.last_notice_count = current_count
 
 tab1, tab2 = st.tabs([_['tab_notice'], _['tab_map']])
 
