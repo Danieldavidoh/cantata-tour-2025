@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 from datetime import datetime
 import folium
@@ -26,11 +25,16 @@ def load_json(filename):
         with open(filename, "r", encoding="utf-8") as f:
             try:
                 data = json.load(f)
+                # ✅ 누락 필드 자동 보정
                 for n in data:
-                    n.setdefault("id", str(uuid.uuid4()))
-                    n.setdefault("title", "(제목 없음)")
-                    n.setdefault("content", "")
-                    n.setdefault("date", datetime.now().strftime("%Y-%m-%d %H:%M"))
+                    if "id" not in n:
+                        n["id"] = str(uuid.uuid4())
+                    if "title" not in n:
+                        n["title"] = "(제목 없음)"
+                    if "content" not in n:
+                        n["content"] = ""
+                    if "date" not in n:
+                        n["date"] = datetime.now().strftime("%Y-%m-%d %H:%M")
                 return data
             except json.JSONDecodeError:
                 return []
@@ -46,10 +50,11 @@ def get_file_download_link(file_path, label):
     with open(file_path, "rb") as f:
         data = f.read()
     b64 = base64.b64encode(data).decode()
-    return f'<a href="data:file/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
+    href = f'<a href="data:file/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
+    return href
 
 # =============================================
-# 다국어 사전
+# 다국어
 # =============================================
 LANG = {
     "ko": {
@@ -68,50 +73,21 @@ LANG = {
         "no_notice": "등록된 공지가 없습니다.",
         "delete": "삭제",
         "delete_confirm": "정말 이 공지를 삭제하시겠습니까?",
-        "confirm_yes": "예, 삭제합니다",
-        "confirm_no": "취소",
+        "confirm_yes": "✅ 예, 삭제합니다",
+        "confirm_no": "❌ 취소",
         "map_title": "경로 보기",
         "admin_login": "관리자 로그인",
         "password": "비밀번호",
         "login": "로그인",
         "logout": "로그아웃",
         "wrong_pw": "비밀번호가 틀렸습니다.",
-        "file_download": "파일 다운로드",
-        "new_notice_alert": "새로운 공지가 등록되었습니다!",
-        "lang_select": "언어 선택"
-    },
-    "en": {
-        "title": "Cantata Tour 2025",
-        "caption": "Maharashtra Tour Management System",
-        "tab_notice": "Notice Board",
-        "tab_map": "Tour Route",
-        "add_notice": "Add New Notice",
-        "title_label": "Title",
-        "content_label": "Content",
-        "upload_image": "Upload Image (optional)",
-        "upload_file": "Upload File (optional)",
-        "submit": "Submit",
-        "warning": "Please enter both title and content.",
-        "notice_list": "Notice List",
-        "no_notice": "No notices available.",
-        "delete": "Delete",
-        "delete_confirm": "Are you sure you want to delete this notice?",
-        "confirm_yes": "Yes, delete",
-        "confirm_no": "Cancel",
-        "map_title": "View Route",
-        "admin_login": "Admin Login",
-        "password": "Password",
-        "login": "Login",
-        "logout": "Logout",
-        "wrong_pw": "Incorrect password.",
-        "file_download": "Download File",
-        "new_notice_alert": "A new notice has been posted!",
-        "lang_select": "Language"
+        "lang_select": "언어 선택",
+        "file_download": "📎 파일 다운로드"
     }
 }
 
 # =============================================
-# 세션 초기화 (가장 먼저!)
+# 세션 초기화
 # =============================================
 if "admin" not in st.session_state:
     st.session_state.admin = False
@@ -121,16 +97,8 @@ if "notice_data" not in st.session_state:
     st.session_state.notice_data = load_json(NOTICE_FILE)
 if "delete_target" not in st.session_state:
     st.session_state.delete_target = None
-if "last_notice_count" not in st.session_state:
-    st.session_state.last_notice_count = len(st.session_state.notice_data)
-if "show_new_alert" not in st.session_state:
-    st.session_state.show_new_alert = False
 
-# =============================================
-# 번역 함수 정의 (세션 후 즉시!)
-# =============================================
-def _(key):
-    return LANG[st.session_state.lang].get(key, key)
+_ = LANG[st.session_state.lang]
 
 # =============================================
 # 공지 관리
@@ -159,51 +127,50 @@ def add_notice(title, content, image_file=None, upload_file=None):
 
     st.session_state.notice_data.insert(0, new_notice)
     save_json(NOTICE_FILE, st.session_state.notice_data)
-    st.session_state.last_notice_count = len(st.session_state.notice_data)
-    st.session_state.show_new_alert = True
     st.rerun()
 
 def delete_notice(notice_id):
     st.session_state.notice_data = [n for n in st.session_state.notice_data if n.get("id") != notice_id]
     save_json(NOTICE_FILE, st.session_state.notice_data)
     st.session_state.delete_target = None
-    st.session_state.last_notice_count = len(st.session_state.notice_data)
     st.rerun()
 
 def render_notice_list():
-    st.subheader(_("notice_list"))
+    st.subheader(_["notice_list"])
 
     if not st.session_state.notice_data:
-        st.info(_("no_notice"))
+        st.info(_["no_notice"])
         return
 
     for idx, n in enumerate(st.session_state.notice_data):
+        # ✅ get()으로 안전하게 키 접근
         title = n.get("title", "(제목 없음)")
         date = n.get("date", "?")
         content = n.get("content", "")
         nid = n.get("id", str(uuid.uuid4()))
 
-        with st.expander(f"{date} | {title}"):
+        with st.expander(f"📅 {date} | {title}"):
             st.markdown(content)
 
             if n.get("image") and os.path.exists(n["image"]):
                 st.image(n["image"], use_container_width=True)
 
             if n.get("file") and os.path.exists(n["file"]):
-                st.markdown(get_file_download_link(n["file"], _("file_download")), unsafe_allow_html=True)
+                st.markdown(get_file_download_link(n["file"], _["file_download"]), unsafe_allow_html=True)
 
             if st.session_state.admin:
-                if st.button(f"{_('delete')}", key=f"del_{nid}_{idx}"):
+                if st.button(f"🗑️ {_['delete']}", key=f"del_{nid}_{idx}"):
                     st.session_state.delete_target = nid
 
+    # 삭제 확인 영역
     if st.session_state.delete_target:
-        st.warning(_("delete_confirm"))
+        st.warning(_["delete_confirm"])
         col1, col2 = st.columns(2)
         with col1:
-            if st.button(_("confirm_yes"), key="yes_delete"):
+            if st.button(_["confirm_yes"], key="yes_delete"):
                 delete_notice(st.session_state.delete_target)
         with col2:
-            if st.button(_("confirm_no"), key="cancel_delete"):
+            if st.button(_["confirm_no"], key="cancel_delete"):
                 st.session_state.delete_target = None
                 st.rerun()
 
@@ -211,7 +178,7 @@ def render_notice_list():
 # 지도
 # =============================================
 def render_map():
-    st.subheader(_("map_title"))
+    st.subheader(_["map_title"])
     cities = [
         {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
         {"name": "Pune", "lat": 18.5204, "lon": 73.8567},
@@ -230,75 +197,45 @@ def render_map():
     st_folium(m, width=900, height=550)
 
 # =============================================
-# 사이드바 (언어 + 로그인)
+# 사이드바
 # =============================================
 with st.sidebar:
-    st.markdown("### 언어 / Language")
-    lang_choice = st.selectbox(
-        "언어 선택 / Language",
-        ["ko", "en"],
-        index=0 if st.session_state.lang == "ko" else 1
-    )
-    if lang_choice != st.session_state.lang:
-        st.session_state.lang = lang_choice
-        st.rerun()
-
-    st.markdown(f"### {_( 'admin_login')}")
+    st.markdown(f"### 🔐 {_['admin_login']}")
     if not st.session_state.admin:
-        pw = st.text_input(_("password"), type="password")
-        if st.button(_("login")):
+        pw = st.text_input(_["password"], type="password")
+        if st.button(_["login"]):
             if pw == "0000":
                 st.session_state.admin = True
-                st.success("관리자 모드 ON")
+                st.success("✅ 관리자 모드 ON")
                 st.rerun()
             else:
-                st.error(_("wrong_pw"))
+                st.error(_["wrong_pw"])
     else:
-        st.success("관리자 모드")
-        if st.button(_("logout")):
+        st.success("✅ 관리자 모드")
+        if st.button(_["logout"]):
             st.session_state.admin = False
             st.rerun()
 
 # =============================================
-# 자동 새로고침 (5분 주기) + 알림
+# 메인
 # =============================================
-if not st.session_state.admin:
-    current_time = datetime.now()
-    if not hasattr(st.session_state, 'last_check_time'):
-        st.session_state.last_check_time = current_time
-    if (current_time - st.session_state.last_check_time).total_seconds() > 300:
-        latest_data = load_json(NOTICE_FILE)
-        if len(latest_data) > st.session_state.last_notice_count:
-            st.session_state.show_new_alert = True
-        st.session_state.notice_data = latest_data
-        st.session_state.last_notice_count = len(latest_data)
-        st.session_state.last_check_time = current_time
-        st.rerun()
+st.markdown(f"# {_['title']} 🎄")
+st.caption(_['caption'])
 
-if st.session_state.show_new_alert and not st.session_state.admin:
-    st.toast(_("new_notice_alert"))
-    st.session_state.show_new_alert = False
-
-# =============================================
-# 메인 헤더 (이제 _() 함수 사용 가능!)
-# =============================================
-st.markdown(f"# {_('title')}")
-st.caption(_("caption"))
-
-tab1, tab2 = st.tabs([_('tab_notice'), _('tab_map')])
+tab1, tab2 = st.tabs([_['tab_notice'], _['tab_map']])
 
 with tab1:
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
-            t = st.text_input(_("title_label"))
-            c = st.text_area(_("content_label"))
-            img = st.file_uploader(_("upload_image"), type=["png", "jpg", "jpeg"])
-            f = st.file_uploader(_("upload_file"))
-            if st.form_submit_button(_("submit")):
+            t = st.text_input(_["title_label"])
+            c = st.text_area(_["content_label"])
+            img = st.file_uploader(_["upload_image"], type=["png", "jpg", "jpeg"])
+            f = st.file_uploader(_["upload_file"])
+            if st.form_submit_button(_["submit"]):
                 if t.strip() and c.strip():
                     add_notice(t, c, img, f)
                 else:
-                    st.warning(_("warning"))
+                    st.warning(_["warning"])
     render_notice_list()
 
 with tab2:
