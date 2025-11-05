@@ -50,12 +50,12 @@ def get_file_download_link(file_path, label):
     return href
 
 # =============================================
-# 다국어 사전 (힌디어 포함)
+# 다국어 사전 (마하라스트라로 수정)
 # =============================================
 LANG = {
     "ko": {
         "title": "칸타타 투어 2025",
-        "caption": "마하라스트라 지역 투어 관리 시스템",
+        "caption": "마하라스트라",
         "tab_notice": "공지 관리",
         "tab_map": "투어 경로",
         "add_notice": "새 공지 추가",
@@ -83,7 +83,7 @@ LANG = {
     },
     "en": {
         "title": "Cantata Tour 2025",
-        "caption": "Maharashtra Tour Management System",
+        "caption": "Maharashtra",
         "tab_notice": "Notice Board",
         "tab_map": "Tour Route",
         "add_notice": "Add New Notice",
@@ -111,7 +111,7 @@ LANG = {
     },
     "hi": {
         "title": "कांताता टूर 2025",
-        "caption": "महाराष्ट्र टूर मैनेजमेंट सिस्टम",
+        "caption": "महाराष्ट्र",
         "tab_notice": "सूचना बोर्ड",
         "tab_map": "टूर रूट",
         "add_notice": "नई सूचना जोड़ें",
@@ -255,7 +255,7 @@ def render_map():
         ).add_to(m)
     AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
 
-    # 모바일에서 좌우 100% 너비
+    # 일반 사용자: 모바일에서 좌우 100%
     if st.session_state.admin:
         st_folium(m, width=900, height=550)
     else:
@@ -319,7 +319,7 @@ if len(st.session_state.notice_data) > st.session_state.last_notice_count and no
 st.markdown(f"# {_('title')}")
 st.caption(_("caption"))
 
-tab1, tab2 = st.tabs([_('tab_notice'), _['tab_map']])
+tab1, tab2 = st.tabs([_('tab_notice'), _('tab_map')])
 
 with tab1:
     if st.session_state.admin:
