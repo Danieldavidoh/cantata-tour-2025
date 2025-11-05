@@ -62,6 +62,7 @@ LANG = {
         "notice_list": "공지 목록",
         "no_notice": "등록된 공지가 없습니다.",
         "delete": "삭제",
+        "delete_confirm": "정말 이 공지를 삭제하시겠습니까?",
         "map_title": "경로 보기",
         "admin_login": "관리자 로그인",
         "password": "비밀번호",
@@ -86,6 +87,7 @@ LANG = {
         "notice_list": "Notice List",
         "no_notice": "No notices yet.",
         "delete": "Delete",
+        "delete_confirm": "Are you sure you want to delete this notice?",
         "map_title": "View Route",
         "admin_login": "Admin Login",
         "password": "Password",
@@ -110,6 +112,7 @@ LANG = {
         "notice_list": "सूचना सूची",
         "no_notice": "कोई सूचना नहीं है।",
         "delete": "हटाएं",
+        "delete_confirm": "क्या आप वाकई इस सूचना को हटाना चाहते हैं?",
         "map_title": "रूट देखें",
         "admin_login": "एडमिन लॉगिन",
         "password": "पासवर्ड",
@@ -177,7 +180,7 @@ def delete_notice(notice_id):
     st.session_state.last_notice_count = len(st.session_state.notice_data)
     st.rerun()
 
-def render_notice_list(show_delete=False):
+def render_notice_list():
     st.subheader(_["notice_list"])
 
     if not st.session_state.notice_data:
@@ -194,9 +197,13 @@ def render_notice_list(show_delete=False):
             if n.get("file") and os.path.exists(n["file"]):
                 st.markdown(get_file_download_link(n["file"], _["file_download"]), unsafe_allow_html=True)
 
-            if show_delete:
-                if st.button(_["delete"], key=f"del_{n['id']}_{idx}"):
-                    delete_notice(n["id"])
+            # ✅ 관리자 모드에서만 삭제 버튼 표시
+            if st.session_state.admin:
+                col1, col2 = st.columns([8, 2])
+                with col2:
+                    if st.button(f"🗑️ {_['delete']}", key=f"del_{n['id']}_{idx}"):
+                        if st.confirm(_["delete_confirm"]):
+                            delete_notice(n["id"])
 
 # =============================================
 # 지도 렌더링
@@ -262,7 +269,7 @@ with st.sidebar:
 st.markdown(f"# {_['title']} 🎄")
 st.caption(_['caption'])
 
-# 새로운 공지 감지 시 알림
+# 새 공지 감지 시 알림
 current_count = len(load_json(NOTICE_FILE))
 if current_count > st.session_state.last_notice_count:
     st.toast("🔔 새 공지가 등록되었습니다!")
@@ -282,9 +289,7 @@ with tab1:
                     add_notice(t, c, img, f)
                 else:
                     st.warning(_["warning"])
-        render_notice_list(show_delete=True)
-    else:
-        render_notice_list(show_delete=False)
+    render_notice_list()
 
 with tab2:
     render_map()
