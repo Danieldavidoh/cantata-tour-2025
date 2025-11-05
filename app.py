@@ -187,7 +187,7 @@ def add_notice(title, content, image_file=None, upload_file=None):
     st.session_state.notice_data.insert(0, new_notice)
     save_json(NOTICE_FILE, st.session_state.notice_data)
     
-    # 즉시 알림 트리거
+    # 즉시 갱신 트리거 증가
     st.session_state.global_refresh_trigger += 1
     st.rerun()
 
@@ -330,7 +330,7 @@ if not st.session_state.admin:
             st.session_state.last_notice_count = current_count
         
         st.session_state.last_global_refresh = st.session_state.global_refresh_trigger
-        st.rerun()
+        # st.rerun() 제거 → 무한 루프 방지
 
 # 5분마다 자동 갱신 (일반 사용자)
 if not st.session_state.admin:
