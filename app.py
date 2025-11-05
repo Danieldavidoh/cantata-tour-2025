@@ -3,8 +3,11 @@ from datetime import datetime
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
-import json, os, uuid, base64
-from streamlit_autorefresh import st_autorefresh  # ✅ 자동 새로고침 추가
+import json
+import os
+import uuid
+import base64
+import time
 
 # =============================================
 # 기본 설정
@@ -13,6 +16,11 @@ st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
 NOTICE_FILE = "notice.json"
 UPLOAD_DIR = "uploads"
+REFRESH_INTERVAL = 10  # ✅ 10초마다 새로고침
+
+# =============================================
+# 폴더 준비
+# =============================================
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # =============================================
@@ -34,7 +42,8 @@ def get_file_download_link(file_path, label):
     with open(file_path, "rb") as f:
         data = f.read()
     b64 = base64.b64encode(data).decode()
-    return f'<a href="data:file/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
+    href = f'<a href="data:file/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
+    return href
 
 # =============================================
 # 다국어 지원
@@ -87,6 +96,30 @@ LANG = {
         "wrong_pw": "Wrong password.",
         "lang_select": "Language",
         "file_download": "📎 Download File"
+    },
+    "hi": {
+        "title": "कांताता टूर 2025",
+        "caption": "महाराष्ट्र टूर मैनेजमेंट",
+        "tab_notice": "सूचना बोर्ड",
+        "tab_map": "टूर रूट",
+        "add_notice": "नई सूचना जोड़ें",
+        "title_label": "शीर्षक",
+        "content_label": "सामग्री",
+        "upload_image": "छवि अपलोड करें (वैकल्पिक)",
+        "upload_file": "फ़ाइल अपलोड करें (वैकल्पिक)",
+        "submit": "जमा करें",
+        "warning": "कृपया शीर्षक और सामग्री भरें।",
+        "notice_list": "सूचना सूची",
+        "no_notice": "कोई सूचना नहीं है।",
+        "delete": "हटाएं",
+        "map_title": "रूट देखें",
+        "admin_login": "एडमिन लॉगिन",
+        "password": "पासवर्ड",
+        "login": "लॉगिन",
+        "logout": "लॉगआउट",
+        "wrong_pw": "गलत पासवर्ड।",
+        "lang_select": "भाषा चुनें",
+        "file_download": "📎 फ़ाइल डाउनलोड करें"
     }
 }
 
@@ -101,8 +134,19 @@ if "notice_data" not in st.session_state:
     st.session_state.notice_data = load_json(NOTICE_FILE)
 if "last_notice_count" not in st.session_state:
     st.session_state.last_notice_count = len(st.session_state.notice_data)
+if "last_check_time" not in st.session_state:
+    st.session_state.last_check_time = time.time()
+if "last_refresh" not in st.session_state:
+    st.session_state.last_refresh = time.time()
 
 _ = LANG[st.session_state.lang]
+
+# =============================================
+# 자동 새로고침 (내장 버전)
+# =============================================
+if time.time() - st.session_state.last_refresh > REFRESH_INTERVAL:
+    st.session_state.last_refresh = time.time()
+    st.rerun()
 
 # =============================================
 # 공지 관리 함수
@@ -135,6 +179,12 @@ def add_notice(title, content, image_file=None, upload_file=None):
     st.rerun()
 
 def delete_notice(notice_id):
+    for n in st.session_state.notice_data:
+        if n["id"] == notice_id:
+            if n.get("image") and os.path.exists(n["image"]):
+                os.remove(n["image"])
+            if n.get("file") and os.path.exists(n["file"]):
+                os.remove(n["file"])
     st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
     save_json(NOTICE_FILE, st.session_state.notice_data)
     st.session_state.last_notice_count = len(st.session_state.notice_data)
@@ -142,6 +192,7 @@ def delete_notice(notice_id):
 
 def render_notice_list(show_delete=False):
     st.subheader(_["notice_list"])
+
     if not st.session_state.notice_data:
         st.info(_["no_notice"])
         return
@@ -149,13 +200,42 @@ def render_notice_list(show_delete=False):
     for idx, n in enumerate(st.session_state.notice_data):
         with st.expander(f"📅 {n.get('date','?')} | {n.get('title','(제목 없음)')}"):
             st.markdown(n.get("content", ""))
+
             if n.get("image") and os.path.exists(n["image"]):
                 st.image(n["image"], use_container_width=True)
+
             if n.get("file") and os.path.exists(n["file"]):
                 st.markdown(get_file_download_link(n["file"], _["file_download"]), unsafe_allow_html=True)
+
             if show_delete:
                 if st.button(_["delete"], key=f"del_{n['id']}_{idx}"):
                     delete_notice(n["id"])
+
+# =============================================
+# 지도 렌더링
+# =============================================
+def render_map():
+    st.subheader(_["map_title"])
+
+    cities = [
+        {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
+        {"name": "Pune", "lat": 18.5204, "lon": 73.8567},
+        {"name": "Nashik", "lat": 19.9975, "lon": 73.7898},
+    ]
+
+    m = folium.Map(location=[19.0, 73.0], zoom_start=7)
+    coords = [(c["lat"], c["lon"]) for c in cities]
+
+    for c in cities:
+        folium.Marker(
+            [c["lat"], c["lon"]],
+            popup=c["name"],
+            tooltip=c["name"],
+            icon=folium.Icon(color="red", icon="music")
+        ).add_to(m)
+
+    AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
+    st_folium(m, width=900, height=550)
 
 # =============================================
 # 사이드바
@@ -163,9 +243,9 @@ def render_notice_list(show_delete=False):
 with st.sidebar:
     new_lang = st.selectbox(
         _["lang_select"],
-        ["ko", "en"],
-        format_func=lambda x: {"ko": "한국어", "en": "English"}[x],
-        index=["ko", "en"].index(st.session_state.lang)
+        ["ko", "en", "hi"],
+        format_func=lambda x: {"ko": "한국어", "en": "English", "hi": "हिन्दी"}[x],
+        index=["ko", "en", "hi"].index(st.session_state.lang)
     )
     if new_lang != st.session_state.lang:
         st.session_state.lang = new_lang
@@ -195,10 +275,7 @@ with st.sidebar:
 st.markdown(f"# {_['title']} 🎄")
 st.caption(_['caption'])
 
-# ✅ 자동 새로고침 (10초 간격)
-count = st_autorefresh(interval=10 * 1000, limit=None, key="refresh")
-
-# ✅ 새 공지 감지 후 즉시 알림
+# 🔔 새 공지 감지 및 알림
 current_data = load_json(NOTICE_FILE)
 if len(current_data) > st.session_state.last_notice_count:
     st.toast("🔔 새 공지가 등록되었습니다!")
@@ -224,15 +301,4 @@ with tab1:
         render_notice_list(show_delete=False)
 
 with tab2:
-    st.subheader(_["map_title"])
-    cities = [
-        {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
-        {"name": "Pune", "lat": 18.5204, "lon": 73.8567},
-        {"name": "Nashik", "lat": 19.9975, "lon": 73.7898},
-    ]
-    m = folium.Map(location=[19.0, 73.0], zoom_start=7)
-    coords = [(c["lat"], c["lon"]) for c in cities]
-    for c in cities:
-        folium.Marker([c["lat"], c["lon"]], popup=c["name"], tooltip=c["name"], icon=folium.Icon(color="red")).add_to(m)
-    AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
-    st_folium(m, width=900, height=550)
+    render_map()
