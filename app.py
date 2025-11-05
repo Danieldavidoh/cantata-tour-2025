@@ -40,66 +40,7 @@ def calc_distance(lat1, lon1, lat2, lon2):
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
-# 공지 관리
-# =============================================
-def add_notice(title, content):
-    new_notice = {
-        "id": str(uuid.uuid4()),
-        "title": title,
-        "content": content,
-        "date": datetime.now().strftime("%Y-%m-%d %H:%M")
-    }
-    st.session_state.notice_data.insert(0, new_notice)
-    save_json(NOTICE_FILE, st.session_state.notice_data)
-    st.rerun()
-
-def delete_notice(notice_id):
-    st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
-    save_json(NOTICE_FILE, st.session_state.notice_data)
-    st.rerun()
-
-def render_notice_list(show_delete=False):
-    st.subheader(_("notice_list"))
-
-    if not st.session_state.notice_data:
-        st.info(_("no_notice"))
-        return
-
-    for idx, n in enumerate(st.session_state.notice_data):
-        with st.expander(f"{n['date']} | {n['title']}", expanded=False):
-            st.markdown(n['content'])
-            if show_delete:
-                if st.button(_("delete"), key=f"del_{n['id']}_{idx}"):
-                    delete_notice(n['id'])
-
-# =============================================
-# 지도 렌더링
-# =============================================
-def render_map():
-    st.subheader(_("map_title"))
-
-    cities = [
-        {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
-        {"name": "Pune", "lat": 18.5204, "lon": 73.8567},
-        {"name": "Nashik", "lat": 19.9975, "lon": 73.7898},
-    ]
-
-    m = folium.Map(location=[19.0, 73.0], zoom_start=7)
-    coords = []
-    for c in cities:
-        coords.append((c["lat"], c["lon"]))
-        folium.Marker(
-            [c["lat"], c["lon"]],
-            popup=c["name"],
-            tooltip=c["name"],
-            icon=folium.Icon(color="red", icon="music")
-        ).add_to(m)
-
-    AntPath(coords, color="#ff1744", weight=5, delay=800, dash_array=[10, 20]).add_to(m)
-    st_folium(m, width=900, height=550)
-
-# =============================================
-# 세션 & 언어 초기화
+# 세션 & 언어 초기화 (최우선)
 # =============================================
 if "admin" not in st.session_state:
     st.session_state.admin = False
@@ -109,7 +50,7 @@ if "notice_data" not in st.session_state:
     st.session_state.notice_data = load_json(NOTICE_FILE)
 
 # =============================================
-# 다국어 사전
+# 다국어 사전 (언어 초기화 후 즉시 정의)
 # =============================================
 LANG = {
     "ko": {
@@ -176,10 +117,69 @@ LANG = {
         "lang_select": "भाषा"
     }
 }
-_ = LANG[st.session_state.lang]
+_ = LANG[st.session_state.lang]  # 여기서 _ 정의 완료
 
 # =============================================
-# 사이드바: 언어 + 관리자
+# 공지 관리
+# =============================================
+def add_notice(title, content):
+    new_notice = {
+        "id": str(uuid.uuid4()),
+        "title": title,
+        "content": content,
+        "date": datetime.now().strftime("%Y-%m-%d %H:%M")
+    }
+    st.session_state.notice_data.insert(0, new_notice)
+    save_json(NOTICE_FILE, st.session_state.notice_data)
+    st.rerun()
+
+def delete_notice(notice_id):
+    st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
+    save_json(NOTICE_FILE, st.session_state.notice_data)
+    st.rerun()
+
+def render_notice_list(show_delete=False):
+    st.subheader(_("notice_list"))
+
+    if not st.session_state.notice_data:
+        st.info(_("no_notice"))
+        return
+
+    for idx, n in enumerate(st.session_state.notice_data):
+        with st.expander(f"{n['date']} | {n['title']}", expanded=False):
+            st.markdown(n['content'])
+            if show_delete:
+                if st.button(_("delete"), key=f"del_{n['id']}_{idx}"):
+                    delete_notice(n['id'])
+
+# =============================================
+# 지도 렌더링
+# =============================================
+def render_map():
+    st.subheader(_("map_title"))
+
+    cities = [
+        {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
+        {"name": "Pune", "lat": 18.5204, "lon": 73.8567},
+        {"name": "Nashik", "lat": 19.9975, "lon": 73.7898},
+    ]
+
+    m = folium.Map(location=[19.0, 73.0], zoom_start=7)
+    coords = []
+    for c in cities:
+        coords.append((c["lat"], c["lon"]))
+        folium.Marker(
+            [c["lat"], c["lon"]],
+            popup=c["name"],
+            tooltip=c["name"],
+            icon=folium.Icon(color="red", icon="music")
+        ).add_to(m)
+
+    AntPath(coords, color="#ff1744", weight=5, delay=800, dash_array=[10, 20]).add_to(m)
+    st_folium(m, width=900, height=550)
+
+# =============================================
+# 사이드바: 언어 + 관리자 (이제 _ 사용 가능!)
 # =============================================
 with st.sidebar:
     # 언어 선택
@@ -191,6 +191,7 @@ with st.sidebar:
     )
     if new_lang != st.session_state.lang:
         st.session_state.lang = new_lang
+        _ = LANG[st.session_state.lang]  # 실시간 언어 갱신
         st.rerun()
 
     st.markdown("---")
@@ -227,7 +228,7 @@ with tab1:
             t = st.text_input(_("title_label"))
             c = st.text_area(_("content_label"))
             if st.form_submit_button(_("submit")):
-                if t and c:
+                if t.strip() and c.strip():
                     add_notice(t, c)
                     st.success("등록 완료!")
                 else:
