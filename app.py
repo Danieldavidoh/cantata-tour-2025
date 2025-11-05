@@ -127,9 +127,7 @@ if "last_notice_count" not in st.session_state:
 if "last_check_time" not in st.session_state:
     st.session_state.last_check_time = datetime.now()
 
-# =============================================
-# 번역 함수 정의 (세션 후 즉시!)
-# =============================================
+# 번역 함수 정의
 def _(key):
     return LANG[st.session_state.lang].get(key, key)
 
@@ -281,12 +279,12 @@ if len(st.session_state.notice_data) > st.session_state.last_notice_count and no
     st.session_state.last_notice_count = len(st.session_state.notice_data)
 
 # =============================================
-# 메인 헤더 (함수 사용!)
+# 메인
 # =============================================
 st.markdown(f"# {_('title')}")
-st.caption(_("caption"))
+st.caption(_['caption'])
 
-tab1, tab2 = st.tabs([_('tab_notice'), _('tab_map')])
+tab1, tab2 = st.tabs([_['tab_notice'], _['tab_map']])
 
 with tab1:
     if st.session_state.admin:
