@@ -1,5 +1,4 @@
 streamlit
-streamlit-folium
 folium
-websockets
-streamlit-autorefresh
+streamlit-folium
+pandas
