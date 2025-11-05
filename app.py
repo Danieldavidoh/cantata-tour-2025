@@ -4,302 +4,284 @@ from datetime import datetime
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
+from math import radians, sin, cos, sqrt, atan2
+import re
 import json
 import os
-import uuid
 import base64
+import uuid
 
 # =============================================
-# 기본 설정
+# PWA & 실시간 푸시 알림 설정
 # =============================================
-st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
+st.set_page_config(
+    page_title="Cantata Tour 2025",
+    page_icon="🎄",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-NOTICE_FILE = "notice.json"
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-# =============================================
-# 유틸 함수
-# =============================================
-def load_json(filename):
-    if os.path.exists(filename):
-        with open(filename, "r", encoding="utf-8") as f:
-            try:
-                data = json.load(f)
-                for n in data:
-                    n.setdefault("id", str(uuid.uuid4()))
-                    n.setdefault("title", "(제목 없음)")
-                    n.setdefault("content", "")
-                    n.setdefault("date", datetime.now().strftime("%Y-%m-%d %H:%M"))
-                return data
-            except json.JSONDecodeError:
-                return []
-    return []
-
-def save_json(filename, data):
-    with open(filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-def get_file_download_link(file_path, label):
-    if not os.path.exists(file_path):
-        return ""
-    with open(file_path, "rb") as f:
-        data = f.read()
-    b64 = base64.b64encode(data).decode()
-    href = f'<a href="data:file/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
-    return href
+# PWA Manifest & Service Worker 등록
+st.markdown("""
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#ff1744">
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(() => console.log('SW registered'))
+            .catch(err => console.log('SW error:', err));
+    });
+}
+if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+}
+</script>
+""", unsafe_allow_html=True)
 
 # =============================================
-# 다국어 사전
+# 세션 상태 초기화
+# =============================================
+defaults = {
+    "lang": "ko", "admin": False, "route": [], "venue_data": {},
+}
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
+
+# =============================================
+# 데이터 로드/저장
+# =============================================
+VENUE_FILE = "venue_data.json"
+
+def load_json(file, default):
+    if os.path.exists(file):
+        with open(file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return default
+
+def save_json(file, data):
+    with open(file, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+st.session_state.venue_data = load_json(VENUE_FILE, {})
+
+# 기본 도시 자동 추가
+default_cities = {
+    "Mumbai": {"venue": "NSCI Dome", "seats": 5000, "type": "실내", "google": ""},
+    "Pune": {"venue": "Balewadi Stadium", "seats": 8000, "type": "실외", "google": ""},
+    "Nagpur": {"venue": "VCA Stadium", "seats": 45000, "type": "실외", "google": ""}
+}
+if not st.session_state.venue_data:
+    st.session_state.venue_data = default_cities.copy()
+    save_json(VENUE_FILE, st.session_state.venue_data)
+for city in default_cities:
+    if city not in st.session_state.route:
+        st.session_state.route.append(city)
+
+# =============================================
+# 언어 설정
 # =============================================
 LANG = {
     "ko": {
-        "title": "칸타타 투어 2025",
-        "caption": "마하라스트라 지역 투어 관리 시스템",
-        "tab_notice": "공지 관리",
-        "tab_map": "투어 경로",
-        "add_notice": "새 공지 추가",
-        "title_label": "제목",
-        "content_label": "내용",
-        "upload_image": "이미지 업로드 (선택)",
-        "upload_file": "파일 업로드 (선택)",
-        "submit": "등록",
-        "warning": "제목과 내용을 모두 입력해주세요.",
-        "notice_list": "공지 목록",
-        "no_notice": "등록된 공지가 없습니다.",
-        "delete": "삭제",
-        "delete_confirm": "정말 이 공지를 삭제하시겠습니까?",
-        "confirm_yes": "예, 삭제합니다",
-        "confirm_no": "취소",
-        "map_title": "경로 보기",
-        "admin_login": "관리자 로그인",
-        "password": "비밀번호",
-        "login": "로그인",
-        "logout": "로그아웃",
-        "wrong_pw": "비밀번호가 틀렸습니다.",
-        "lang_select": "언어 선택",
-        "file_download": "파일 다운로드",
-        "new_notice_alert": "새 공지가 도착했습니다!"
-    },
-    "en": {
-        "title": "Cantata Tour 2025",
-        "caption": "Maharashtra Tour Management System",
-        "tab_notice": "Notice Board",
-        "tab_map": "Tour Route",
-        "add_notice": "Add New Notice",
-        "title_label": "Title",
-        "content_label": "Content",
-        "upload_image": "Upload Image (optional)",
-        "upload_file": "Upload File (optional)",
-        "submit": "Submit",
-        "warning": "Please enter both title and content.",
-        "notice_list": "Notice List",
-        "no_notice": "No notices available.",
-        "delete": "Delete",
-        "delete_confirm": "Are you sure you want to delete this notice?",
-        "confirm_yes": "Yes, delete",
-        "confirm_no": "Cancel",
-        "map_title": "View Route",
-        "admin_login": "Admin Login",
-        "password": "Password",
-        "login": "Login",
-        "logout": "Logout",
-        "wrong_pw": "Incorrect password.",
-        "lang_select": "Language",
-        "file_download": "Download File",
-        "new_notice_alert": "New notice posted!"
+        "title": "칸타타 투어", "password": "관리자 비밀번호", "login": "로그인", "logout": "로그아웃",
+        "city_input": "도시 입력", "venue_name": "공연장 이름", "seats_count": "좌석 수", "venue_type": "공연장 유형",
+        "google_link": "구글 링크", "add_venue": "추가", "already_exists": "이미 존재하는 도시입니다."
     }
 }
+_ = LANG.get(st.session_state.lang, LANG["ko"])
 
 # =============================================
-# 세션 초기화
-# =============================================
-if "admin" not in st.session_state:
-    st.session_state.admin = False
-if "lang" not in st.session_state:
-    st.session_state.lang = "ko"
-if "notice_data" not in st.session_state:
-    st.session_state.notice_data = load_json(NOTICE_FILE)
-if "delete_target" not in st.session_state:
-    st.session_state.delete_target = None
-if "last_notice_count" not in st.session_state:
-    st.session_state.last_notice_count = len(st.session_state.notice_data)
-if "last_check_time" not in st.session_state:
-    st.session_state.last_check_time = datetime.now()
-
-# 번역 함수 정의
-def _(key):
-    return LANG[st.session_state.lang].get(key, key)
-
-# =============================================
-# 공지 관리
-# =============================================
-def add_notice(title, content, image_file=None, upload_file=None):
-    img_path, file_path = None, None
-
-    if image_file:
-        img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{image_file.name}")
-        with open(img_path, "wb") as f:
-            f.write(image_file.read())
-
-    if upload_file:
-        file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{upload_file.name}")
-        with open(file_path, "wb") as f:
-            f.write(upload_file.read())
-
-    new_notice = {
-        "id": str(uuid.uuid4()),
-        "title": title,
-        "content": content,
-        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "image": img_path,
-        "file": file_path
-    }
-
-    st.session_state.notice_data.insert(0, new_notice)
-    save_json(NOTICE_FILE, st.session_state.notice_data)
-    st.session_state.last_notice_count = len(st.session_state.notice_data)
-    st.rerun()
-
-def delete_notice(notice_id):
-    st.session_state.notice_data = [n for n in st.session_state.notice_data if n.get("id") != notice_id]
-    save_json(NOTICE_FILE, st.session_state.notice_data)
-    st.session_state.delete_target = None
-    st.rerun()
-
-def render_notice_list():
-    st.subheader(_("notice_list"))
-
-    if not st.session_state.notice_data:
-        st.info(_("no_notice"))
-        return
-
-    for idx, n in enumerate(st.session_state.notice_data):
-        title = n.get("title", "(제목 없음)")
-        date = n.get("date", "?")
-        content = n.get("content", "")
-        nid = n.get("id", str(uuid.uuid4()))
-
-        with st.expander(f"{date} | {title}"):
-            st.markdown(content)
-
-            if n.get("image") and os.path.exists(n["image"]):
-                st.image(n["image"], use_container_width=True)
-
-            if n.get("file") and os.path.exists(n["file"]):
-                st.markdown(get_file_download_link(n["file"], _("file_download")), unsafe_allow_html=True)
-
-            if st.session_state.admin:
-                if st.button(f"{_('delete')}", key=f"del_{nid}_{idx}"):
-                    st.session_state.delete_target = nid
-
-    if st.session_state.delete_target:
-        st.warning(_("delete_confirm"))
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button(_("confirm_yes"), key="yes_delete"):
-                delete_notice(st.session_state.delete_target)
-        with col2:
-            if st.button(_("confirm_no"), key="cancel_delete"):
-                st.session_state.delete_target = None
-                st.rerun()
-
-# =============================================
-# 지도
-# =============================================
-def render_map():
-    st.subheader(_("map_title"))
-    cities = [
-        {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
-        {"name": "Pune", "lat": 18.5204, "lon": 73.8567},
-        {"name": "Nashik", "lat": 19.9975, "lon": 73.7898},
-    ]
-    m = folium.Map(location=[19.0, 73.0], zoom_start=7)
-    coords = [(c["lat"], c["lon"]) for c in cities]
-    for c in cities:
-        folium.Marker(
-            [c["lat"], c["lon"]],
-            popup=c["name"],
-            tooltip=c["name"],
-            icon=folium.Icon(color="red", icon="music")
-        ).add_to(m)
-    AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
-    st_folium(m, width=900, height=550)
-
-# =============================================
-# 사이드바 (언어 + 로그인)
+# 사이드바
 # =============================================
 with st.sidebar:
-    st.markdown(f"### {_( 'lang_select')}")
-    lang_choice = st.selectbox(
-        "",
-        ["ko", "en"],
-        format_func=lambda x: {"ko": "한국어", "en": "English"}[x],
-        index=0 if st.session_state.lang == "ko" else 1
-    )
-    if lang_choice != st.session_state.lang:
-        st.session_state.lang = lang_choice
-        st.rerun()
+    lang_selected = st.selectbox("Language", ["ko", "en", "hi"], format_func=lambda x: {"ko":"한국어","en":"English","hi":"हिन्दी"}[x])
+    st.session_state.lang = lang_selected if lang_selected in LANG else "ko"
+    _ = LANG.get(st.session_state.lang, LANG["ko"])
 
     st.markdown("---")
-    st.markdown(f"### {_( 'admin_login')}")
+    st.write("**Admin**")
     if not st.session_state.admin:
-        pw = st.text_input(_("password"), type="password")
-        if st.button(_("login")):
-            if pw == "0000":
-                st.session_state.admin = True
-                st.success("관리자 모드 ON")
-                st.rerun()
-            else:
-                st.error(_("wrong_pw"))
+        pw = st.text_input(_["password"], type="password")
+        if st.button(_["login"]) and pw == "0000":
+            st.session_state.admin = True
+            st.rerun()
+        elif pw and pw != "0000":
+            st.error("비밀번호 틀림")
     else:
-        st.success("관리자 모드")
-        if st.button(_("logout")):
+        if st.button(_["logout"]):
             st.session_state.admin = False
             st.rerun()
 
 # =============================================
-# 자동 갱신 + 즉시 푸시 알림
+# 서클 화살표 SVG
 # =============================================
-current_time = datetime.now()
+REFRESH_SVG = """
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M23 4v6h-6"></path>
+  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+</svg>
+"""
 
-# 5분마다 자동 갱신 (일반 사용자만)
+# =============================================
+# 스타일
+# =============================================
+st.markdown("""
+<style>
+.stApp { background: radial-gradient(circle at 20% 20%, #0a0a0f 0%, #000000 100%); color: #fff; }
+h1 { color: #ff3333 !important; text-align: center; font-weight: 900; font-size: 4em;
+     text-shadow: 0 0 25px #b71c1c, 0 0 15px #00ff99; }
+h1 span.year { color: #fff; font-size: 0.8em; vertical-align: super; }
+h1 span.subtitle { color: #ccc; font-size: 0.45em; vertical-align: super; margin-left: 5px; }
+
+/* 제목: 흰색 + 1.3em 통일 */
+.city-input-title {
+    color: white !important; 
+    font-weight: bold; 
+    font-size: 1.3em; 
+    margin-bottom: 15px;
+}
+
+/* 새로고침 버튼 */
+.refresh-btn {
+    background: none; 
+    border: 2px solid #00c853; 
+    border-radius: 50%; 
+    width: 44px; height: 44px; 
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; 
+    transition: all 0.3s;
+}
+.refresh-btn:hover {
+    background: rgba(0,200,83,0.1); 
+    border-color: #00b140;
+    transform: scale(1.15);
+}
+.refresh-icon {
+    width: 24px; height: 24px; 
+    animation: rotate 1.5s linear infinite paused;
+    stroke: #00c853;
+}
+.refresh-btn:hover .refresh-icon {
+    animation-play-state: running;
+}
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.city-input-form {
+    background: #1a1a1a; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0;
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown(f"<h1>{_['title']} <span class='year'>2025</span><span class='subtitle'>마하라스트라</span> 🎄</h1>", unsafe_allow_html=True)
+
+# =============================================
+# 도시 & 거리 계산
+# =============================================
+coords = {
+    "Mumbai": (19.0760, 72.8777),
+    "Pune": (18.5204, 73.8567),
+    "Nagpur": (21.1458, 79.0882)
+}
+
+def distance_km(p1, p2):
+    R = 6371
+    lat1, lon1 = radians(p1[0]), radians(p1[1])
+    lat2, lon2 = radians(p2[0]), radians(p2[1])
+    dlat, dlon = lat2 - lat1, lon2 - lon1
+    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+    return R * 2 * atan2(sqrt(a), sqrt(1 - a))
+
+# =============================================
+# 투어지도 UI
+# =============================================
+def render_tour_map():
+    st.markdown(f"""
+    <div class="map-header">
+        <div class="map-title">투어지도</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    with st.expander("투어지도", expanded=False):
+        try:
+            GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+        except:
+            st.error("Google Maps API 키 없음")
+            return
+
+        m = folium.Map(location=(19.75, 75.71), zoom_start=6,
+                       tiles=f"https://mt1.google.com/vt/lyrs=m&x={{x}}&y={{y}}&z={{z}}&key={GOOGLE_API_KEY}",
+                       attr="Google")
+        points = [coords[c] for c in st.session_state.route if c in coords]
+        if len(points) >= 2:
+            for i in range(len(points)-1):
+                p1, p2 = points[i], points[i+1]
+                dist = distance_km(p1, p2)
+                time_hr = dist / 60.0
+                mid = ((p1[0]+p2[0])/2, (p1[1]+p2[1])/2)
+                folium.Marker(mid, icon=folium.DivIcon(html=f"<div style='color:white;font-size:10pt'>{dist:.1f}km / {time_hr:.1f}h</div>")).add_to(m)
+            AntPath(points, color="red", weight=4, delay=800).add_to(m)
+
+        for c in st.session_state.route:
+            if c in coords:
+                data = st.session_state.venue_data.get(c, {})
+                popup = f"<b>{c}</b><br>"
+                if "date" in data: popup += f"{data['date']}<br>{data['venue']}<br>Seats: {data['seats']}<br>{data['type']}<br>"
+                if "google" in data and data["google"]:
+                    match = re.search(r'@(\d+\.\d+),(\d+\.\d+)', data["google"])
+                    lat, lng = (match.group(1), match.group(2)) if match else (None, None)
+                    nav = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lng}" if lat else data["google"]
+                    popup += f"<a href='{nav}' target='_blank'>네비 시작</a>"
+                folium.Marker(coords[c], popup=popup, icon=folium.Icon(color="red")).add_to(m)
+        st_folium(m, width=900, height=600)
+
+# =============================================
+# 일반 사용자 UI
+# =============================================
 if not st.session_state.admin:
-    if (current_time - st.session_state.last_check_time).total_seconds() > 300:
-        latest_data = load_json(NOTICE_FILE)
-        if len(latest_data) > st.session_state.last_notice_count:
-            st.session_state.notice_data = latest_data
-            st.session_state.last_notice_count = len(latest_data)
+    render_tour_map()
+    st.stop()
+
+# =============================================
+# 관리자 모드
+# =============================================
+
+# 도시 입력
+st.markdown(f"<div class='city-input-title'>{_['city_input']}</div>", unsafe_allow_html=True)
+with st.form("city_form", clear_on_submit=True):
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        new_city = st.text_input("도시 이름", placeholder="예: Delhi")
+    with col2:
+        venue_name = st.text_input(_["venue_name"], placeholder="공연장 이름")
+
+    col3, col4 = st.columns([1, 1])
+    with col3:
+        seats = st.number_input(_["seats_count"], min_value=1, step=1)
+    with col4:
+        venue_type = st.selectbox(_["venue_type"], ["실내", "실외"])
+
+    google_link = st.text_input(_["google_link"], placeholder="구글 링크 (선택)")
+
+    if st.form_submit_button(_["add_venue"]):
+        if new_city in st.session_state.venue_data:
+            st.error(_["already_exists"])
+        else:
+            st.session_state.venue_data[new_city] = {
+                "venue": venue_name,
+                "seats": seats,
+                "type": venue_type,
+                "google": google_link
+            }
+            save_json(VENUE_FILE, st.session_state.venue_data)
+            if new_city not in st.session_state.route:
+                st.session_state.route.append(new_city)
+            st.success(f"{new_city} 추가됨!")
             st.rerun()
-        st.session_state.last_check_time = current_time
 
-# 관리자가 등록하면 즉시 알림 (일반 사용자에게)
-if len(st.session_state.notice_data) > st.session_state.last_notice_count and not st.session_state.admin:
-    st.toast(_("new_notice_alert"), icon="")
-    st.session_state.last_notice_count = len(st.session_state.notice_data)
-
-# =============================================
-# 메인
-# =============================================
-st.markdown(f"# {_('title')}")
-st.caption(_['caption'])
-
-tab1, tab2 = st.tabs([_['tab_notice'], _['tab_map']])
-
-with tab1:
-    if st.session_state.admin:
-        with st.form("notice_form", clear_on_submit=True):
-            t = st.text_input(_("title_label"))
-            c = st.text_area(_("content_label"))
-            img = st.file_uploader(_("upload_image"), type=["png", "jpg", "jpeg"])
-            f = st.file_uploader(_("upload_file"))
-            if st.form_submit_button(_("submit")):
-                if t.strip() and c.strip():
-                    add_notice(t, c, img, f)
-                    st.success("공지 등록 완료!")
-                else:
-                    st.warning(_("warning"))
-    render_notice_list()
-
-with tab2:
-    render_map()
+# 투어지도
+st.markdown("---")
+render_tour_map()
