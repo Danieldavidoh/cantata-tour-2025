@@ -159,24 +159,6 @@ def render_notice_list(show_delete=False):
                     delete_notice(n["id"])
 
 # =============================================
-# 지도
-# =============================================
-def render_map():
-    st.subheader(_["map_title"])
-    cities = [
-        {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
-        {"name": "Pune", "lat": 18.5204, "lon": 73.8567},
-        {"name": "Nashik", "lat": 19.9975, "lon": 73.7898},
-    ]
-    m = folium.Map(location=[19.0, 73.0], zoom_start=7)
-    coords = [(c["lat"], c["lon"]) for c in cities]
-    for c in cities:
-        folium.Marker([c["lat"], c["lon"]], popup=c["name"], tooltip=c["name"],
-                      icon=folium.Icon(color="red", icon="music")).add_to(m)
-    AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
-    st_folium(m, width=900, height=550)
-
-# =============================================
 # 자동 새로고침 (10초마다)
 # =============================================
 from streamlit_autorefresh import st_autorefresh
@@ -298,6 +280,12 @@ with tab2:
         "Nagbhid (Chandrapur)": (20.29, 79.36), "Gadhinglaj (Kolhapur)": (16.23, 74.34), "Kagal (Kolhapur)": (16.57, 74.31), "Ajra (Kolhapur)": (16.67, 74.22),
         "Shiroli (Kolhapur)": (16.70, 74.24),
     }
+
+    # ----------------------------------------------------------------------
+    # 헬퍼
+    # ----------------------------------------------------------------------
+    def nav(url):
+        return f"https://www.google.com/maps/dir/?api=1&destination={url}&travelmode=driving" if url and url.startswith("http") else ""
 
     # ----------------------------------------------------------------------
     # 도시 추가 (관리자 전용)
