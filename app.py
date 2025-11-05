@@ -50,12 +50,12 @@ def get_file_download_link(file_path, label):
     return href
 
 # =============================================
-# 다국어 사전 (마하라스트라로 수정)
+# 다국어 사전
 # =============================================
 LANG = {
     "ko": {
         "title": "칸타타 투어 2025",
-        "caption": "마하라스트라",
+        "caption": "마하라스트라 지역 투어 관리 시스템",
         "tab_notice": "공지 관리",
         "tab_map": "투어 경로",
         "add_notice": "새 공지 추가",
@@ -83,7 +83,7 @@ LANG = {
     },
     "en": {
         "title": "Cantata Tour 2025",
-        "caption": "Maharashtra",
+        "caption": "Maharashtra Tour Management System",
         "tab_notice": "Notice Board",
         "tab_map": "Tour Route",
         "add_notice": "Add New Notice",
@@ -108,34 +108,6 @@ LANG = {
         "lang_select": "Language",
         "file_download": "Download File",
         "new_notice_alert": "New notice posted!"
-    },
-    "hi": {
-        "title": "कांताता टूर 2025",
-        "caption": "महाराष्ट्र",
-        "tab_notice": "सूचना बोर्ड",
-        "tab_map": "टूर रूट",
-        "add_notice": "नई सूचना जोड़ें",
-        "title_label": "शीर्षक",
-        "content_label": "सामग्री",
-        "upload_image": "छवि अपलोड करें (वैकल्पिक)",
-        "upload_file": "फ़ाइल अपलोड करें (वैकल्पिक)",
-        "submit": "जमा करें",
-        "warning": "कृपया शीर्षक और सामग्री दोनों भरें।",
-        "notice_list": "सूचना सूची",
-        "no_notice": "कोई सूचना उपलब्ध नहीं।",
-        "delete": "हटाएं",
-        "delete_confirm": "क्या आप वाकई इस सूचना को हटाना चाहते हैं?",
-        "confirm_yes": "हाँ, हटाएं",
-        "confirm_no": "रद्द करें",
-        "map_title": "रूट देखें",
-        "admin_login": "एडमिन लॉगिन",
-        "password": "पासवर्ड",
-        "login": "लॉगिन",
-        "logout": "लॉगआउट",
-        "wrong_pw": "गलत पासवर्ड।",
-        "lang_select": "भाषा",
-        "file_download": "फ़ाइल डाउनलोड करें",
-        "new_notice_alert": "नई सूचना पोस्ट की गई!"
     }
 }
 
@@ -156,7 +128,7 @@ if "last_check_time" not in st.session_state:
     st.session_state.last_check_time = datetime.now()
 
 # =============================================
-# 번역 함수 정의
+# 번역 함수 정의 (세션 후 즉시!)
 # =============================================
 def _(key):
     return LANG[st.session_state.lang].get(key, key)
@@ -235,7 +207,7 @@ def render_notice_list():
                 st.rerun()
 
 # =============================================
-# 지도 (모바일 최적화)
+# 지도
 # =============================================
 def render_map():
     st.subheader(_("map_title"))
@@ -254,23 +226,18 @@ def render_map():
             icon=folium.Icon(color="red", icon="music")
         ).add_to(m)
     AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
-
-    # 일반 사용자: 모바일에서 좌우 100%
-    if st.session_state.admin:
-        st_folium(m, width=900, height=550)
-    else:
-        st_folium(m, use_container_width=True, height=550)
+    st_folium(m, width=900, height=550)
 
 # =============================================
-# 사이드바 (힌디어 포함, "국내어" → "한국어")
+# 사이드바 (언어 + 로그인)
 # =============================================
 with st.sidebar:
     st.markdown(f"### {_( 'lang_select')}")
     lang_choice = st.selectbox(
         "",
-        ["ko", "en", "hi"],
-        format_func=lambda x: {"ko": "한국어", "en": "English", "hi": "हिन्दी"}[x],
-        index=["ko", "en", "hi"].index(st.session_state.lang)
+        ["ko", "en"],
+        format_func=lambda x: {"ko": "한국어", "en": "English"}[x],
+        index=0 if st.session_state.lang == "ko" else 1
     )
     if lang_choice != st.session_state.lang:
         st.session_state.lang = lang_choice
@@ -314,7 +281,7 @@ if len(st.session_state.notice_data) > st.session_state.last_notice_count and no
     st.session_state.last_notice_count = len(st.session_state.notice_data)
 
 # =============================================
-# 메인 헤더
+# 메인 헤더 (함수 사용!)
 # =============================================
 st.markdown(f"# {_('title')}")
 st.caption(_("caption"))
