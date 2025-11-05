@@ -6,7 +6,7 @@ from streamlit_folium import st_folium
 import json, os, uuid, base64
 
 # =============================================
-# 필수 패키지 (requirements.txt에 추가)
+# 필수 패키지
 # =============================================
 # pip install streamlit-autorefresh
 
@@ -40,7 +40,8 @@ LANG = {
     "ko": {
         "title": "칸타타 투어 2025",
         "caption": "마하라스트라 지역 투어 관리 시스템",
-        "tab_notice": "공지 관리",
+        "tab_notice_user": "공지 현황",
+        "tab_notice_admin": "공지 관리",
         "tab_map": "투어 경로",
         "add_notice": "새 공지 추가",
         "title_label": "제목",
@@ -74,9 +75,7 @@ LANG = {
         "venue_registered": "등록 완료",
         "indoor": "실내",
         "outdoor": "실외"
-    },
-    "en": { ... },  # 필요시 추가
-    "hi": { ... }   # 필요시 추가
+    }
 }
 
 _ = LANG[st.session_state.lang]
@@ -221,8 +220,13 @@ with st.sidebar:
 st.markdown(f"# {_['title']} ")
 st.caption(_["caption"])
 
-tab1, tab2 = st.tabs([_["tab_notice"], _["tab_map"]])
+# 탭 이름 동적 변경
+notice_tab_name = _["tab_notice_admin"] if st.session_state.admin else _["tab_notice_user"]
+tab1, tab2 = st.tabs([notice_tab_name, _["tab_map"]])
 
+# =============================================
+# 공지 탭
+# =============================================
 with tab1:
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
@@ -238,14 +242,13 @@ with tab1:
         render_notice_list(show_delete=True)
     else:
         render_notice_list(show_delete=False)
-        if st.button("새로고침"):
-            st.rerun()
+        # 새로고침 버튼 제거
 
 # =============================================
-# 투어 경로 탭
+# 투어 경로 탭 (일반/관리자 모두 표시)
 # =============================================
 with tab2:
-    # 도시 리스트 (알파벳 순)
+    # 도시 리스트
     CITIES = sorted([
         "Mumbai","Pune","Nagpur","Nashik","Thane","Aurangabad","Solapur","Kolhapur",
         "Amravati","Jalgaon","Akola","Latur","Ahmednagar","Dhule","Chandrapur","Parbhani",
@@ -266,7 +269,7 @@ with tab2:
         "Madha","Mohol","Malshiras","Akkalkot","Phaltan","Patan","Khatav","Koregaon","Man","Wai"
     ])
 
-    # 좌표 (150개 전부 포함)
+    # 좌표 (150개 전부)
     coords = {
         "Mumbai": (19.07, 72.88), "Pune": (18.52, 73.86), "Nagpur": (21.15, 79.08), "Nashik": (20.00, 73.79),
         "Thane": (19.22, 72.98), "Aurangabad": (19.88, 75.34), "Solapur": (17.67, 75.91), "Kolhapur": (16.70, 74.24),
@@ -354,7 +357,7 @@ with tab2:
                     if v["Google Maps Link"].startswith("http"):
                         st.markdown(f'<div style="text-align:right">[자동차]({v["Google Maps Link"]})</div>', unsafe_allow_html=True)
 
-    # 지도
+    # 지도 (일반/관리자 모두 표시)
     st.subheader("Tour Map")
     if st.session_state.route:
         center = (19.75, 75.71)
