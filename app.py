@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime
 import folium
 from streamlit_folium import st_folium
+from folium.plugins import AntPath
 import json, os, uuid, base64
 
 # =============================================
@@ -173,7 +174,7 @@ if not st.session_state.admin and AUTO_REFRESH:
     count = len(load_json(NOTICE_FILE))
     if st.session_state.last_notice_count == 0:
         st.session_state.last_notice_count = count
-    st_autorefresh(interval=5000, key="auto_refresh")  # 5초
+    st_autorefresh(interval=5000, key="auto_refresh")
     new_count = len(load_json(NOTICE_FILE))
     if new_count > st.session_state.last_notice_count:
         st.toast("새 공지가 등록되었습니다!")
@@ -224,9 +225,6 @@ st.caption(_["caption"])
 notice_tab_name = _["tab_notice_admin"] if st.session_state.admin else _["tab_notice_user"]
 tab1, tab2 = st.tabs([notice_tab_name, _["tab_map"]])
 
-# =============================================
-# 공지 탭
-# =============================================
 with tab1:
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
@@ -242,10 +240,9 @@ with tab1:
         render_notice_list(show_delete=True)
     else:
         render_notice_list(show_delete=False)
-        # 새로고침 버튼 제거
 
 # =============================================
-# 투어 경로 탭 (일반/관리자 모두 표시)
+# 투어 경로 탭 (항상 표시)
 # =============================================
 with tab2:
     # 도시 리스트
@@ -269,7 +266,7 @@ with tab2:
         "Madha","Mohol","Malshiras","Akkalkot","Phaltan","Patan","Khatav","Koregaon","Man","Wai"
     ])
 
-    # 좌표 (150개 전부)
+    # 좌표
     coords = {
         "Mumbai": (19.07, 72.88), "Pune": (18.52, 73.86), "Nagpur": (21.15, 79.08), "Nashik": (20.00, 73.79),
         "Thane": (19.22, 72.98), "Aurangabad": (19.88, 75.34), "Solapur": (17.67, 75.91), "Kolhapur": (16.70, 74.24),
@@ -357,35 +354,30 @@ with tab2:
                     if v["Google Maps Link"].startswith("http"):
                         st.markdown(f'<div style="text-align:right">[자동차]({v["Google Maps Link"]})</div>', unsafe_allow_html=True)
 
-    # 지도 (일반/관리자 모두 표시)
+    # 지도 (항상 표시)
     st.subheader("Tour Map")
-    if st.session_state.route:
-        center = (19.75, 75.71)
-        m = folium.Map(location=center, zoom_start=7, tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", attr="Google")
-        points = []
-        for city in st.session_state.route:
-            lat, lon = coords.get(city, center)
-            points.append((lat, lon))
-            venues = st.session_state.venues.get(city, [])
-            popup_lines = []
-            for v in venues:
-                line = f"<b>{v['Venue']}</b><br>{v['Seats']}석 | {v['IndoorOutdoor']}"
-                if v.get('Special Notes'):
-                    line += f"<br>{v['Special Notes']}"
-                if v["Google Maps Link"].startswith("http"):
-                    line += f"<br><a href='{v['Google Maps Link']}' target='_blank'>자동차 구글맵</a>"
-                popup_lines.append(line + "<hr>")
-            popup_html = "<br>".join(popup_lines)
-            folium.CircleMarker(
-                location=[lat, lon],
-                radius=12,
-                color="#90EE90",
-                fill_color="#8B0000",
-                popup=folium.Popup(popup_html, max_width=450),
-                tooltip=None
-            ).add_to(m)
-        if len(points) > 1:
-            folium.PolyLine(points, color="red", weight=4).add_to(m)
-        st_folium(m, width=700, height=500)
-    else:
-        st.info("등록된 도시가 없습니다.")
+    center = (19.75, 75.71)
+    m = folium.Map(location=center, zoom_start=7, tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", attr="Google")
+    points = []
+    for city in st.session_state.route:
+        lat, lon = coords.get(city, center)
+        points.append((lat, lon))
+        venues = st.session_state.venues.get(city, [])
+        popup_lines = []
+        for v in venues:
+            line = f"<b>{v['Venue']}</b><br>{v['Seats']}석 | {v['IndoorOutdoor']}"
+            if v.get('Special Notes'):
+                line += f"<br>{v['Special Notes']}"
+            if v["Google Maps Link"].startswith("http"):
+                line += f"<br><a href='{v['Google Maps Link']}' target='_blank'>자동차 구글맵</a>"
+            popup_lines.append(line + "<hr>")
+        popup_html = "<br>".join(popup_lines) if popup_lines else f"<b>{city}</b>"
+        folium.Marker(
+            location=[lat, lon],
+            popup=folium.Popup(popup_html, max_width=450),
+            tooltip=None,
+            icon=folium.Icon(icon="map-marker", prefix="fa", color="red")
+        ).add_to(m)
+    if len(points) > 1:
+        AntPath(points, color="#ff1744", weight=5, delay=1000, dash_array=[10, 20]).add_to(m)
+    st_folium(m, width=700, height=500)
