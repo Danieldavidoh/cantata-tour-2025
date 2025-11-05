@@ -1,4 +1,5 @@
-streamlit
+streamlit>=1.36.0
 streamlit-folium
 folium
 websockets
+requests
