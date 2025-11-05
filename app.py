@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 from datetime import datetime
 import folium
@@ -33,96 +32,18 @@ def save_json(filename, data):
 # 거리 계산 함수
 # =============================================
 def calc_distance(lat1, lon1, lat2, lon2):
-    R = 6371.0
+    R = 6371.0  # 지구 반경 (km)
     dlon = radians(lon2 - lon1)
     dlat = radians(lat2 - lat1)
     a = sin(dlat / 2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2)**2
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 # =============================================
-# 세션 & 언어 초기화 (최우선)
-# =============================================
-if "admin" not in st.session_state:
-    st.session_state.admin = False
-if "lang" not in st.session_state:
-    st.session_state.lang = "ko"
-if "notice_data" not in st.session_state:
-    st.session_state.notice_data = load_json(NOTICE_FILE)
-
-# =============================================
-# 다국어 사전 (언어 초기화 후 즉시 정의)
-# =============================================
-LANG = {
-    "ko": {
-        "title": "칸타타 투어 2025",
-        "caption": "마하라스트라 지역 투어 관리 시스템",
-        "tab_notice": "공지 관리",
-        "tab_map": "투어 경로",
-        "add_notice": "새 공지 추가",
-        "title_label": "제목",
-        "content_label": "내용",
-        "submit": "등록",
-        "warning": "제목과 내용을 모두 입력해주세요.",
-        "notice_list": "공지 목록",
-        "no_notice": "등록된 공지가 없습니다.",
-        "delete": "삭제",
-        "map_title": "경로 보기",
-        "admin_login": "관리자 로그인",
-        "password": "비밀번호",
-        "login": "로그인",
-        "logout": "로그아웃",
-        "wrong_pw": "비밀번호가 틀렸습니다.",
-        "lang_select": "언어 선택"
-    },
-    "en": {
-        "title": "Cantata Tour 2025",
-        "caption": "Maharashtra Tour Management",
-        "tab_notice": "Notice Board",
-        "tab_map": "Tour Route",
-        "add_notice": "Add Notice",
-        "title_label": "Title",
-        "content_label": "Content",
-        "submit": "Submit",
-        "warning": "Please fill in title and content.",
-        "notice_list": "Notice List",
-        "no_notice": "No notices yet.",
-        "delete": "Delete",
-        "map_title": "View Route",
-        "admin_login": "Admin Login",
-        "password": "Password",
-        "login": "Login",
-        "logout": "Logout",
-        "wrong_pw": "Wrong password.",
-        "lang_select": "Language"
-    },
-    "hi": {
-        "title": "कांताता टूर 2025",
-        "caption": "महाराष्ट्र टूर मैनेजमेंट",
-        "tab_notice": "सूचना बोर्ड",
-        "tab_map": "टूर रूट",
-        "add_notice": "नई सूचना",
-        "title_label": "शीर्षक",
-        "content_label": "सामग्री",
-        "submit": "जमा करें",
-        "warning": "शीर्षक और सामग्री भरें।",
-        "notice_list": "सूचना सूची",
-        "no_notice": "कोई सूचना नहीं।",
-        "delete": "हटाएं",
-        "map_title": "रूट देखें",
-        "admin_login": "एडमिन लॉगिन",
-        "password": "पासवर्ड",
-        "login": "लॉगिन",
-        "logout": "लॉगआउट",
-        "wrong_pw": "गलत पासवर्ड।",
-        "lang_select": "भाषा"
-    }
-}
-_ = LANG[st.session_state.lang]  # 여기서 _ 정의 완료
-
-# =============================================
 # 공지 관리
 # =============================================
 def add_notice(title, content):
+    if "notice_data" not in st.session_state:
+        st.session_state.notice_data = []
     new_notice = {
         "id": str(uuid.uuid4()),
         "title": title,
@@ -131,32 +52,46 @@ def add_notice(title, content):
     }
     st.session_state.notice_data.insert(0, new_notice)
     save_json(NOTICE_FILE, st.session_state.notice_data)
-    st.rerun()
+    try:
+        st.rerun()
+    except AttributeError:
+        st.experimental_rerun()
 
 def delete_notice(notice_id):
-    st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
-    save_json(NOTICE_FILE, st.session_state.notice_data)
-    st.rerun()
+    if "notice_data" in st.session_state:
+        st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
+        save_json(NOTICE_FILE, st.session_state.notice_data)
+        try:
+            st.rerun()
+        except AttributeError:
+            st.experimental_rerun()
 
 def render_notice_list(show_delete=False):
-    st.subheader(_("notice_list"))
+    st.subheader("📢 공지 목록")
 
-    if not st.session_state.notice_data:
-        st.info(_("no_notice"))
+    if "notice_data" not in st.session_state or not st.session_state.notice_data:
+        st.info("등록된 공지가 없습니다.")
         return
 
     for idx, n in enumerate(st.session_state.notice_data):
-        with st.expander(f"{n['date']} | {n['title']}", expanded=False):
-            st.markdown(n['content'])
+        # ✅ KeyError 방지
+        title = n.get("title", "제목 없음")
+        content = n.get("content", "")
+        date = n.get("date", "날짜 없음")
+        nid = n.get("id") or str(uuid.uuid4())
+
+        # ✅ DuplicateElementKey 방지: idx와 uuid를 함께 사용
+        with st.expander(f"📅 {date} | {title}", expanded=False):
+            st.markdown(content)
             if show_delete:
-                if st.button(_("delete"), key=f"del_{n['id']}_{idx}"):
-                    delete_notice(n['id'])
+                if st.button("🗑️ 삭제", key=f"del_{nid}_{idx}"):
+                    delete_notice(nid)
 
 # =============================================
 # 지도 렌더링
 # =============================================
 def render_map():
-    st.subheader(_("map_title"))
+    st.subheader("🗺️ 경로 보기")
 
     cities = [
         {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
@@ -165,6 +100,7 @@ def render_map():
     ]
 
     m = folium.Map(location=[19.0, 73.0], zoom_start=7)
+
     coords = []
     for c in cities:
         coords.append((c["lat"], c["lon"]))
@@ -172,70 +108,53 @@ def render_map():
             [c["lat"], c["lon"]],
             popup=c["name"],
             tooltip=c["name"],
-            icon=folium.Icon(color="red", icon="music")
+            icon=folium.Icon(color="blue", icon="info-sign")
         ).add_to(m)
 
-    AntPath(coords, color="#ff1744", weight=5, delay=800, dash_array=[10, 20]).add_to(m)
-    st_folium(m, width=900, height=550)
+    AntPath(coords, color="red", weight=3, delay=600).add_to(m)
+    st_folium(m, width=800, height=500)
 
 # =============================================
-# 사이드바: 언어 + 관리자 (이제 _ 사용 가능!)
+# 메인
 # =============================================
-with st.sidebar:
-    # 언어 선택
-    new_lang = st.selectbox(
-        _("lang_select"),
-        ["ko", "en", "hi"],
-        format_func=lambda x: {"ko": "한국어", "en": "English", "hi": "हिन्दी"}[x],
-        index=["ko", "en", "hi"].index(st.session_state.lang)
-    )
-    if new_lang != st.session_state.lang:
-        st.session_state.lang = new_lang
-        _ = LANG[st.session_state.lang]  # 실시간 언어 갱신
-        st.rerun()
+def main():
+    st.title("🎵 칸타타 투어 2025")
+    st.caption("마하라스트라 지역 투어 관리 시스템")
 
-    st.markdown("---")
+    # 세션 초기화
+    if "notice_data" not in st.session_state:
+        st.session_state.notice_data = load_json(NOTICE_FILE)
 
-    # 관리자 로그인
-    if not st.session_state.admin:
-        pw = st.text_input(_("password"), type="password")
-        if st.button(_("login")):
-            if pw == "0000":
-                st.session_state.admin = True
-                st.rerun()
-            else:
-                st.error(_("wrong_pw"))
-    else:
-        st.success("관리자 ON")
-        if st.button(_("logout")):
-            st.session_state.admin = False
-            st.rerun()
+    # ✅ 누락된 ID 자동 보정
+    changed = False
+    for n in st.session_state.notice_data:
+        if "id" not in n:
+            n["id"] = str(uuid.uuid4())
+            changed = True
+    if changed:
+        save_json(NOTICE_FILE, st.session_state.notice_data)
 
-# =============================================
-# 메인 헤더
-# =============================================
-st.markdown(f"# {_['title']} 🎄")
-st.caption(_['caption'])
+    tabs = st.tabs(["📰 공지 관리", "🗺️ 투어 경로"])
 
-# =============================================
-# 탭
-# =============================================
-tab1, tab2 = st.tabs([_['tab_notice'], _['tab_map']])
-
-with tab1:
-    if st.session_state.admin:
-        with st.form("notice_form", clear_on_submit=True):
-            t = st.text_input(_("title_label"))
-            c = st.text_area(_("content_label"))
-            if st.form_submit_button(_("submit")):
-                if t.strip() and c.strip():
-                    add_notice(t, c)
-                    st.success("등록 완료!")
+    with tabs[0]:
+        st.subheader("📝 새 공지 추가")
+        with st.form("add_notice_form", clear_on_submit=True):
+            title = st.text_input("제목")
+            content = st.text_area("내용")
+            submitted = st.form_submit_button("등록")
+            if submitted:
+                if title.strip() and content.strip():
+                    add_notice(title, content)
                 else:
-                    st.warning(_("warning"))
-        render_notice_list(show_delete=True)
-    else:
-        render_notice_list(show_delete=False)
+                    st.warning("제목과 내용을 모두 입력해주세요.")
 
-with tab2:
-    render_map()
+        render_notice_list(show_delete=True)
+
+    with tabs[1]:
+        render_map()
+
+# =============================================
+# 실행
+# =============================================
+if __name__ == "__main__":
+    main()
