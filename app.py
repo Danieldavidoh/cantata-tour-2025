@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 from datetime import datetime
 import folium
@@ -79,7 +78,7 @@ LANG = {
         "wrong_pw": "비밀번호가 틀렸습니다.",
         "lang_select": "언어 선택",
         "file_download": "파일 다운로드",
-        "new_notice_alert": "새 공지가 도착했습니다!"
+        "new_notice_alert": "새 공지가 등록되었습니다!"
     },
     "en": {
         "title": "Cantata Tour 2025",
@@ -107,7 +106,7 @@ LANG = {
         "wrong_pw": "Incorrect password.",
         "lang_select": "Language",
         "file_download": "Download File",
-        "new_notice_alert": "New notice posted!"
+        "new_notice_alert": "A new notice has been posted!"
     },
     "hi": {
         "title": "कांताता टूर 2025",
@@ -154,26 +153,19 @@ if "last_notice_count" not in st.session_state:
     st.session_state.last_notice_count = len(st.session_state.notice_data)
 if "last_check_time" not in st.session_state:
     st.session_state.last_check_time = datetime.now()
-if "show_new_alert" not in st.session_state:
-    st.session_state.show_new_alert = False
 
-# =============================================
-# 번역 함수 정의
-# =============================================
 def _(key):
     return LANG[st.session_state.lang].get(key, key)
 
 # =============================================
-# 공지 관리
+# 공지 추가 / 삭제
 # =============================================
 def add_notice(title, content, image_file=None, upload_file=None):
     img_path, file_path = None, None
-
     if image_file:
         img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{image_file.name}")
         with open(img_path, "wb") as f:
             f.write(image_file.read())
-
     if upload_file:
         file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{upload_file.name}")
         with open(file_path, "wb") as f:
@@ -187,12 +179,9 @@ def add_notice(title, content, image_file=None, upload_file=None):
         "image": img_path,
         "file": file_path
     }
-
     st.session_state.notice_data.insert(0, new_notice)
     save_json(NOTICE_FILE, st.session_state.notice_data)
-    
-    # 새 공지 감지 플래그 ON
-    st.session_state.show_new_alert = True
+    st.session_state.last_notice_count = len(st.session_state.notice_data)
     st.rerun()
 
 def delete_notice(notice_id):
@@ -201,32 +190,28 @@ def delete_notice(notice_id):
     st.session_state.delete_target = None
     st.rerun()
 
+# =============================================
+# 공지 리스트
+# =============================================
 def render_notice_list():
     st.subheader(_("notice_list"))
-
     if not st.session_state.notice_data:
         st.info(_("no_notice"))
         return
-
     for idx, n in enumerate(st.session_state.notice_data):
         title = n.get("title", "(제목 없음)")
         date = n.get("date", "?")
         content = n.get("content", "")
         nid = n.get("id", str(uuid.uuid4()))
-
         with st.expander(f"{date} | {title}"):
             st.markdown(content)
-
             if n.get("image") and os.path.exists(n["image"]):
                 st.image(n["image"], use_container_width=True)
-
             if n.get("file") and os.path.exists(n["file"]):
                 st.markdown(get_file_download_link(n["file"], _("file_download")), unsafe_allow_html=True)
-
             if st.session_state.admin:
                 if st.button(f"{_('delete')}", key=f"del_{nid}_{idx}"):
                     st.session_state.delete_target = nid
-
     if st.session_state.delete_target:
         st.warning(_("delete_confirm"))
         col1, col2 = st.columns(2)
@@ -239,7 +224,7 @@ def render_notice_list():
                 st.rerun()
 
 # =============================================
-# 지도 (모바일 최적화)
+# 지도
 # =============================================
 def render_map():
     st.subheader(_("map_title"))
@@ -258,7 +243,6 @@ def render_map():
             icon=folium.Icon(color="red", icon="music")
         ).add_to(m)
     AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
-
     if st.session_state.admin:
         st_folium(m, width=900, height=550)
     else:
@@ -297,32 +281,36 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 실시간 알림 + 5분 갱신 (완벽 보완)
+# 자동 갱신 (5분) + 새 공지 즉시 알림 (팝업+음)
 # =============================================
 current_time = datetime.now()
-
-# 1. 5분마다 파일에서 최신 공지 확인 (일반 사용자)
 if not st.session_state.admin:
     if (current_time - st.session_state.last_check_time).total_seconds() > 300:
         latest_data = load_json(NOTICE_FILE)
         if len(latest_data) > st.session_state.last_notice_count:
-            st.session_state.show_new_alert = True
             st.session_state.notice_data = latest_data
             st.session_state.last_notice_count = len(latest_data)
-        st.session_state.last_check_time = current_time
-        st.rerun()
-
-# 2. 관리자가 등록하면 즉시 알림 (모든 사용자)
-if st.session_state.show_new_alert:
-    st.toast(_("new_notice_alert"), icon="📢")
-    st.session_state.show_new_alert = False  # 1회만 표시
+            st.session_state.last_check_time = current_time
+            st.toast(_("new_notice_alert"))
+            st.markdown(
+                """
+                <script>
+                alert("🔔 새 공지가 등록되었습니다!");
+                var audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+                audio.play();
+                </script>
+                """,
+                unsafe_allow_html=True
+            )
+            st.rerun()
+        else:
+            st.session_state.last_check_time = current_time
 
 # =============================================
-# 메인 헤더
+# 메인 화면
 # =============================================
 st.markdown(f"# {_('title')}")
 st.caption(_("caption"))
-
 tab1, tab2 = st.tabs([_('tab_notice'), _('tab_map')])
 
 with tab1:
