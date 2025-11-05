@@ -8,6 +8,7 @@ import json
 import os
 import uuid
 import base64
+from streamlit_autorefresh import st_autorefresh
 
 # =============================================
 # 기본 설정
@@ -16,10 +17,6 @@ st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
 NOTICE_FILE = "notice.json"
 UPLOAD_DIR = "uploads"
-
-# =============================================
-# 폴더 준비
-# =============================================
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # =============================================
@@ -49,78 +46,31 @@ def get_file_download_link(file_path, label):
 # 다국어 지원
 # =============================================
 LANG = {
-    "ko": {
-        "title": "칸타타 투어 2025",
-        "caption": "마하라스트라 지역 투어 관리 시스템",
-        "tab_notice": "공지 관리",
-        "tab_map": "투어 경로",
-        "add_notice": "새 공지 추가",
-        "title_label": "제목",
-        "content_label": "내용",
-        "upload_image": "이미지 업로드 (선택)",
-        "upload_file": "파일 업로드 (선택)",
-        "submit": "등록",
-        "warning": "제목과 내용을 모두 입력해주세요.",
-        "notice_list": "공지 목록",
-        "no_notice": "등록된 공지가 없습니다.",
-        "delete": "삭제",
-        "map_title": "경로 보기",
-        "admin_login": "관리자 로그인",
-        "password": "비밀번호",
-        "login": "로그인",
-        "logout": "로그아웃",
-        "wrong_pw": "비밀번호가 틀렸습니다.",
-        "lang_select": "언어 선택",
-        "file_download": "📎 파일 다운로드"
-    },
-    "en": {
-        "title": "Cantata Tour 2025",
-        "caption": "Maharashtra Tour Management",
-        "tab_notice": "Notice Board",
-        "tab_map": "Tour Route",
-        "add_notice": "Add Notice",
-        "title_label": "Title",
-        "content_label": "Content",
-        "upload_image": "Upload Image (optional)",
-        "upload_file": "Upload File (optional)",
-        "submit": "Submit",
-        "warning": "Please fill in both title and content.",
-        "notice_list": "Notice List",
-        "no_notice": "No notices yet.",
-        "delete": "Delete",
-        "map_title": "View Route",
-        "admin_login": "Admin Login",
-        "password": "Password",
-        "login": "Login",
-        "logout": "Logout",
-        "wrong_pw": "Wrong password.",
-        "lang_select": "Language",
-        "file_download": "📎 Download File"
-    },
-    "hi": {
-        "title": "कांताता टूर 2025",
-        "caption": "महाराष्ट्र टूर मैनेजमेंट",
-        "tab_notice": "सूचना बोर्ड",
-        "tab_map": "टूर रूट",
-        "add_notice": "नई सूचना जोड़ें",
-        "title_label": "शीर्षक",
-        "content_label": "सामग्री",
-        "upload_image": "छवि अपलोड करें (वैकल्पिक)",
-        "upload_file": "फ़ाइल अपलोड करें (वैकल्पिक)",
-        "submit": "जमा करें",
-        "warning": "कृपया शीर्षक और सामग्री भरें।",
-        "notice_list": "सूचना सूची",
-        "no_notice": "कोई सूचना नहीं है।",
-        "delete": "हटाएं",
-        "map_title": "रूट देखें",
-        "admin_login": "एडमिन लॉगिन",
-        "password": "पासवर्ड",
-        "login": "लॉगिन",
-        "logout": "लॉगआउट",
-        "wrong_pw": "गलत पासवर्ड।",
-        "lang_select": "भाषा चुनें",
-        "file_download": "📎 फ़ाइल डाउनलोड करें"
-    }
+    "ko": {"title": "칸타타 투어 2025", "caption": "마하라스트라 지역 투어 관리 시스템",
+        "tab_notice": "공지 관리", "tab_map": "투어 경로", "add_notice": "새 공지 추가",
+        "title_label": "제목", "content_label": "내용", "upload_image": "이미지 업로드 (선택)",
+        "upload_file": "파일 업로드 (선택)", "submit": "등록", "warning": "제목과 내용을 모두 입력해주세요.",
+        "notice_list": "공지 목록", "no_notice": "등록된 공지가 없습니다.", "delete": "삭제",
+        "map_title": "경로 보기", "admin_login": "관리자 로그인", "password": "비밀번호",
+        "login": "로그인", "logout": "로그아웃", "wrong_pw": "비밀번호가 틀렸습니다.",
+        "lang_select": "언어 선택", "file_download": "📎 파일 다운로드"},
+    "en": {"title": "Cantata Tour 2025", "caption": "Maharashtra Tour Management",
+        "tab_notice": "Notice Board", "tab_map": "Tour Route", "add_notice": "Add Notice",
+        "title_label": "Title", "content_label": "Content", "upload_image": "Upload Image (optional)",
+        "upload_file": "Upload File (optional)", "submit": "Submit",
+        "warning": "Please fill in both title and content.", "notice_list": "Notice List",
+        "no_notice": "No notices yet.", "delete": "Delete", "map_title": "View Route",
+        "admin_login": "Admin Login", "password": "Password", "login": "Login", "logout": "Logout",
+        "wrong_pw": "Wrong password.", "lang_select": "Language", "file_download": "📎 Download File"},
+    "hi": {"title": "कांताता टूर 2025", "caption": "महाराष्ट्र टूर मैनेजमेंट",
+        "tab_notice": "सूचना बोर्ड", "tab_map": "टूर रूट", "add_notice": "नई सूचना जोड़ें",
+        "title_label": "शीर्षक", "content_label": "सामग्री", "upload_image": "छवि अपलोड करें (वैकल्पिक)",
+        "upload_file": "फ़ाइल अपलोड करें (वैकल्पिक)", "submit": "जमा करें",
+        "warning": "कृपया शीर्षक और सामग्री भरें।", "notice_list": "सूचना सूची",
+        "no_notice": "कोई सूचना नहीं है।", "delete": "हटाएं", "map_title": "रूट देखें",
+        "admin_login": "एडमिन लॉगिन", "password": "पासवर्ड", "login": "लॉगिन",
+        "logout": "लॉगआउट", "wrong_pw": "गलत पासवर्ड।", "lang_select": "भाषा चुनें",
+        "file_download": "📎 फ़ाइल डाउनलोड करें"}
 }
 
 # =============================================
@@ -132,6 +82,8 @@ if "lang" not in st.session_state:
     st.session_state.lang = "ko"
 if "notice_data" not in st.session_state:
     st.session_state.notice_data = load_json(NOTICE_FILE)
+if "prev_notice_count" not in st.session_state:
+    st.session_state.prev_notice_count = len(st.session_state.notice_data)
 
 _ = LANG[st.session_state.lang]
 
@@ -140,12 +92,10 @@ _ = LANG[st.session_state.lang]
 # =============================================
 def add_notice(title, content, image_file=None, upload_file=None):
     img_path, file_path = None, None
-
     if image_file:
         img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{image_file.name}")
         with open(img_path, "wb") as f:
             f.write(image_file.read())
-
     if upload_file:
         file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{upload_file.name}")
         with open(file_path, "wb") as f:
@@ -162,6 +112,7 @@ def add_notice(title, content, image_file=None, upload_file=None):
 
     st.session_state.notice_data.insert(0, new_notice)
     save_json(NOTICE_FILE, st.session_state.notice_data)
+    st.session_state.prev_notice_count = len(st.session_state.notice_data)
     st.rerun()
 
 def delete_notice(notice_id):
@@ -177,7 +128,6 @@ def delete_notice(notice_id):
 
 def render_notice_list(show_delete=False):
     st.subheader(_["notice_list"])
-
     if not st.session_state.notice_data:
         st.info(_["no_notice"])
         return
@@ -185,13 +135,10 @@ def render_notice_list(show_delete=False):
     for idx, n in enumerate(st.session_state.notice_data):
         with st.expander(f"📅 {n.get('date','?')} | {n.get('title','(제목 없음)')}"):
             st.markdown(n.get("content", ""))
-
             if n.get("image") and os.path.exists(n["image"]):
                 st.image(n["image"], use_container_width=True)
-
             if n.get("file") and os.path.exists(n["file"]):
                 st.markdown(get_file_download_link(n["file"], _["file_download"]), unsafe_allow_html=True)
-
             if show_delete:
                 if st.button(_["delete"], key=f"del_{n['id']}_{idx}"):
                     delete_notice(n["id"])
@@ -201,16 +148,13 @@ def render_notice_list(show_delete=False):
 # =============================================
 def render_map():
     st.subheader(_["map_title"])
-
     cities = [
         {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
         {"name": "Pune", "lat": 18.5204, "lon": 73.8567},
         {"name": "Nashik", "lat": 19.9975, "lon": 73.7898},
     ]
-
     m = folium.Map(location=[19.0, 73.0], zoom_start=7)
     coords = [(c["lat"], c["lon"]) for c in cities]
-
     for c in cities:
         folium.Marker(
             [c["lat"], c["lon"]],
@@ -218,7 +162,6 @@ def render_map():
             tooltip=c["name"],
             icon=folium.Icon(color="red", icon="music")
         ).add_to(m)
-
     AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
     st_folium(m, width=900, height=550)
 
@@ -255,7 +198,7 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 메인
+# 메인 화면
 # =============================================
 st.markdown(f"# {_['title']} 🎄")
 st.caption(_['caption'])
@@ -276,6 +219,16 @@ with tab1:
                     st.warning(_["warning"])
         render_notice_list(show_delete=True)
     else:
+        # ✅ 자동 새로고침 (5초마다)
+        st_autorefresh(interval=5000, key="refresh_notices")
+
+        # 새 공지 감지
+        current_data = load_json(NOTICE_FILE)
+        if len(current_data) > st.session_state.prev_notice_count:
+            st.toast("🔔 새로운 공지가 등록되었습니다!")
+            st.session_state.prev_notice_count = len(current_data)
+
+        st.session_state.notice_data = current_data
         render_notice_list(show_delete=False)
 
 with tab2:
