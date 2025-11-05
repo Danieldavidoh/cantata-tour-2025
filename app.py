@@ -50,7 +50,7 @@ def get_file_download_link(file_path, label):
     return href
 
 # =============================================
-# 다국어 사전 (힌디어 추가 완료)
+# 다국어 사전 (힌디어 포함)
 # =============================================
 LANG = {
     "ko": {
@@ -235,7 +235,7 @@ def render_notice_list():
                 st.rerun()
 
 # =============================================
-# 지도
+# 지도 (모바일 최적화)
 # =============================================
 def render_map():
     st.subheader(_("map_title"))
@@ -254,17 +254,22 @@ def render_map():
             icon=folium.Icon(color="red", icon="music")
         ).add_to(m)
     AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
-    st_folium(m, width=900, height=550)
+
+    # 모바일에서 좌우 100% 너비
+    if st.session_state.admin:
+        st_folium(m, width=900, height=550)
+    else:
+        st_folium(m, use_container_width=True, height=550)
 
 # =============================================
-# 사이드바 (힌디어 포함)
+# 사이드바 (힌디어 포함, "국내어" → "한국어")
 # =============================================
 with st.sidebar:
     st.markdown(f"### {_( 'lang_select')}")
     lang_choice = st.selectbox(
         "",
         ["ko", "en", "hi"],
-        format_func=lambda x: {"ko": "국내어", "en": "English", "hi": "हिन्दी"}[x],
+        format_func=lambda x: {"ko": "한국어", "en": "English", "hi": "हिन्दी"}[x],
         index=["ko", "en", "hi"].index(st.session_state.lang)
     )
     if lang_choice != st.session_state.lang:
@@ -314,7 +319,7 @@ if len(st.session_state.notice_data) > st.session_state.last_notice_count and no
 st.markdown(f"# {_('title')}")
 st.caption(_("caption"))
 
-tab1, tab2 = st.tabs([_('tab_notice'), _('tab_map')])
+tab1, tab2 = st.tabs([_('tab_notice'), _['tab_map']])
 
 with tab1:
     if st.session_state.admin:
