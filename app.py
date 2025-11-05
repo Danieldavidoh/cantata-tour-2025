@@ -7,6 +7,7 @@ import json
 import os
 import uuid
 import base64
+from streamlit_autorefresh import st_autorefresh
 
 # =============================================
 # 기본 설정
@@ -82,7 +83,8 @@ LANG = {
         "logout": "로그아웃",
         "wrong_pw": "비밀번호가 틀렸습니다.",
         "lang_select": "언어 선택",
-        "file_download": "📎 파일 다운로드"
+        "file_download": "📎 파일 다운로드",
+        "new_notice_alert": "📢 새로운 공지가 등록되었습니다!"
     }
 }
 
@@ -97,6 +99,10 @@ if "notice_data" not in st.session_state:
     st.session_state.notice_data = load_json(NOTICE_FILE)
 if "delete_target" not in st.session_state:
     st.session_state.delete_target = None
+if "last_notice_count" not in st.session_state:
+    st.session_state.last_notice_count = len(st.session_state.notice_data)
+if "show_new_alert" not in st.session_state:
+    st.session_state.show_new_alert = False
 
 _ = LANG[st.session_state.lang]
 
@@ -127,12 +133,14 @@ def add_notice(title, content, image_file=None, upload_file=None):
 
     st.session_state.notice_data.insert(0, new_notice)
     save_json(NOTICE_FILE, st.session_state.notice_data)
+    st.session_state.last_notice_count = len(st.session_state.notice_data)
     st.rerun()
 
 def delete_notice(notice_id):
     st.session_state.notice_data = [n for n in st.session_state.notice_data if n.get("id") != notice_id]
     save_json(NOTICE_FILE, st.session_state.notice_data)
     st.session_state.delete_target = None
+    st.session_state.last_notice_count = len(st.session_state.notice_data)
     st.rerun()
 
 def render_notice_list():
@@ -143,7 +151,6 @@ def render_notice_list():
         return
 
     for idx, n in enumerate(st.session_state.notice_data):
-        # ✅ get()으로 안전하게 키 접근
         title = n.get("title", "(제목 없음)")
         date = n.get("date", "?")
         content = n.get("content", "")
@@ -215,6 +222,22 @@ with st.sidebar:
         if st.button(_["logout"]):
             st.session_state.admin = False
             st.rerun()
+
+# =============================================
+# 일반 사용자용 자동 새로고침 + 새 공지 알림
+# =============================================
+if not st.session_state.admin:
+    st_autorefresh(interval=120000, key="auto_refresh")  # 2분마다 새로고침
+    latest_data = load_json(NOTICE_FILE)
+    if len(latest_data) > st.session_state.last_notice_count:
+        st.session_state.show_new_alert = True
+        st.session_state.notice_data = latest_data
+        st.session_state.last_notice_count = len(latest_data)
+
+# 새 공지 알림 표시
+if st.session_state.show_new_alert and not st.session_state.admin:
+    st.toast(_["new_notice_alert"])
+    st.session_state.show_new_alert = False
 
 # =============================================
 # 메인
