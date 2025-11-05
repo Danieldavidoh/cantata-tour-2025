@@ -3,7 +3,7 @@ from datetime import datetime
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
-import json, os, uuid, base64
+import json, os, uuid, base64, time
 
 # =============================================
 # 기본 설정
@@ -21,6 +21,10 @@ if "admin" not in st.session_state:
     st.session_state.admin = False
 if "lang" not in st.session_state:
     st.session_state.lang = "ko"
+if "last_check_time" not in st.session_state:
+    st.session_state.last_check_time = time.time()
+if "notice_count" not in st.session_state:
+    st.session_state.notice_count = 0
 
 # =============================================
 # 다국어
@@ -128,10 +132,8 @@ def add_notice(title, content, image_file=None, upload_file=None):
     data.insert(0, new_notice)
     save_json(NOTICE_FILE, data)
 
-    # ✅ rerun 전에 세션 플래그 설정
-    st.session_state["show_toast"] = "add"
-    st.rerun()  # ✅ 최신 방식으로 변경
-
+    st.toast("✅ 공지가 등록되었습니다.")
+    st.rerun()  # 등록 시 즉시 새로고침
 
 def delete_notice(notice_id):
     data = load_json(NOTICE_FILE)
@@ -144,8 +146,8 @@ def delete_notice(notice_id):
     data = [n for n in data if n["id"] != notice_id]
     save_json(NOTICE_FILE, data)
 
-    st.session_state["show_toast"] = "delete"
-    st.rerun()  # ✅ 최신 방식으로 변경
+    st.toast("🗑️ 공지가 삭제되었습니다.")
+    st.rerun()  # 삭제 시 즉시 새로고침
 
 # =============================================
 # 공지 리스트
@@ -185,6 +187,21 @@ def render_map():
     st_folium(m, width=900, height=550)
 
 # =============================================
+# 자동 새로고침 (3분 주기) + 새 공지 알림
+# =============================================
+if not st.session_state.admin:
+    current_time = time.time()
+    if current_time - st.session_state.last_check_time > 180:  # 3분
+        current_data = load_json(NOTICE_FILE)
+        current_count = len(current_data)
+        if current_count > st.session_state.notice_count:
+            st.toast("🔔 새 공지가 등록되었습니다!")
+            st.audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg")
+        st.session_state.notice_count = current_count
+        st.session_state.last_check_time = current_time
+        st.rerun()
+
+# =============================================
 # 사이드바
 # =============================================
 with st.sidebar:
@@ -217,22 +234,11 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 메인 영역
+# 메인
 # =============================================
 st.markdown(f"# {_['title']} 🎄")
 st.caption(_["caption"])
 
-# ✅ rerun 후 토스트 표시
-if "show_toast" in st.session_state:
-    if st.session_state["show_toast"] == "add":
-        st.toast("✅ 공지가 등록되었습니다.")
-    elif st.session_state["show_toast"] == "delete":
-        st.toast("🗑️ 공지가 삭제되었습니다.")
-    del st.session_state["show_toast"]
-
-# =============================================
-# 탭
-# =============================================
 tab1, tab2 = st.tabs([_["tab_notice"], _["tab_map"]])
 
 with tab1:
@@ -250,6 +256,8 @@ with tab1:
         render_notice_list(show_delete=True)
     else:
         render_notice_list(show_delete=False)
+        if st.button("🔄 새로고침"):
+            st.rerun()
 
 with tab2:
     render_map()
