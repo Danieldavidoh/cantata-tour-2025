@@ -7,12 +7,20 @@ from math import radians, sin, cos, sqrt, atan2
 import json
 import os
 import uuid
+import base64
 
 # =============================================
 # 기본 설정
 # =============================================
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
+
 NOTICE_FILE = "notice.json"
+UPLOAD_DIR = "uploads"
+
+# =============================================
+# 폴더 준비
+# =============================================
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # =============================================
 # 유틸 함수
@@ -27,6 +35,16 @@ def save_json(filename, data):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
+def get_file_download_link(file_path, label):
+    """파일 다운로드 링크 생성"""
+    if not os.path.exists(file_path):
+        return ""
+    with open(file_path, "rb") as f:
+        data = f.read()
+    b64 = base64.b64encode(data).decode()
+    href = f'<a href="data:file/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
+    return href
+
 # =============================================
 # 다국어 지원
 # =============================================
@@ -39,6 +57,8 @@ LANG = {
         "add_notice": "새 공지 추가",
         "title_label": "제목",
         "content_label": "내용",
+        "upload_image": "이미지 업로드 (선택)",
+        "upload_file": "파일 업로드 (선택)",
         "submit": "등록",
         "warning": "제목과 내용을 모두 입력해주세요.",
         "notice_list": "공지 목록",
@@ -50,7 +70,8 @@ LANG = {
         "login": "로그인",
         "logout": "로그아웃",
         "wrong_pw": "비밀번호가 틀렸습니다.",
-        "lang_select": "언어 선택"
+        "lang_select": "언어 선택",
+        "file_download": "📎 파일 다운로드"
     },
     "en": {
         "title": "Cantata Tour 2025",
@@ -60,6 +81,8 @@ LANG = {
         "add_notice": "Add Notice",
         "title_label": "Title",
         "content_label": "Content",
+        "upload_image": "Upload Image (optional)",
+        "upload_file": "Upload File (optional)",
         "submit": "Submit",
         "warning": "Please fill in both title and content.",
         "notice_list": "Notice List",
@@ -71,7 +94,8 @@ LANG = {
         "login": "Login",
         "logout": "Logout",
         "wrong_pw": "Wrong password.",
-        "lang_select": "Language"
+        "lang_select": "Language",
+        "file_download": "📎 Download File"
     },
     "hi": {
         "title": "कांताता टूर 2025",
@@ -81,6 +105,8 @@ LANG = {
         "add_notice": "नई सूचना जोड़ें",
         "title_label": "शीर्षक",
         "content_label": "सामग्री",
+        "upload_image": "छवि अपलोड करें (वैकल्पिक)",
+        "upload_file": "फ़ाइल अपलोड करें (वैकल्पिक)",
         "submit": "जमा करें",
         "warning": "कृपया शीर्षक और सामग्री भरें।",
         "notice_list": "सूचना सूची",
@@ -92,7 +118,8 @@ LANG = {
         "login": "लॉगिन",
         "logout": "लॉगआउट",
         "wrong_pw": "गलत पासवर्ड।",
-        "lang_select": "भाषा चुनें"
+        "lang_select": "भाषा चुनें",
+        "file_download": "📎 फ़ाइल डाउनलोड करें"
     }
 }
 
@@ -111,18 +138,39 @@ _ = LANG[st.session_state.lang]
 # =============================================
 # 공지 관리 함수
 # =============================================
-def add_notice(title, content):
+def add_notice(title, content, image_file=None, upload_file=None):
+    img_path, file_path = None, None
+
+    if image_file:
+        img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{image_file.name}")
+        with open(img_path, "wb") as f:
+            f.write(image_file.read())
+
+    if upload_file:
+        file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{upload_file.name}")
+        with open(file_path, "wb") as f:
+            f.write(upload_file.read())
+
     new_notice = {
         "id": str(uuid.uuid4()),
         "title": title,
         "content": content,
-        "date": datetime.now().strftime("%Y-%m-%d %H:%M")
+        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "image": img_path,
+        "file": file_path
     }
+
     st.session_state.notice_data.insert(0, new_notice)
     save_json(NOTICE_FILE, st.session_state.notice_data)
     st.rerun()
 
 def delete_notice(notice_id):
+    for n in st.session_state.notice_data:
+        if n["id"] == notice_id:
+            if n.get("image") and os.path.exists(n["image"]):
+                os.remove(n["image"])
+            if n.get("file") and os.path.exists(n["file"]):
+                os.remove(n["file"])
     st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
     save_json(NOTICE_FILE, st.session_state.notice_data)
     st.rerun()
@@ -136,7 +184,14 @@ def render_notice_list(show_delete=False):
 
     for idx, n in enumerate(st.session_state.notice_data):
         with st.expander(f"📅 {n.get('date','?')} | {n.get('title','(제목 없음)')}"):
-            st.markdown(n.get('content', ''))
+            st.markdown(n.get("content", ""))
+
+            if n.get("image") and os.path.exists(n["image"]):
+                st.image(n["image"], use_container_width=True)
+
+            if n.get("file") and os.path.exists(n["file"]):
+                st.markdown(get_file_download_link(n["file"], _["file_download"]), unsafe_allow_html=True)
+
             if show_delete:
                 if st.button(_["delete"], key=f"del_{n['id']}_{idx}"):
                     delete_notice(n["id"])
@@ -171,7 +226,6 @@ def render_map():
 # 사이드바: 언어 + 관리자 로그인
 # =============================================
 with st.sidebar:
-    # 언어 선택
     new_lang = st.selectbox(
         _["lang_select"],
         ["ko", "en", "hi"],
@@ -184,7 +238,6 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # 관리자 로그인
     if not st.session_state.admin:
         st.markdown(f"### 🔐 {_['admin_login']}")
         pw = st.text_input(_["password"], type="password")
@@ -214,9 +267,11 @@ with tab1:
         with st.form("notice_form", clear_on_submit=True):
             t = st.text_input(_["title_label"])
             c = st.text_area(_["content_label"])
+            img = st.file_uploader(_["upload_image"], type=["png", "jpg", "jpeg"])
+            f = st.file_uploader(_["upload_file"])
             if st.form_submit_button(_["submit"]):
                 if t.strip() and c.strip():
-                    add_notice(t, c)
+                    add_notice(t, c, img, f)
                 else:
                     st.warning(_["warning"])
         render_notice_list(show_delete=True)
