@@ -3,7 +3,7 @@ from datetime import datetime
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
-import json, os, uuid, base64, time
+import json, os, uuid, base64
 
 # =============================================
 # 기본 설정
@@ -21,10 +21,8 @@ if "admin" not in st.session_state:
     st.session_state.admin = False
 if "lang" not in st.session_state:
     st.session_state.lang = "ko"
-if "last_check_time" not in st.session_state:
-    st.session_state.last_check_time = time.time()
-if "notice_count" not in st.session_state:
-    st.session_state.notice_count = 0
+if "last_notice_count" not in st.session_state:
+    st.session_state.last_notice_count = 0
 
 # =============================================
 # 다국어
@@ -53,30 +51,6 @@ LANG = {
         "wrong_pw": "비밀번호가 틀렸습니다.",
         "lang_select": "언어 선택",
         "file_download": "📎 파일 다운로드"
-    },
-    "en": {
-        "title": "Cantata Tour 2025",
-        "caption": "Maharashtra Tour Management",
-        "tab_notice": "Notice Board",
-        "tab_map": "Tour Route",
-        "add_notice": "Add Notice",
-        "title_label": "Title",
-        "content_label": "Content",
-        "upload_image": "Upload Image (optional)",
-        "upload_file": "Upload File (optional)",
-        "submit": "Submit",
-        "warning": "Please fill in both title and content.",
-        "notice_list": "Notice List",
-        "no_notice": "No notices yet.",
-        "delete": "Delete",
-        "map_title": "View Route",
-        "admin_login": "Admin Login",
-        "password": "Password",
-        "login": "Login",
-        "logout": "Logout",
-        "wrong_pw": "Wrong password.",
-        "lang_select": "Language",
-        "file_download": "📎 Download File"
     },
 }
 
@@ -133,7 +107,7 @@ def add_notice(title, content, image_file=None, upload_file=None):
     save_json(NOTICE_FILE, data)
 
     st.toast("✅ 공지가 등록되었습니다.")
-    st.rerun()  # 등록 시 즉시 새로고침
+    st.rerun()
 
 def delete_notice(notice_id):
     data = load_json(NOTICE_FILE)
@@ -145,9 +119,8 @@ def delete_notice(notice_id):
                 os.remove(n["file"])
     data = [n for n in data if n["id"] != notice_id]
     save_json(NOTICE_FILE, data)
-
     st.toast("🗑️ 공지가 삭제되었습니다.")
-    st.rerun()  # 삭제 시 즉시 새로고침
+    st.rerun()
 
 # =============================================
 # 공지 리스트
@@ -187,30 +160,30 @@ def render_map():
     st_folium(m, width=900, height=550)
 
 # =============================================
-# 자동 새로고침 (3분 주기) + 새 공지 알림
+# 자동 새로고침 (10초마다)
 # =============================================
+from streamlit_autorefresh import st_autorefresh
+
 if not st.session_state.admin:
-    current_time = time.time()
-    if current_time - st.session_state.last_check_time > 180:  # 3분
-        current_data = load_json(NOTICE_FILE)
-        current_count = len(current_data)
-        if current_count > st.session_state.notice_count:
-            st.toast("🔔 새 공지가 등록되었습니다!")
-            st.audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg")
-        st.session_state.notice_count = current_count
-        st.session_state.last_check_time = current_time
-        st.rerun()
+    count = len(load_json(NOTICE_FILE))
+    if st.session_state.last_notice_count == 0:
+        st.session_state.last_notice_count = count
+
+    # 10초마다 새로고침
+    st_autorefresh(interval=10 * 1000, key="auto_refresh")
+
+    new_count = len(load_json(NOTICE_FILE))
+    if new_count > st.session_state.last_notice_count:
+        st.toast("🔔 새 공지가 등록되었습니다!")
+        st.audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg")
+        st.session_state.last_notice_count = new_count
 
 # =============================================
 # 사이드바
 # =============================================
 with st.sidebar:
-    new_lang = st.selectbox(
-        _["lang_select"],
-        ["ko", "en"],
-        format_func=lambda x: {"ko": "한국어", "en": "English"}[x],
-        index=["ko", "en"].index(st.session_state.lang)
-    )
+    st.markdown("### 언어 선택")
+    new_lang = st.selectbox("Language", ["ko"], index=0)
     if new_lang != st.session_state.lang:
         st.session_state.lang = new_lang
         st.rerun()
@@ -218,7 +191,7 @@ with st.sidebar:
     st.markdown("---")
 
     if not st.session_state.admin:
-        st.markdown(f"### 🔐 {_['admin_login']}")
+        st.markdown(f"### 🔐 관리자 로그인")
         pw = st.text_input(_["password"], type="password")
         if st.button(_["login"]):
             if pw == "0000":
