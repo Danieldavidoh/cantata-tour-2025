@@ -63,6 +63,64 @@ LANG = {
         "longitude": "경도",
         "city_added": "도시가 추가되었습니다."
     },
+    "en": {
+        "title": "Cantata Tour 2025",
+        "caption": "Maharashtra Tour Management",
+        "tab_notice": "Notice Board",
+        "tab_map": "Tour Route",
+        "add_notice": "Add New Notice",
+        "title_label": "Title",
+        "content_label": "Content",
+        "upload_image": "Upload Image (optional)",
+        "upload_file": "Upload File (optional)",
+        "submit": "Submit",
+        "warning": "Please fill in both title and content.",
+        "notice_list": "Notice List",
+        "no_notice": "No notices yet.",
+        "delete": "Delete",
+        "map_title": "View Route",
+        "admin_login": "Admin Login",
+        "password": "Password",
+        "login": "Login",
+        "logout": "Logout",
+        "wrong_pw": "Wrong password.",
+        "lang_select": "Language",
+        "file_download": "Download File",
+        "add_city": "Add City",
+        "city_name": "City Name",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "city_added": "City added."
+    },
+    "hi": {
+        "title": "कांताता टूर 2025",
+        "caption": "महाराष्ट्र",
+        "tab_notice": "सूचना बोर्ड",
+        "tab_map": "टूर रूट",
+        "add_notice": "नई सूचना",
+        "title_label": "शीर्षक",
+        "content_label": "सामग्री",
+        "upload_image": "छवि अपलोड (वैकल्पिक)",
+        "upload_file": "फ़ाइल अपलोड (वैकल्पिक)",
+        "submit": "जमा करें",
+        "warning": "शीर्षक और सामग्री भरें।",
+        "notice_list": "सूचना सूची",
+        "no_notice": "कोई सूचना नहीं।",
+        "delete": "हटाएं",
+        "map_title": "रूट देखें",
+        "admin_login": "एडमिन लॉगिन",
+        "password": "पासवर्ड",
+        "login": "लॉगिन",
+        "logout": "लॉगआउट",
+        "wrong_pw": "गलत पासवर्ड।",
+        "lang_select": "भाषा",
+        "file_download": "फ़ाइल डाउनलोड करें",
+        "add_city": "शहर जोड़ें",
+        "city_name": "शहर का नाम",
+        "latitude": "अक्षांश",
+        "longitude": "देशांतर",
+        "city_added": "शहर जोड़ा गया।"
+    }
 }
 
 # =============================================
@@ -213,28 +271,41 @@ def render_map():
                 st.rerun()
 
 # =============================================
-# 자동 새로고침 (3초마다) + 알림
+# 자동 새로고침 (3초마다) + 알림 (st_autorefresh 제거)
 # =============================================
 if not st.session_state.admin:
     count = len(load_json(NOTICE_FILE))
     if st.session_state.last_notice_count == 0:
         st.session_state.last_notice_count = count
 
-    # 3초마다 자동 갱신
-    st_autorefresh(interval=3 * 1000, key="auto_refresh")
+    # 3초마다 수동 체크
+    if "last_refresh_time" not in st.session_state:
+        st.session_state.last_refresh_time = datetime.now()
 
-    new_count = len(load_json(NOTICE_FILE))
-    if new_count > st.session_state.last_notice_count:
-        st.toast("새 공지가 등록되었습니다!")
-        st.audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg", format="audio/ogg")
-        st.session_state.last_notice_count = new_count
+    if (datetime.now() - st.session_state.last_refresh_time).total_seconds() > 3:
+        new_count = len(load_json(NOTICE_FILE))
+        if new_count > st.session_state.last_notice_count:
+            st.toast("새 공지가 등록되었습니다!")
+            st.audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg", format="audio/ogg")
+            st.session_state.last_notice_count = new_count
+        st.session_state.last_refresh_time = datetime.now()
+        st.rerun()
 
 # =============================================
-# 사이드바 (이제 _() 사용 가능!)
+# 사이드바 (언어 선택 수정: 한국어, English, हिन्दी)
 # =============================================
 with st.sidebar:
     st.markdown("### " + _("lang_select"))
-    new_lang = st.selectbox("", ["ko"], index=0)
+    lang_options = ["ko", "en", "hi"]
+    lang_labels = {"ko": "한국어", "en": "English", "hi": "हिन्दी"}
+    current_index = lang_options.index(st.session_state.lang)
+    
+    new_lang = st.selectbox(
+        "",
+        options=lang_options,
+        format_func=lambda x: lang_labels[x],
+        index=current_index
+    )
     if new_lang != st.session_state.lang:
         st.session_state.lang = new_lang
         st.rerun()
@@ -258,7 +329,7 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 메인 헤더 (함수 사용!)
+# 메인 헤더
 # =============================================
 st.markdown(f"# {_( 'title' )}")
 st.caption(_( 'caption' ))
