@@ -3,7 +3,7 @@ from datetime import datetime
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
-import json, os, uuid, base64, time
+import json, os, uuid, base64
 
 # =============================================
 # 기본 설정
@@ -12,47 +12,18 @@ st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
 NOTICE_FILE = "notice.json"
 UPLOAD_DIR = "uploads"
-AUTO_REFRESH_SECONDS = 10  # ✅ 10초마다 새로고침
-
-# =============================================
-# 자동 새로고침 스크립트 (Streamlit 표준 JS)
-# =============================================
-st.markdown(
-    f"""
-    <meta http-equiv="refresh" content="{AUTO_REFRESH_SECONDS}">
-    """,
-    unsafe_allow_html=True
-)
-
-# =============================================
-# 폴더 준비
-# =============================================
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # =============================================
-# JSON 관련 함수
+# 세션 초기화
 # =============================================
-def load_json(filename):
-    if os.path.exists(filename):
-        with open(filename, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
-
-def save_json(filename, data):
-    with open(filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-def get_file_download_link(file_path, label):
-    if not os.path.exists(file_path):
-        return ""
-    with open(file_path, "rb") as f:
-        data = f.read()
-    b64 = base64.b64encode(data).decode()
-    href = f'<a href="data:file/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
-    return href
+if "admin" not in st.session_state:
+    st.session_state.admin = False
+if "lang" not in st.session_state:
+    st.session_state.lang = "ko"
 
 # =============================================
-# 다국어 지원
+# 다국어
 # =============================================
 LANG = {
     "ko": {
@@ -105,22 +76,31 @@ LANG = {
     },
 }
 
-# =============================================
-# 세션 상태 초기화
-# =============================================
-if "admin" not in st.session_state:
-    st.session_state.admin = False
-if "lang" not in st.session_state:
-    st.session_state.lang = "ko"
-if "notice_data" not in st.session_state:
-    st.session_state.notice_data = load_json(NOTICE_FILE)
-if "last_notice_count" not in st.session_state:
-    st.session_state.last_notice_count = len(st.session_state.notice_data)
-
 _ = LANG[st.session_state.lang]
 
 # =============================================
-# 공지 함수
+# JSON 유틸
+# =============================================
+def load_json(filename):
+    if os.path.exists(filename):
+        with open(filename, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+def save_json(filename, data):
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def get_file_download_link(file_path, label):
+    if not os.path.exists(file_path):
+        return ""
+    with open(file_path, "rb") as f:
+        data = f.read()
+    b64 = base64.b64encode(data).decode()
+    return f'<a href="data:file/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
+
+# =============================================
+# 공지 추가/삭제
 # =============================================
 def add_notice(title, content, image_file=None, upload_file=None):
     img_path, file_path = None, None
@@ -144,44 +124,42 @@ def add_notice(title, content, image_file=None, upload_file=None):
         "file": file_path
     }
 
-    st.session_state.notice_data.insert(0, new_notice)
-    save_json(NOTICE_FILE, st.session_state.notice_data)
-    st.session_state.last_notice_count = len(st.session_state.notice_data)
+    data = load_json(NOTICE_FILE)
+    data.insert(0, new_notice)
+    save_json(NOTICE_FILE, data)
+
     st.toast("✅ 공지가 등록되었습니다.")
-    st.rerun()
+    st.rerun()  # ✅ 등록 직후 새로고침
 
 def delete_notice(notice_id):
-    for n in st.session_state.notice_data:
+    data = load_json(NOTICE_FILE)
+    for n in data:
         if n["id"] == notice_id:
             if n.get("image") and os.path.exists(n["image"]):
                 os.remove(n["image"])
             if n.get("file") and os.path.exists(n["file"]):
                 os.remove(n["file"])
-    st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
-    save_json(NOTICE_FILE, st.session_state.notice_data)
+    data = [n for n in data if n["id"] != notice_id]
+    save_json(NOTICE_FILE, data)
+
     st.toast("🗑️ 공지가 삭제되었습니다.")
-    st.rerun()
+    st.rerun()  # ✅ 삭제 직후 새로고침
 
 # =============================================
-# 공지 목록
+# 공지 리스트
 # =============================================
 def render_notice_list(show_delete=False):
-    st.subheader(_["notice_list"])
-
-    if not st.session_state.notice_data:
+    data = load_json(NOTICE_FILE)
+    if not data:
         st.info(_["no_notice"])
         return
-
-    for idx, n in enumerate(st.session_state.notice_data):
-        with st.expander(f"📅 {n.get('date','?')} | {n.get('title','(제목 없음)')}"):
-            st.markdown(n.get("content", ""))
-
+    for idx, n in enumerate(data):
+        with st.expander(f"📅 {n['date']} | {n['title']}"):
+            st.markdown(n["content"])
             if n.get("image") and os.path.exists(n["image"]):
                 st.image(n["image"], use_container_width=True)
-
             if n.get("file") and os.path.exists(n["file"]):
                 st.markdown(get_file_download_link(n["file"], _["file_download"]), unsafe_allow_html=True)
-
             if show_delete:
                 if st.button(_["delete"], key=f"del_{n['id']}_{idx}"):
                     delete_notice(n["id"])
@@ -191,7 +169,6 @@ def render_notice_list(show_delete=False):
 # =============================================
 def render_map():
     st.subheader(_["map_title"])
-
     cities = [
         {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
         {"name": "Pune", "lat": 18.5204, "lon": 73.8567},
@@ -238,17 +215,10 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 메인 UI
+# 메인
 # =============================================
 st.markdown(f"# {_['title']} 🎄")
 st.caption(_["caption"])
-
-# 🔔 새 공지 감지
-current_data = load_json(NOTICE_FILE)
-if len(current_data) > st.session_state.last_notice_count:
-    st.toast("🔔 새 공지가 등록되었습니다!")
-    st.session_state.notice_data = current_data
-    st.session_state.last_notice_count = len(current_data)
 
 tab1, tab2 = st.tabs([_["tab_notice"], _["tab_map"]])
 
