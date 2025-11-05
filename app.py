@@ -130,7 +130,7 @@ def add_notice(title, content, image_file=None, upload_file=None):
 
     # ✅ rerun 전에 세션 플래그 설정
     st.session_state["show_toast"] = "add"
-    st.experimental_rerun()
+    st.rerun()  # ✅ 최신 방식으로 변경
 
 
 def delete_notice(notice_id):
@@ -144,9 +144,8 @@ def delete_notice(notice_id):
     data = [n for n in data if n["id"] != notice_id]
     save_json(NOTICE_FILE, data)
 
-    # ✅ rerun 전에 세션 플래그 설정
     st.session_state["show_toast"] = "delete"
-    st.experimental_rerun()
+    st.rerun()  # ✅ 최신 방식으로 변경
 
 # =============================================
 # 공지 리스트
@@ -197,7 +196,7 @@ with st.sidebar:
     )
     if new_lang != st.session_state.lang:
         st.session_state.lang = new_lang
-        st.experimental_rerun()
+        st.rerun()
 
     st.markdown("---")
 
@@ -208,14 +207,14 @@ with st.sidebar:
             if pw == "0000":
                 st.session_state.admin = True
                 st.success("✅ 관리자 모드 ON")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error(_["wrong_pw"])
     else:
         st.success("✅ 관리자 모드")
         if st.button(_["logout"]):
             st.session_state.admin = False
-            st.experimental_rerun()
+            st.rerun()
 
 # =============================================
 # 메인 영역
