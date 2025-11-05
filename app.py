@@ -31,7 +31,7 @@ if "last_notice_count" not in st.session_state:
     st.session_state.last_notice_count = 0
 
 # =============================================
-# 다국어 사전 (세션 후 즉시!)
+# 다국어 사전
 # =============================================
 LANG = {
     "ko": {
@@ -66,7 +66,7 @@ LANG = {
 }
 
 # =============================================
-# 번역 함수 정의 (사전 후 즉시!)
+# 번역 함수 정의 (세션 후 즉시!)
 # =============================================
 def _(key):
     return LANG[st.session_state.lang].get(key, key)
@@ -258,25 +258,25 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 메인
+# 메인 헤더 (함수 사용!)
 # =============================================
-st.markdown(f"# {_['title']} ")
-st.caption(_["caption"])
+st.markdown(f"# {_( 'title' )}")
+st.caption(_( 'caption' ))
 
-tab1, tab2 = st.tabs([_["tab_notice"], _["tab_map"]])
+tab1, tab2 = st.tabs([_( 'tab_notice' ), _( 'tab_map' )])
 
 with tab1:
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
-            t = st.text_input(_("title_label"))
-            c = st.text_area(_("content_label"))
-            img = st.file_uploader(_("upload_image"), type=["png", "jpg", "jpeg"])
-            f = st.file_uploader(_("upload_file"))
-            if st.form_submit_button(_("submit")):
+            t = st.text_input(_( 'title_label' ))
+            c = st.text_area(_( 'content_label' ))
+            img = st.file_uploader(_( 'upload_image' ), type=["png", "jpg", "jpeg"])
+            f = st.file_uploader(_( 'upload_file' ))
+            if st.form_submit_button(_( 'submit' )):
                 if t.strip() and c.strip():
                     add_notice(t, c, img, f)
                 else:
-                    st.warning(_("warning"))
+                    st.warning(_( 'warning' ))
         render_notice_list(show_delete=True)
     else:
         render_notice_list(show_delete=False)
