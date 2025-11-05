@@ -7,7 +7,7 @@ import json
 import os
 import uuid
 import base64
-import time
+from streamlit_autorefresh import st_autorefresh
 
 # =============================================
 # 기본 설정
@@ -252,18 +252,16 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 자동 새로고침 (3초 주기) + 알림
+# 자동 새로고침 (5분 주기) + 알림
 # =============================================
 if not st.session_state.admin:
-    st_autorefresh = st.empty()
-    st_autorefresh.write("")  # 더미출력
-    time.sleep(3)  # 3초 대기
+    count = st_autorefresh(interval=5 * 60 * 1000, limit=None, key="auto_refresh_key")
+
     latest_data = load_json(NOTICE_FILE)
     if len(latest_data) > st.session_state.last_notice_count:
         st.session_state.show_new_alert = True
     st.session_state.notice_data = latest_data
     st.session_state.last_notice_count = len(latest_data)
-    st.rerun()
 
 if st.session_state.show_new_alert and not st.session_state.admin:
     st.toast(_["new_notice_alert"])
