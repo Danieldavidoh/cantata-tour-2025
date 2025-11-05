@@ -3,7 +3,7 @@ from datetime import datetime
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
-import json, os, uuid, base64
+import json, os, uuid, base64, time
 
 # =============================================
 # 기본 설정
@@ -21,6 +21,8 @@ if "admin" not in st.session_state:
     st.session_state.admin = False
 if "lang" not in st.session_state:
     st.session_state.lang = "ko"
+if "last_update" not in st.session_state:
+    st.session_state.last_update = 0
 
 # =============================================
 # 다국어
@@ -127,9 +129,8 @@ def add_notice(title, content, image_file=None, upload_file=None):
     data = load_json(NOTICE_FILE)
     data.insert(0, new_notice)
     save_json(NOTICE_FILE, data)
-
+    st.session_state.last_update = os.path.getmtime(NOTICE_FILE)
     st.toast("✅ 공지가 등록되었습니다.")
-    st.rerun()  # ✅ 등록 직후 새로고침
 
 def delete_notice(notice_id):
     data = load_json(NOTICE_FILE)
@@ -141,9 +142,9 @@ def delete_notice(notice_id):
                 os.remove(n["file"])
     data = [n for n in data if n["id"] != notice_id]
     save_json(NOTICE_FILE, data)
-
+    st.session_state.last_update = os.path.getmtime(NOTICE_FILE)
     st.toast("🗑️ 공지가 삭제되었습니다.")
-    st.rerun()  # ✅ 삭제 직후 새로고침
+    st.rerun()  # ✅ 삭제 시 바로 새로고침
 
 # =============================================
 # 공지 리스트
@@ -181,6 +182,24 @@ def render_map():
                       icon=folium.Icon(color="red", icon="music")).add_to(m)
     AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
     st_folium(m, width=900, height=550)
+
+# =============================================
+# 자동 새로고침 (일반 사용자만)
+# =============================================
+if not st.session_state.admin:
+    import streamlit.runtime.scriptrunner as stsr
+    from streamlit.runtime.scriptrunner import add_script_run_ctx
+    from streamlit.runtime.scriptrunner import get_script_run_ctx
+    from streamlit.runtime.legacy_caching import caching
+
+    st_autorefresh = st.experimental_rerun  # 대체: 10초마다 실행
+    if os.path.exists(NOTICE_FILE):
+        last_update = os.path.getmtime(NOTICE_FILE)
+        if last_update != st.session_state.last_update:
+            st.toast("🔔 새 공지가 등록되었습니다!")
+            st.session_state.last_update = last_update
+            st.rerun()
+    time.sleep(10)
 
 # =============================================
 # 사이드바
@@ -229,11 +248,14 @@ with tab1:
             c = st.text_area(_["content_label"])
             img = st.file_uploader(_["upload_image"], type=["png", "jpg", "jpeg"])
             f = st.file_uploader(_["upload_file"])
-            if st.form_submit_button(_["submit"]):
-                if t.strip() and c.strip():
-                    add_notice(t, c, img, f)
-                else:
-                    st.warning(_["warning"])
+            submitted = st.form_submit_button(_["submit"])
+
+        if submitted:
+            if t.strip() and c.strip():
+                add_notice(t, c, img, f)
+                st.rerun()  # ✅ 폼 바깥 rerun → 즉시 갱신됨
+            else:
+                st.warning(_["warning"])
         render_notice_list(show_delete=True)
     else:
         render_notice_list(show_delete=False)
