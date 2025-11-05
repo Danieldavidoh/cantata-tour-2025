@@ -96,31 +96,6 @@ LANG = {
         "wrong_pw": "Wrong password.",
         "lang_select": "Language",
         "file_download": "📎 Download File"
-    },
-    "hi": {
-        "title": "कांताता टूर 2025",
-        "caption": "महाराष्ट्र टूर मैनेजमेंट",
-        "tab_notice": "सूचना बोर्ड",
-        "tab_map": "टूर रूट",
-        "add_notice": "नई सूचना जोड़ें",
-        "title_label": "शीर्षक",
-        "content_label": "सामग्री",
-        "upload_image": "छवि अपलोड करें (वैकल्पिक)",
-        "upload_file": "फ़ाइल अपलोड करें (वैकल्पिक)",
-        "submit": "जमा करें",
-        "warning": "कृपया शीर्षक और सामग्री भरें।",
-        "notice_list": "सूचना सूची",
-        "no_notice": "कोई सूचना नहीं है।",
-        "delete": "हटाएं",
-        "delete_confirm": "क्या आप वाकई इस सूचना को हटाना चाहते हैं?",
-        "map_title": "रूट देखें",
-        "admin_login": "एडमिन लॉगिन",
-        "password": "पासवर्ड",
-        "login": "लॉगिन",
-        "logout": "लॉगआउट",
-        "wrong_pw": "गलत पासवर्ड।",
-        "lang_select": "भाषा चुनें",
-        "file_download": "📎 फ़ाइल डाउनलोड करें"
     }
 }
 
@@ -133,6 +108,8 @@ if "lang" not in st.session_state:
     st.session_state.lang = "ko"
 if "notice_data" not in st.session_state:
     st.session_state.notice_data = load_json(NOTICE_FILE)
+if "delete_target" not in st.session_state:
+    st.session_state.delete_target = None
 if "last_notice_count" not in st.session_state:
     st.session_state.last_notice_count = len(st.session_state.notice_data)
 
@@ -177,6 +154,7 @@ def delete_notice(notice_id):
                 os.remove(n["file"])
     st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
     save_json(NOTICE_FILE, st.session_state.notice_data)
+    st.session_state.delete_target = None
     st.session_state.last_notice_count = len(st.session_state.notice_data)
     st.rerun()
 
@@ -197,29 +175,38 @@ def render_notice_list():
             if n.get("file") and os.path.exists(n["file"]):
                 st.markdown(get_file_download_link(n["file"], _["file_download"]), unsafe_allow_html=True)
 
-            # ✅ 관리자 모드에서만 삭제 버튼 표시
+            # ✅ 관리자만 삭제 버튼 표시
             if st.session_state.admin:
-                col1, col2 = st.columns([8, 2])
-                with col2:
-                    if st.button(f"🗑️ {_['delete']}", key=f"del_{n['id']}_{idx}"):
-                        if st.confirm(_["delete_confirm"]):
-                            delete_notice(n["id"])
+                if st.button(f"🗑️ {_['delete']}", key=f"del_{n['id']}_{idx}"):
+                    st.session_state.delete_target = n["id"]
+
+# =============================================
+# 삭제 확인 모달
+# =============================================
+if st.session_state.delete_target:
+    with st.modal("⚠️ " + _["delete_confirm"]):
+        st.warning("삭제 시 복구할 수 없습니다.")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✅ 확인"):
+                delete_notice(st.session_state.delete_target)
+        with col2:
+            if st.button("❌ 취소"):
+                st.session_state.delete_target = None
+                st.rerun()
 
 # =============================================
 # 지도 렌더링
 # =============================================
 def render_map():
     st.subheader(_["map_title"])
-
     cities = [
         {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
         {"name": "Pune", "lat": 18.5204, "lon": 73.8567},
         {"name": "Nashik", "lat": 19.9975, "lon": 73.7898},
     ]
-
     m = folium.Map(location=[19.0, 73.0], zoom_start=7)
     coords = [(c["lat"], c["lon"]) for c in cities]
-
     for c in cities:
         folium.Marker(
             [c["lat"], c["lon"]],
@@ -227,7 +214,6 @@ def render_map():
             tooltip=c["name"],
             icon=folium.Icon(color="red", icon="music")
         ).add_to(m)
-
     AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
     st_folium(m, width=900, height=550)
 
@@ -237,9 +223,9 @@ def render_map():
 with st.sidebar:
     new_lang = st.selectbox(
         _["lang_select"],
-        ["ko", "en", "hi"],
-        format_func=lambda x: {"ko": "한국어", "en": "English", "hi": "हिन्दी"}[x],
-        index=["ko", "en", "hi"].index(st.session_state.lang)
+        ["ko", "en"],
+        format_func=lambda x: {"ko": "한국어", "en": "English"}[x],
+        index=["ko", "en"].index(st.session_state.lang)
     )
     if new_lang != st.session_state.lang:
         st.session_state.lang = new_lang
