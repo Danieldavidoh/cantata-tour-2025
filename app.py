@@ -1,3 +1,4 @@
+from streamlit_autorefresh import st_autorefresh  # ← Streamlit Cloud에 미설치from streamlit_autorefresh import st_autorefresh  # ← Streamlit Cloud에 미설치# app.py
 import streamlit as st
 from datetime import datetime
 import folium
@@ -7,7 +8,6 @@ import json
 import os
 import uuid
 import base64
-from streamlit_autorefresh import st_autorefresh
 
 # =============================================
 # 기본 설정
@@ -126,7 +126,8 @@ if "last_notice_count" not in st.session_state:
 if "show_new_alert" not in st.session_state:
     st.session_state.show_new_alert = False
 
-_ = LANG[st.session_state.lang]
+def _(key):
+    return LANG[st.session_state.lang].get(key, key)
 
 # =============================================
 # 공지 관리
@@ -156,6 +157,7 @@ def add_notice(title, content, image_file=None, upload_file=None):
     st.session_state.notice_data.insert(0, new_notice)
     save_json(NOTICE_FILE, st.session_state.notice_data)
     st.session_state.last_notice_count = len(st.session_state.notice_data)
+    st.session_state.show_new_alert = True
     st.rerun()
 
 def delete_notice(notice_id):
@@ -166,10 +168,10 @@ def delete_notice(notice_id):
     st.rerun()
 
 def render_notice_list():
-    st.subheader(_["notice_list"])
+    st.subheader(_("notice_list"))
 
     if not st.session_state.notice_data:
-        st.info(_["no_notice"])
+        st.info(_("no_notice"))
         return
 
     for idx, n in enumerate(st.session_state.notice_data):
@@ -185,20 +187,20 @@ def render_notice_list():
                 st.image(n["image"], use_container_width=True)
 
             if n.get("file") and os.path.exists(n["file"]):
-                st.markdown(get_file_download_link(n["file"], _["file_download"]), unsafe_allow_html=True)
+                st.markdown(get_file_download_link(n["file"], _("file_download")), unsafe_allow_html=True)
 
             if st.session_state.admin:
-                if st.button(f"🗑️ {_['delete']}", key=f"del_{nid}_{idx}"):
+                if st.button(f"🗑️ {_('delete')}", key=f"del_{nid}_{idx}"):
                     st.session_state.delete_target = nid
 
     if st.session_state.delete_target:
-        st.warning(_["delete_confirm"])
+        st.warning(_("delete_confirm"))
         col1, col2 = st.columns(2)
         with col1:
-            if st.button(_["confirm_yes"], key="yes_delete"):
+            if st.button(_("confirm_yes"), key="yes_delete"):
                 delete_notice(st.session_state.delete_target)
         with col2:
-            if st.button(_["confirm_no"], key="cancel_delete"):
+            if st.button(_("confirm_no"), key="cancel_delete"):
                 st.session_state.delete_target = None
                 st.rerun()
 
@@ -206,7 +208,7 @@ def render_notice_list():
 # 지도
 # =============================================
 def render_map():
-    st.subheader(_["map_title"])
+    st.subheader(_("map_title"))
     cities = [
         {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
         {"name": "Pune", "lat": 18.5204, "lon": 73.8567},
@@ -233,44 +235,48 @@ with st.sidebar:
     if lang_choice != st.session_state.lang:
         st.session_state.lang = lang_choice
         st.rerun()
-    _ = LANG[st.session_state.lang]
 
-    st.markdown(f"### 🔐 {_['admin_login']}")
+    st.markdown(f"### 🔐 {_( 'admin_login')}")
     if not st.session_state.admin:
-        pw = st.text_input(_["password"], type="password")
-        if st.button(_["login"]):
+        pw = st.text_input(_("password"), type="password")
+        if st.button(_("login")):
             if pw == "0000":
                 st.session_state.admin = True
                 st.success("✅ 관리자 모드 ON")
                 st.rerun()
             else:
-                st.error(_["wrong_pw"])
+                st.error(_("wrong_pw"))
     else:
         st.success("✅ 관리자 모드")
-        if st.button(_["logout"]):
+        if st.button(_("logout")):
             st.session_state.admin = False
             st.rerun()
 
 # =============================================
-# 자동 새로고침 (5분 주기) + 알림
+# 자동 새로고침 (5분 주기) + 알림 (내장 rerun으로 대체)
 # =============================================
 if not st.session_state.admin:
-    count = st_autorefresh(interval=5 * 60 * 1000, limit=None, key="auto_refresh_key")
-
-    latest_data = load_json(NOTICE_FILE)
-    if len(latest_data) > st.session_state.last_notice_count:
-        st.session_state.show_new_alert = True
-    st.session_state.notice_data = latest_data
-    st.session_state.last_notice_count = len(latest_data)
+    # 5분마다 체크 (간단한 타이머 시뮬레이션)
+    current_time = datetime.now()
+    if not hasattr(st.session_state, 'last_check_time'):
+        st.session_state.last_check_time = current_time
+    if (current_time - st.session_state.last_check_time).total_seconds() > 300:  # 5분
+        latest_data = load_json(NOTICE_FILE)
+        if len(latest_data) > st.session_state.last_notice_count:
+            st.session_state.show_new_alert = True
+        st.session_state.notice_data = latest_data
+        st.session_state.last_notice_count = len(latest_data)
+        st.session_state.last_check_time = current_time
+        st.rerun()
 
 if st.session_state.show_new_alert and not st.session_state.admin:
-    st.toast(_["new_notice_alert"])
+    st.toast(_("new_notice_alert"))
     st.session_state.show_new_alert = False
 
 # =============================================
 # 메인
 # =============================================
-st.markdown(f"# {_['title']} 🎄")
+st.markdown(f"# {_('title')} 🎄")
 st.caption(_['caption'])
 
 tab1, tab2 = st.tabs([_['tab_notice'], _['tab_map']])
@@ -278,15 +284,15 @@ tab1, tab2 = st.tabs([_['tab_notice'], _['tab_map']])
 with tab1:
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
-            t = st.text_input(_["title_label"])
-            c = st.text_area(_["content_label"])
-            img = st.file_uploader(_["upload_image"], type=["png", "jpg", "jpeg"])
-            f = st.file_uploader(_["upload_file"])
-            if st.form_submit_button(_["submit"]):
+            t = st.text_input(_("title_label"))
+            c = st.text_area(_("content_label"))
+            img = st.file_uploader(_("upload_image"), type=["png", "jpg", "jpeg"])
+            f = st.file_uploader(_("upload_file"))
+            if st.form_submit_button(_("submit")):
                 if t.strip() and c.strip():
                     add_notice(t, c, img, f)
                 else:
-                    st.warning(_["warning"])
+                    st.warning(_("warning"))
     render_notice_list()
 
 with tab2:
