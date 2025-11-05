@@ -7,7 +7,7 @@ import json
 import os
 import uuid
 import base64
-from streamlit_autorefresh import st_autorefresh
+import time
 
 # =============================================
 # 기본 설정
@@ -26,16 +26,11 @@ def load_json(filename):
         with open(filename, "r", encoding="utf-8") as f:
             try:
                 data = json.load(f)
-                # ✅ 누락 필드 자동 보정
                 for n in data:
-                    if "id" not in n:
-                        n["id"] = str(uuid.uuid4())
-                    if "title" not in n:
-                        n["title"] = "(제목 없음)"
-                    if "content" not in n:
-                        n["content"] = ""
-                    if "date" not in n:
-                        n["date"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+                    n.setdefault("id", str(uuid.uuid4()))
+                    n.setdefault("title", "(제목 없음)")
+                    n.setdefault("content", "")
+                    n.setdefault("date", datetime.now().strftime("%Y-%m-%d %H:%M"))
                 return data
             except json.JSONDecodeError:
                 return []
@@ -51,8 +46,7 @@ def get_file_download_link(file_path, label):
     with open(file_path, "rb") as f:
         data = f.read()
     b64 = base64.b64encode(data).decode()
-    href = f'<a href="data:file/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
-    return href
+    return f'<a href="data:file/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
 
 # =============================================
 # 다국어
@@ -82,7 +76,6 @@ LANG = {
         "login": "로그인",
         "logout": "로그아웃",
         "wrong_pw": "비밀번호가 틀렸습니다.",
-        "lang_select": "언어 선택",
         "file_download": "📎 파일 다운로드",
         "new_notice_alert": "📢 새로운 공지가 등록되었습니다!"
     }
@@ -103,6 +96,8 @@ if "last_notice_count" not in st.session_state:
     st.session_state.last_notice_count = len(st.session_state.notice_data)
 if "show_new_alert" not in st.session_state:
     st.session_state.show_new_alert = False
+if "last_refresh" not in st.session_state:
+    st.session_state.last_refresh = time.time()
 
 _ = LANG[st.session_state.lang]
 
@@ -169,7 +164,6 @@ def render_notice_list():
                 if st.button(f"🗑️ {_['delete']}", key=f"del_{nid}_{idx}"):
                     st.session_state.delete_target = nid
 
-    # 삭제 확인 영역
     if st.session_state.delete_target:
         st.warning(_["delete_confirm"])
         col1, col2 = st.columns(2)
@@ -224,17 +218,19 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 일반 사용자용 자동 새로고침 + 새 공지 알림
+# 자동 새로고침 (2분 간격) + 알림
 # =============================================
 if not st.session_state.admin:
-    st_autorefresh(interval=120000, key="auto_refresh")  # 2분마다 새로고침
-    latest_data = load_json(NOTICE_FILE)
-    if len(latest_data) > st.session_state.last_notice_count:
-        st.session_state.show_new_alert = True
+    now = time.time()
+    if now - st.session_state.last_refresh > 120:
+        latest_data = load_json(NOTICE_FILE)
+        if len(latest_data) > st.session_state.last_notice_count:
+            st.session_state.show_new_alert = True
         st.session_state.notice_data = latest_data
         st.session_state.last_notice_count = len(latest_data)
+        st.session_state.last_refresh = now
+        st.rerun()
 
-# 새 공지 알림 표시
 if st.session_state.show_new_alert and not st.session_state.admin:
     st.toast(_["new_notice_alert"])
     st.session_state.show_new_alert = False
