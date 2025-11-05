@@ -7,7 +7,6 @@ import json
 import os
 import uuid
 import base64
-import time
 
 # =============================================
 # 기본 설정
@@ -15,46 +14,18 @@ import time
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
 NOTICE_FILE = "notice.json"
-GLOBAL_FILE = "global_state.json"
+STATE_FILE = "global_state.json"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # =============================================
-# 공용 상태 관리 (세션 공유용)
-# =============================================
-def load_global_state():
-    if os.path.exists(GLOBAL_FILE):
-        with open(GLOBAL_FILE, "r", encoding="utf-8") as f:
-            try:
-                return json.load(f)
-            except json.JSONDecodeError:
-                return {"refresh_counter": 0, "last_update": 0}
-    return {"refresh_counter": 0, "last_update": 0}
-
-def save_global_state(state):
-    with open(GLOBAL_FILE, "w", encoding="utf-8") as f:
-        json.dump(state, f)
-
-def trigger_global_refresh():
-    state = load_global_state()
-    state["refresh_counter"] += 1
-    state["last_update"] = time.time()
-    save_global_state(state)
-
-# =============================================
-# 유틸
+# 유틸 함수
 # =============================================
 def load_json(filename):
     if os.path.exists(filename):
         with open(filename, "r", encoding="utf-8") as f:
             try:
-                data = json.load(f)
-                for n in data:
-                    n.setdefault("id", str(uuid.uuid4()))
-                    n.setdefault("title", "(제목 없음)")
-                    n.setdefault("content", "")
-                    n.setdefault("date", datetime.now().strftime("%Y-%m-%d %H:%M"))
-                return data
+                return json.load(f)
             except json.JSONDecodeError:
                 return []
     return []
@@ -73,7 +44,24 @@ def get_file_download_link(file_path, label):
     return href
 
 # =============================================
-# 다국어
+# 전역 상태 관리 (refresh_counter)
+# =============================================
+def load_state():
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            return {"refresh_counter": 0}
+    return {"refresh_counter": 0}
+
+def increment_state():
+    state = load_state()
+    state["refresh_counter"] += 1
+    save_json(STATE_FILE, state)
+
+# =============================================
+# 다국어 사전
 # =============================================
 LANG = {
     "ko": {
@@ -91,6 +79,9 @@ LANG = {
         "notice_list": "공지 목록",
         "no_notice": "등록된 공지가 없습니다.",
         "delete": "삭제",
+        "delete_confirm": "정말 이 공지를 삭제하시겠습니까?",
+        "confirm_yes": "예, 삭제합니다",
+        "confirm_no": "취소",
         "map_title": "경로 보기",
         "admin_login": "관리자 로그인",
         "password": "비밀번호",
@@ -99,8 +90,7 @@ LANG = {
         "wrong_pw": "비밀번호가 틀렸습니다.",
         "lang_select": "언어 선택",
         "file_download": "파일 다운로드",
-        "new_notice_alert": "🔔 새 공지가 등록되었습니다!",
-        "admin_refresh": "전체 갱신"
+        "new_notice_alert": "새 공지가 등록되었습니다!"
     },
     "en": {
         "title": "Cantata Tour 2025",
@@ -117,6 +107,9 @@ LANG = {
         "notice_list": "Notice List",
         "no_notice": "No notices available.",
         "delete": "Delete",
+        "delete_confirm": "Are you sure you want to delete this notice?",
+        "confirm_yes": "Yes, delete",
+        "confirm_no": "Cancel",
         "map_title": "View Route",
         "admin_login": "Admin Login",
         "password": "Password",
@@ -125,9 +118,36 @@ LANG = {
         "wrong_pw": "Incorrect password.",
         "lang_select": "Language",
         "file_download": "Download File",
-        "new_notice_alert": "🔔 New notice posted!",
-        "admin_refresh": "Refresh All"
+        "new_notice_alert": "New notice posted!"
     },
+    "hi": {
+        "title": "कांताता टूर 2025",
+        "caption": "महाराष्ट्र",
+        "tab_notice": "सूचना बोर्ड",
+        "tab_map": "टूर रूट",
+        "add_notice": "नई सूचना जोड़ें",
+        "title_label": "शीर्षक",
+        "content_label": "सामग्री",
+        "upload_image": "छवि अपलोड करें (वैकल्पिक)",
+        "upload_file": "फ़ाइल अपलोड करें (वैकल्पिक)",
+        "submit": "जमा करें",
+        "warning": "कृपया शीर्षक और सामग्री दोनों भरें।",
+        "notice_list": "सूचना सूची",
+        "no_notice": "कोई सूचना उपलब्ध नहीं।",
+        "delete": "हटाएं",
+        "delete_confirm": "क्या आप वाकई इस सूचना को हटाना चाहते हैं?",
+        "confirm_yes": "हाँ, हटाएं",
+        "confirm_no": "रद्द करें",
+        "map_title": "रूट देखें",
+        "admin_login": "एडमिन लॉगिन",
+        "password": "पासवर्ड",
+        "login": "लॉगिन",
+        "logout": "लॉगआउट",
+        "wrong_pw": "गलत पासवर्ड।",
+        "lang_select": "भाषा",
+        "file_download": "फ़ाइल डाउनलोड करें",
+        "new_notice_alert": "नई सूचना पोस्ट की गई!"
+    }
 }
 
 # =============================================
@@ -139,17 +159,15 @@ if "lang" not in st.session_state:
     st.session_state.lang = "ko"
 if "notice_data" not in st.session_state:
     st.session_state.notice_data = load_json(NOTICE_FILE)
-if "last_refresh_counter" not in st.session_state:
-    st.session_state.last_refresh_counter = load_global_state()["refresh_counter"]
-if "last_check_time" not in st.session_state:
-    st.session_state.last_check_time = datetime.now()
 
-# 번역 헬퍼
+# =============================================
+# 번역 함수
+# =============================================
 def _(key):
     return LANG[st.session_state.lang].get(key, key)
 
 # =============================================
-# 공지 추가 / 삭제
+# 공지 관리
 # =============================================
 def add_notice(title, content, image_file=None, upload_file=None):
     img_path, file_path = None, None
@@ -161,6 +179,7 @@ def add_notice(title, content, image_file=None, upload_file=None):
         file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{upload_file.name}")
         with open(file_path, "wb") as f:
             f.write(upload_file.read())
+
     new_notice = {
         "id": str(uuid.uuid4()),
         "title": title,
@@ -169,36 +188,39 @@ def add_notice(title, content, image_file=None, upload_file=None):
         "image": img_path,
         "file": file_path
     }
+
     st.session_state.notice_data.insert(0, new_notice)
     save_json(NOTICE_FILE, st.session_state.notice_data)
-    trigger_global_refresh()  # ✅ 공용 상태 갱신 (모든 사용자 감지 가능)
+    increment_state()  # 🔹 상태 변경 즉시 반영
     st.success("공지 등록 완료!")
     st.rerun()
 
-def delete_notice(nid):
-    st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != nid]
+def delete_notice(notice_id):
+    st.session_state.notice_data = [n for n in st.session_state.notice_data if n.get("id") != notice_id]
     save_json(NOTICE_FILE, st.session_state.notice_data)
-    trigger_global_refresh()
+    increment_state()
+    st.session_state.delete_target = None
     st.rerun()
 
-# =============================================
-# 공지 목록
-# =============================================
 def render_notice_list():
     st.subheader(_("notice_list"))
     if not st.session_state.notice_data:
         st.info(_("no_notice"))
         return
     for idx, n in enumerate(st.session_state.notice_data):
-        with st.expander(f"{n['date']} | {n['title']}"):
-            st.markdown(n["content"])
-            if n.get("image"):
+        title = n.get("title", "(제목 없음)")
+        date = n.get("date", "?")
+        content = n.get("content", "")
+        nid = n.get("id", str(uuid.uuid4()))
+        with st.expander(f"{date} | {title}"):
+            st.markdown(content)
+            if n.get("image") and os.path.exists(n["image"]):
                 st.image(n["image"], use_container_width=True)
-            if n.get("file"):
+            if n.get("file") and os.path.exists(n["file"]):
                 st.markdown(get_file_download_link(n["file"], _("file_download")), unsafe_allow_html=True)
             if st.session_state.admin:
-                if st.button(_("delete"), key=f"del_{idx}"):
-                    delete_notice(n["id"])
+                if st.button(f"{_('delete')}", key=f"del_{nid}_{idx}"):
+                    delete_notice(nid)
 
 # =============================================
 # 지도
@@ -213,7 +235,8 @@ def render_map():
     m = folium.Map(location=[19.0, 73.0], zoom_start=7)
     coords = [(c["lat"], c["lon"]) for c in cities]
     for c in cities:
-        folium.Marker([c["lat"], c["lon"]], popup=c["name"]).add_to(m)
+        folium.Marker([c["lat"], c["lon"]], popup=c["name"], tooltip=c["name"],
+                      icon=folium.Icon(color="red", icon="music")).add_to(m)
     AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
     st_folium(m, use_container_width=True, height=550)
 
@@ -221,19 +244,16 @@ def render_map():
 # 사이드바
 # =============================================
 with st.sidebar:
-    st.markdown(f"### {_('lang_select')}")
-    lang_choice = st.selectbox(
-        "",
-        ["ko", "en"],
-        format_func=lambda x: {"ko": "한국어", "en": "English"}[x],
-        index=["ko", "en"].index(st.session_state.lang)
-    )
+    st.markdown(f"### {_( 'lang_select')}")
+    lang_choice = st.selectbox("", ["ko", "en", "hi"],
+        format_func=lambda x: {"ko": "한국어", "en": "English", "hi": "हिन्दी"}[x],
+        index=["ko", "en", "hi"].index(st.session_state.lang))
     if lang_choice != st.session_state.lang:
         st.session_state.lang = lang_choice
         st.rerun()
 
     st.markdown("---")
-    st.markdown(f"### {_('admin_login')}")
+    st.markdown(f"### {_( 'admin_login')}")
     if not st.session_state.admin:
         pw = st.text_input(_("password"), type="password")
         if st.button(_("login")):
@@ -250,39 +270,35 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 자동 새로고침 감지 (일반 사용자)
+# 실시간 감지 (2초마다 global_state.json 체크)
 # =============================================
-if not st.session_state.admin:
-    global_state = load_global_state()
-    if global_state["refresh_counter"] != st.session_state.last_refresh_counter:
-        st.session_state.notice_data = load_json(NOTICE_FILE)
-        st.session_state.last_refresh_counter = global_state["refresh_counter"]
-        st.toast(_("new_notice_alert"))
-        st.markdown(
-            """
-            <script>
-            alert("🔔 새 공지가 등록되었거나 변경되었습니다!");
-            var audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-            audio.play();
-            </script>
-            """,
-            unsafe_allow_html=True
-        )
-        st.rerun()
-    else:
-        # 5분 자동 새로고침
-        if (datetime.now() - st.session_state.last_check_time).total_seconds() > 300:
-            st.session_state.notice_data = load_json(NOTICE_FILE)
-            st.session_state.last_check_time = datetime.now()
-            st.rerun()
+st.markdown("""
+<script>
+async function checkUpdate(){
+  let lastCounter = localStorage.getItem("refresh_counter") || 0;
+  setInterval(async ()=>{
+    let r = await fetch("global_state.json?_t=" + Date.now());
+    let d = await r.json();
+    if(d.refresh_counter != lastCounter){
+      localStorage.setItem("refresh_counter", d.refresh_counter);
+      alert("🔔 새 공지가 등록되었습니다!");
+      var audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+      audio.play();
+      location.reload();
+    }
+  }, 2000);
+}
+checkUpdate();
+</script>
+""", unsafe_allow_html=True)
 
 # =============================================
-# 본문
+# 메인 화면
 # =============================================
 st.markdown(f"# {_('title')}")
 st.caption(_("caption"))
 
-tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
+tab1, tab2 = st.tabs([_('tab_notice'), _('tab_map')])
 
 with tab1:
     if st.session_state.admin:
