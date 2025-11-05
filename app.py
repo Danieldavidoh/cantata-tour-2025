@@ -50,7 +50,7 @@ def get_file_download_link(file_path, label):
     return href
 
 # =============================================
-# 다국어 사전 (마하라스트라로 수정)
+# 다국어 사전
 # =============================================
 LANG = {
     "ko": {
@@ -154,6 +154,8 @@ if "last_notice_count" not in st.session_state:
     st.session_state.last_notice_count = len(st.session_state.notice_data)
 if "last_check_time" not in st.session_state:
     st.session_state.last_check_time = datetime.now()
+if "show_new_alert" not in st.session_state:
+    st.session_state.show_new_alert = False
 
 # =============================================
 # 번역 함수 정의
@@ -188,7 +190,9 @@ def add_notice(title, content, image_file=None, upload_file=None):
 
     st.session_state.notice_data.insert(0, new_notice)
     save_json(NOTICE_FILE, st.session_state.notice_data)
-    st.session_state.last_notice_count = len(st.session_state.notice_data)
+    
+    # 새 공지 감지 플래그 ON
+    st.session_state.show_new_alert = True
     st.rerun()
 
 def delete_notice(notice_id):
@@ -255,14 +259,13 @@ def render_map():
         ).add_to(m)
     AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
 
-    # 일반 사용자: 모바일에서 좌우 100%
     if st.session_state.admin:
         st_folium(m, width=900, height=550)
     else:
         st_folium(m, use_container_width=True, height=550)
 
 # =============================================
-# 사이드바 (힌디어 포함, "국내어" → "한국어")
+# 사이드바
 # =============================================
 with st.sidebar:
     st.markdown(f"### {_( 'lang_select')}")
@@ -294,24 +297,25 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 자동 갱신 + 즉시 푸시 알림
+# 실시간 알림 + 5분 갱신 (완벽 보완)
 # =============================================
 current_time = datetime.now()
 
-# 5분마다 자동 갱신 (일반 사용자만)
+# 1. 5분마다 파일에서 최신 공지 확인 (일반 사용자)
 if not st.session_state.admin:
     if (current_time - st.session_state.last_check_time).total_seconds() > 300:
         latest_data = load_json(NOTICE_FILE)
         if len(latest_data) > st.session_state.last_notice_count:
+            st.session_state.show_new_alert = True
             st.session_state.notice_data = latest_data
             st.session_state.last_notice_count = len(latest_data)
-            st.rerun()
         st.session_state.last_check_time = current_time
+        st.rerun()
 
-# 관리자가 등록하면 즉시 알림 (일반 사용자에게)
-if len(st.session_state.notice_data) > st.session_state.last_notice_count and not st.session_state.admin:
-    st.toast(_("new_notice_alert"), icon="")
-    st.session_state.last_notice_count = len(st.session_state.notice_data)
+# 2. 관리자가 등록하면 즉시 알림 (모든 사용자)
+if st.session_state.show_new_alert:
+    st.toast(_("new_notice_alert"), icon="📢")
+    st.session_state.show_new_alert = False  # 1회만 표시
 
 # =============================================
 # 메인 헤더
