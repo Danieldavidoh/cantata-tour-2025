@@ -4,6 +4,8 @@ import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
 import json, os, uuid, base64
+import pytz
+from streamlit_autorefresh import st_autorefresh
 
 # =============================================
 # 기본 설정
@@ -11,6 +13,7 @@ import json, os, uuid, base64
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
 NOTICE_FILE = "notice.json"
+CITY_FILE = "cities.json"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -44,6 +47,11 @@ LANG = {
         "no_notice": "등록된 공지가 없습니다.",
         "delete": "삭제",
         "map_title": "경로 보기",
+        "add_city": "도시 추가",
+        "city_name": "도시 이름",
+        "latitude": "위도",
+        "longitude": "경도",
+        "add": "추가",
         "admin_login": "관리자 로그인",
         "password": "비밀번호",
         "login": "로그인",
@@ -82,6 +90,8 @@ def get_file_download_link(file_path, label):
 # =============================================
 def add_notice(title, content, image_file=None, upload_file=None):
     img_path, file_path = None, None
+    tz = pytz.timezone("Asia/Kolkata")
+    now = datetime.now(tz).strftime("%m/%d %H:%M")
 
     if image_file:
         img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{image_file.name}")
@@ -97,7 +107,7 @@ def add_notice(title, content, image_file=None, upload_file=None):
         "id": str(uuid.uuid4()),
         "title": title,
         "content": content,
-        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "date": now,
         "image": img_path,
         "file": file_path
     }
@@ -120,6 +130,16 @@ def delete_notice(notice_id):
     data = [n for n in data if n["id"] != notice_id]
     save_json(NOTICE_FILE, data)
     st.toast("🗑️ 공지가 삭제되었습니다.")
+    st.rerun()
+
+# =============================================
+# 도시 관리
+# =============================================
+def add_city(name, lat, lon):
+    data = load_json(CITY_FILE)
+    data.append({"name": name, "lat": lat, "lon": lon})
+    save_json(CITY_FILE, data)
+    st.toast("🗺️ 도시가 추가되었습니다.")
     st.rerun()
 
 # =============================================
@@ -146,31 +166,44 @@ def render_notice_list(show_delete=False):
 # =============================================
 def render_map():
     st.subheader(_["map_title"])
-    cities = [
-        {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
-        {"name": "Pune", "lat": 18.5204, "lon": 73.8567},
-        {"name": "Nashik", "lat": 19.9975, "lon": 73.7898},
-    ]
+    data = load_json(CITY_FILE)
+    if not data:
+        data = [
+            {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
+            {"name": "Pune", "lat": 18.5204, "lon": 73.8567},
+            {"name": "Nashik", "lat": 19.9975, "lon": 73.7898},
+        ]
+        save_json(CITY_FILE, data)
+
     m = folium.Map(location=[19.0, 73.0], zoom_start=7)
-    coords = [(c["lat"], c["lon"]) for c in cities]
-    for c in cities:
+    coords = [(c["lat"], c["lon"]) for c in data]
+    for c in data:
         folium.Marker([c["lat"], c["lon"]], popup=c["name"], tooltip=c["name"],
                       icon=folium.Icon(color="red", icon="music")).add_to(m)
     AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
     st_folium(m, width=900, height=550)
 
-# =============================================
-# 자동 새로고침 (10초마다)
-# =============================================
-from streamlit_autorefresh import st_autorefresh
+    # 🔹 관리자 모드일 때 도시 추가 블럭
+    if st.session_state.admin:
+        with st.expander("🗺️ 도시 추가"):
+            n = st.text_input(_["city_name"])
+            lat = st.number_input(_["latitude"], value=19.0)
+            lon = st.number_input(_["longitude"], value=73.0)
+            if st.button(_["add"]):
+                if n.strip():
+                    add_city(n, lat, lon)
+                else:
+                    st.warning("도시 이름을 입력하세요.")
 
+# =============================================
+# 자동 새로고침 (3초마다)
+# =============================================
 if not st.session_state.admin:
     count = len(load_json(NOTICE_FILE))
     if st.session_state.last_notice_count == 0:
         st.session_state.last_notice_count = count
 
-    # 10초마다 새로고침
-    st_autorefresh(interval=10 * 1000, key="auto_refresh")
+    st_autorefresh(interval=3 * 1000, key="auto_refresh")
 
     new_count = len(load_json(NOTICE_FILE))
     if new_count > st.session_state.last_notice_count:
