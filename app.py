@@ -3,7 +3,7 @@ from datetime import datetime
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
-import json, os, uuid, base64, time
+import json, os, uuid, base64
 
 # =============================================
 # 기본 설정
@@ -128,12 +128,10 @@ def add_notice(title, content, image_file=None, upload_file=None):
     data.insert(0, new_notice)
     save_json(NOTICE_FILE, data)
 
-    # ✅ 알림 표시 후 잠깐 대기
-    st.toast("✅ 공지가 등록되었습니다.")
-    time.sleep(0.8)
+    # ✅ rerun 전에 세션 플래그 설정
+    st.session_state["show_toast"] = "add"
+    st.experimental_rerun()
 
-    # ✅ 새로고침
-    st.rerun()
 
 def delete_notice(notice_id):
     data = load_json(NOTICE_FILE)
@@ -146,9 +144,9 @@ def delete_notice(notice_id):
     data = [n for n in data if n["id"] != notice_id]
     save_json(NOTICE_FILE, data)
 
-    st.toast("🗑️ 공지가 삭제되었습니다.")
-    time.sleep(0.8)
-    st.rerun()
+    # ✅ rerun 전에 세션 플래그 설정
+    st.session_state["show_toast"] = "delete"
+    st.experimental_rerun()
 
 # =============================================
 # 공지 리스트
@@ -199,7 +197,7 @@ with st.sidebar:
     )
     if new_lang != st.session_state.lang:
         st.session_state.lang = new_lang
-        st.rerun()
+        st.experimental_rerun()
 
     st.markdown("---")
 
@@ -210,21 +208,32 @@ with st.sidebar:
             if pw == "0000":
                 st.session_state.admin = True
                 st.success("✅ 관리자 모드 ON")
-                st.rerun()
+                st.experimental_rerun()
             else:
                 st.error(_["wrong_pw"])
     else:
         st.success("✅ 관리자 모드")
         if st.button(_["logout"]):
             st.session_state.admin = False
-            st.rerun()
+            st.experimental_rerun()
 
 # =============================================
-# 메인
+# 메인 영역
 # =============================================
 st.markdown(f"# {_['title']} 🎄")
 st.caption(_["caption"])
 
+# ✅ rerun 후 토스트 표시
+if "show_toast" in st.session_state:
+    if st.session_state["show_toast"] == "add":
+        st.toast("✅ 공지가 등록되었습니다.")
+    elif st.session_state["show_toast"] == "delete":
+        st.toast("🗑️ 공지가 삭제되었습니다.")
+    del st.session_state["show_toast"]
+
+# =============================================
+# 탭
+# =============================================
 tab1, tab2 = st.tabs([_["tab_notice"], _["tab_map"]])
 
 with tab1:
