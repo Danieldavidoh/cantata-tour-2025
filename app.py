@@ -49,7 +49,7 @@ def get_file_download_link(file_path, label):
     return f'<a href="data:file/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
 
 # =============================================
-# 다국어
+# 다국어 사전
 # =============================================
 LANG = {
     "ko": {
@@ -111,7 +111,7 @@ LANG = {
 }
 
 # =============================================
-# 세션 초기화
+# 세션 초기화 (가장 먼저!)
 # =============================================
 if "admin" not in st.session_state:
     st.session_state.admin = False
@@ -126,6 +126,9 @@ if "last_notice_count" not in st.session_state:
 if "show_new_alert" not in st.session_state:
     st.session_state.show_new_alert = False
 
+# =============================================
+# 번역 함수 정의 (세션 후 즉시!)
+# =============================================
 def _(key):
     return LANG[st.session_state.lang].get(key, key)
 
@@ -231,7 +234,11 @@ def render_map():
 # =============================================
 with st.sidebar:
     st.markdown("### 언어 / Language")
-    lang_choice = st.selectbox("언어 선택 / Language", ["ko", "en"], index=0 if st.session_state.lang == "ko" else 1)
+    lang_choice = st.selectbox(
+        "언어 선택 / Language",
+        ["ko", "en"],
+        index=0 if st.session_state.lang == "ko" else 1
+    )
     if lang_choice != st.session_state.lang:
         st.session_state.lang = lang_choice
         st.rerun()
@@ -253,13 +260,13 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 자동 새로고침 (5분 주기) + 알림 (내장 기능)
+# 자동 새로고침 (5분 주기) + 알림
 # =============================================
 if not st.session_state.admin:
     current_time = datetime.now()
     if not hasattr(st.session_state, 'last_check_time'):
         st.session_state.last_check_time = current_time
-    if (current_time - st.session_state.last_check_time).total_seconds() > 300:  # 5분
+    if (current_time - st.session_state.last_check_time).total_seconds() > 300:
         latest_data = load_json(NOTICE_FILE)
         if len(latest_data) > st.session_state.last_notice_count:
             st.session_state.show_new_alert = True
@@ -273,12 +280,12 @@ if st.session_state.show_new_alert and not st.session_state.admin:
     st.session_state.show_new_alert = False
 
 # =============================================
-# 메인
+# 메인 헤더 (이제 _() 함수 사용 가능!)
 # =============================================
 st.markdown(f"# {_('title')}")
-st.caption(_['caption'])
+st.caption(_("caption"))
 
-tab1, tab2 = st.tabs([_['tab_notice'], _['tab_map']])
+tab1, tab2 = st.tabs([_('tab_notice'), _('tab_map')])
 
 with tab1:
     if st.session_state.admin:
