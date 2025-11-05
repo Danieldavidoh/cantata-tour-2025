@@ -15,7 +15,6 @@ st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
 NOTICE_FILE = "notice.json"
 UPLOAD_DIR = "uploads"
-
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # =============================================
@@ -24,7 +23,21 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 def load_json(filename):
     if os.path.exists(filename):
         with open(filename, "r", encoding="utf-8") as f:
-            return json.load(f)
+            try:
+                data = json.load(f)
+                # ✅ 누락 필드 자동 보정
+                for n in data:
+                    if "id" not in n:
+                        n["id"] = str(uuid.uuid4())
+                    if "title" not in n:
+                        n["title"] = "(제목 없음)"
+                    if "content" not in n:
+                        n["content"] = ""
+                    if "date" not in n:
+                        n["date"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+                return data
+            except json.JSONDecodeError:
+                return []
     return []
 
 def save_json(filename, data):
@@ -88,7 +101,7 @@ if "delete_target" not in st.session_state:
 _ = LANG[st.session_state.lang]
 
 # =============================================
-# 공지 함수
+# 공지 관리
 # =============================================
 def add_notice(title, content, image_file=None, upload_file=None):
     img_path, file_path = None, None
@@ -117,7 +130,7 @@ def add_notice(title, content, image_file=None, upload_file=None):
     st.rerun()
 
 def delete_notice(notice_id):
-    st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
+    st.session_state.notice_data = [n for n in st.session_state.notice_data if n.get("id") != notice_id]
     save_json(NOTICE_FILE, st.session_state.notice_data)
     st.session_state.delete_target = None
     st.rerun()
@@ -130,8 +143,14 @@ def render_notice_list():
         return
 
     for idx, n in enumerate(st.session_state.notice_data):
-        with st.expander(f"📅 {n['date']} | {n['title']}"):
-            st.markdown(n["content"])
+        # ✅ get()으로 안전하게 키 접근
+        title = n.get("title", "(제목 없음)")
+        date = n.get("date", "?")
+        content = n.get("content", "")
+        nid = n.get("id", str(uuid.uuid4()))
+
+        with st.expander(f"📅 {date} | {title}"):
+            st.markdown(content)
 
             if n.get("image") and os.path.exists(n["image"]):
                 st.image(n["image"], use_container_width=True)
@@ -140,18 +159,18 @@ def render_notice_list():
                 st.markdown(get_file_download_link(n["file"], _["file_download"]), unsafe_allow_html=True)
 
             if st.session_state.admin:
-                if st.button(f"🗑️ {_['delete']}", key=f"del_{n['id']}"):
-                    st.session_state.delete_target = n["id"]
+                if st.button(f"🗑️ {_['delete']}", key=f"del_{nid}_{idx}"):
+                    st.session_state.delete_target = nid
 
-    # 삭제 대상이 있으면 확인 영역 표시
+    # 삭제 확인 영역
     if st.session_state.delete_target:
         st.warning(_["delete_confirm"])
         col1, col2 = st.columns(2)
         with col1:
-            if st.button(_["confirm_yes"]):
+            if st.button(_["confirm_yes"], key="yes_delete"):
                 delete_notice(st.session_state.delete_target)
         with col2:
-            if st.button(_["confirm_no"]):
+            if st.button(_["confirm_no"], key="cancel_delete"):
                 st.session_state.delete_target = None
                 st.rerun()
 
