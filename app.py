@@ -3,7 +3,7 @@ from datetime import datetime
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
-import json, os, uuid, base64, time
+import json, os, uuid, base64
 
 # =============================================
 # 기본 설정
@@ -23,8 +23,6 @@ if "lang" not in st.session_state:
     st.session_state.lang = "ko"
 if "last_notice_count" not in st.session_state:
     st.session_state.last_notice_count = 0
-if "last_check" not in st.session_state:
-    st.session_state.last_check = time.time()
 
 # =============================================
 # 다국어
@@ -54,30 +52,6 @@ LANG = {
         "lang_select": "언어 선택",
         "file_download": "📎 파일 다운로드"
     },
-    "en": {
-        "title": "Cantata Tour 2025",
-        "caption": "Maharashtra Tour Management",
-        "tab_notice": "Notice Board",
-        "tab_map": "Tour Route",
-        "add_notice": "Add Notice",
-        "title_label": "Title",
-        "content_label": "Content",
-        "upload_image": "Upload Image (optional)",
-        "upload_file": "Upload File (optional)",
-        "submit": "Submit",
-        "warning": "Please fill in both title and content.",
-        "notice_list": "Notice List",
-        "no_notice": "No notices yet.",
-        "delete": "Delete",
-        "map_title": "View Route",
-        "admin_login": "Admin Login",
-        "password": "Password",
-        "login": "Login",
-        "logout": "Logout",
-        "wrong_pw": "Wrong password.",
-        "lang_select": "Language",
-        "file_download": "📎 Download File"
-    }
 }
 
 _ = LANG[st.session_state.lang]
@@ -123,7 +97,7 @@ def add_notice(title, content, image_file=None, upload_file=None):
         "id": str(uuid.uuid4()),
         "title": title,
         "content": content,
-        "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "image": img_path,
         "file": file_path
     }
@@ -156,7 +130,6 @@ def render_notice_list(show_delete=False):
     if not data:
         st.info(_["no_notice"])
         return
-
     for idx, n in enumerate(data):
         with st.expander(f"📅 {n['date']} | {n['title']}"):
             st.markdown(n["content"])
@@ -187,15 +160,30 @@ def render_map():
     st_folium(m, width=900, height=550)
 
 # =============================================
+# 자동 새로고침 (10초마다)
+# =============================================
+from streamlit_autorefresh import st_autorefresh
+
+if not st.session_state.admin:
+    count = len(load_json(NOTICE_FILE))
+    if st.session_state.last_notice_count == 0:
+        st.session_state.last_notice_count = count
+
+    # 10초마다 새로고침
+    st_autorefresh(interval=10 * 1000, key="auto_refresh")
+
+    new_count = len(load_json(NOTICE_FILE))
+    if new_count > st.session_state.last_notice_count:
+        st.toast("🔔 새 공지가 등록되었습니다!")
+        st.audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg")
+        st.session_state.last_notice_count = new_count
+
+# =============================================
 # 사이드바
 # =============================================
 with st.sidebar:
-    new_lang = st.selectbox(
-        _["lang_select"],
-        ["ko", "en"],
-        format_func=lambda x: {"ko": "한국어", "en": "English"}[x],
-        index=["ko", "en"].index(st.session_state.lang)
-    )
+    st.markdown("### 언어 선택")
+    new_lang = st.selectbox("Language", ["ko"], index=0)
     if new_lang != st.session_state.lang:
         st.session_state.lang = new_lang
         st.rerun()
@@ -203,7 +191,7 @@ with st.sidebar:
     st.markdown("---")
 
     if not st.session_state.admin:
-        st.markdown(f"### 🔐 {_['admin_login']}")
+        st.markdown(f"### 🔐 관리자 로그인")
         pw = st.text_input(_["password"], type="password")
         if st.button(_["login"]):
             if pw == "0000":
@@ -224,16 +212,6 @@ with st.sidebar:
 st.markdown(f"# {_['title']} 🎄")
 st.caption(_["caption"])
 
-# ✅ 일반 사용자일 때만 3초마다 갱신
-if not st.session_state.admin:
-    if time.time() - st.session_state.last_check >= 3:
-        current_data = load_json(NOTICE_FILE)
-        if len(current_data) > st.session_state.last_notice_count:
-            st.toast("🔔 새 공지가 등록되었습니다!")
-            st.session_state.last_notice_count = len(current_data)
-            st.rerun()
-        st.session_state.last_check = time.time()
-
 tab1, tab2 = st.tabs([_["tab_notice"], _["tab_map"]])
 
 with tab1:
@@ -251,6 +229,8 @@ with tab1:
         render_notice_list(show_delete=True)
     else:
         render_notice_list(show_delete=False)
+        if st.button("🔄 새로고침"):
+            st.rerun()
 
 with tab2:
     render_map()
