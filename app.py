@@ -3,7 +3,7 @@ from datetime import datetime
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
-import json, os, uuid, base64
+import json, os, uuid, base64, time
 
 # =============================================
 # 기본 설정
@@ -84,10 +84,7 @@ _ = LANG[st.session_state.lang]
 def load_json(filename):
     if os.path.exists(filename):
         with open(filename, "r", encoding="utf-8") as f:
-            try:
-                return json.load(f)
-            except json.JSONDecodeError:
-                return []
+            return json.load(f)
     return []
 
 def save_json(filename, data):
@@ -131,8 +128,12 @@ def add_notice(title, content, image_file=None, upload_file=None):
     data.insert(0, new_notice)
     save_json(NOTICE_FILE, data)
 
+    # ✅ 알림 표시 후 잠깐 대기
     st.toast("✅ 공지가 등록되었습니다.")
-    st.rerun()  # ✅ 최신 Streamlit용 새로고침
+    time.sleep(0.8)
+
+    # ✅ 새로고침
+    st.rerun()
 
 def delete_notice(notice_id):
     data = load_json(NOTICE_FILE)
@@ -146,7 +147,8 @@ def delete_notice(notice_id):
     save_json(NOTICE_FILE, data)
 
     st.toast("🗑️ 공지가 삭제되었습니다.")
-    st.rerun()  # ✅ 삭제 직후 새로고침
+    time.sleep(0.8)
+    st.rerun()
 
 # =============================================
 # 공지 리스트
