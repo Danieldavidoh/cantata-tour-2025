@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 from datetime import datetime
 import folium
@@ -8,6 +7,7 @@ import json
 import os
 import uuid
 import base64
+import time
 
 # =============================================
 # 기본 설정
@@ -15,11 +15,34 @@ import base64
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
 NOTICE_FILE = "notice.json"
+GLOBAL_FILE = "global_state.json"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # =============================================
-# 유틸 함수
+# 공용 상태 관리 (세션 공유용)
+# =============================================
+def load_global_state():
+    if os.path.exists(GLOBAL_FILE):
+        with open(GLOBAL_FILE, "r", encoding="utf-8") as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                return {"refresh_counter": 0, "last_update": 0}
+    return {"refresh_counter": 0, "last_update": 0}
+
+def save_global_state(state):
+    with open(GLOBAL_FILE, "w", encoding="utf-8") as f:
+        json.dump(state, f)
+
+def trigger_global_refresh():
+    state = load_global_state()
+    state["refresh_counter"] += 1
+    state["last_update"] = time.time()
+    save_global_state(state)
+
+# =============================================
+# 유틸
 # =============================================
 def load_json(filename):
     if os.path.exists(filename):
@@ -50,7 +73,7 @@ def get_file_download_link(file_path, label):
     return href
 
 # =============================================
-# 다국어 사전
+# 다국어
 # =============================================
 LANG = {
     "ko": {
@@ -76,7 +99,7 @@ LANG = {
         "wrong_pw": "비밀번호가 틀렸습니다.",
         "lang_select": "언어 선택",
         "file_download": "파일 다운로드",
-        "new_notice_alert": "새 공지가 도착했습니다!",
+        "new_notice_alert": "🔔 새 공지가 등록되었습니다!",
         "admin_refresh": "전체 갱신"
     },
     "en": {
@@ -102,35 +125,9 @@ LANG = {
         "wrong_pw": "Incorrect password.",
         "lang_select": "Language",
         "file_download": "Download File",
-        "new_notice_alert": "New notice posted!",
+        "new_notice_alert": "🔔 New notice posted!",
         "admin_refresh": "Refresh All"
     },
-    "hi": {
-        "title": "कांताता टूर 2025",
-        "caption": "महाराष्ट्र",
-        "tab_notice": "सूचना बोर्ड",
-        "tab_map": "टूर रूट",
-        "add_notice": "नई सूचना जोड़ें",
-        "title_label": "शीर्षक",
-        "content_label": "सामग्री",
-        "upload_image": "छवि अपलोड करें (वैकल्पिक)",
-        "upload_file": "फ़ाइल अपलोड करें (वैकल्पिक)",
-        "submit": "जमा करें",
-        "warning": "कृपया शीर्षक और सामग्री दोनों भरें।",
-        "notice_list": "सूचना सूची",
-        "no_notice": "कोई सूचना उपलब्ध नहीं।",
-        "delete": "हटाएं",
-        "map_title": "रूट देखें",
-        "admin_login": "एडमिन लॉगिन",
-        "password": "पासवर्ड",
-        "login": "लॉगिन",
-        "logout": "लॉगआउट",
-        "wrong_pw": "गलत पासवर्ड।",
-        "lang_select": "भाषा",
-        "file_download": "फ़ाइल डाउनलोड करें",
-        "new_notice_alert": "नई सूचना पोस्ट की गई!",
-        "admin_refresh": "सभी को रीफ्रेश"
-    }
 }
 
 # =============================================
@@ -142,39 +139,28 @@ if "lang" not in st.session_state:
     st.session_state.lang = "ko"
 if "notice_data" not in st.session_state:
     st.session_state.notice_data = load_json(NOTICE_FILE)
-if "last_notice_count" not in st.session_state:
-    st.session_state.last_notice_count = len(st.session_state.notice_data)
+if "last_refresh_counter" not in st.session_state:
+    st.session_state.last_refresh_counter = load_global_state()["refresh_counter"]
 if "last_check_time" not in st.session_state:
     st.session_state.last_check_time = datetime.now()
-if "new_notice_shown" not in st.session_state:
-    st.session_state.new_notice_shown = set()
-if "global_refresh_trigger" not in st.session_state:
-    st.session_state.global_refresh_trigger = 0
-if "last_global_refresh" not in st.session_state:
-    st.session_state.last_global_refresh = 0
 
-# =============================================
-# 번역 함수 정의
-# =============================================
+# 번역 헬퍼
 def _(key):
     return LANG[st.session_state.lang].get(key, key)
 
 # =============================================
-# 공지 관리
+# 공지 추가 / 삭제
 # =============================================
 def add_notice(title, content, image_file=None, upload_file=None):
     img_path, file_path = None, None
-
     if image_file:
         img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{image_file.name}")
         with open(img_path, "wb") as f:
             f.write(image_file.read())
-
     if upload_file:
         file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{upload_file.name}")
         with open(file_path, "wb") as f:
             f.write(upload_file.read())
-
     new_notice = {
         "id": str(uuid.uuid4()),
         "title": title,
@@ -183,55 +169,39 @@ def add_notice(title, content, image_file=None, upload_file=None):
         "image": img_path,
         "file": file_path
     }
-
     st.session_state.notice_data.insert(0, new_notice)
     save_json(NOTICE_FILE, st.session_state.notice_data)
-    
-    # 즉시 갱신 트리거 증가
-    st.session_state.global_refresh_trigger += 1
+    trigger_global_refresh()  # ✅ 공용 상태 갱신 (모든 사용자 감지 가능)
+    st.success("공지 등록 완료!")
     st.rerun()
 
-def delete_notice(notice_id):
-    for n in st.session_state.notice_data:
-        if n.get("id") == notice_id:
-            if n.get("image") and os.path.exists(n["image"]):
-                os.remove(n["image"])
-            if n.get("file") and os.path.exists(n["file"]):
-                os.remove(n["file"])
-            break
-
-    st.session_state.notice_data = [n for n in st.session_state.notice_data if n.get("id") != notice_id]
+def delete_notice(nid):
+    st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != nid]
     save_json(NOTICE_FILE, st.session_state.notice_data)
+    trigger_global_refresh()
     st.rerun()
 
+# =============================================
+# 공지 목록
+# =============================================
 def render_notice_list():
     st.subheader(_("notice_list"))
-
     if not st.session_state.notice_data:
         st.info(_("no_notice"))
         return
-
     for idx, n in enumerate(st.session_state.notice_data):
-        title = n.get("title", "(제목 없음)")
-        date = n.get("date", "?")
-        content = n.get("content", "")
-        nid = n.get("id", str(uuid.uuid4()))
-
-        with st.expander(f"{date} | {title}"):
-            st.markdown(content)
-
-            if n.get("image") and os.path.exists(n["image"]):
+        with st.expander(f"{n['date']} | {n['title']}"):
+            st.markdown(n["content"])
+            if n.get("image"):
                 st.image(n["image"], use_container_width=True)
-
-            if n.get("file") and os.path.exists(n["file"]):
+            if n.get("file"):
                 st.markdown(get_file_download_link(n["file"], _("file_download")), unsafe_allow_html=True)
-
             if st.session_state.admin:
-                if st.button(f"{_('delete')}", key=f"del_{nid}_{idx}"):
-                    delete_notice(nid)
+                if st.button(_("delete"), key=f"del_{idx}"):
+                    delete_notice(n["id"])
 
 # =============================================
-# 지도 (모바일 최적화)
+# 지도
 # =============================================
 def render_map():
     st.subheader(_("map_title"))
@@ -243,36 +213,27 @@ def render_map():
     m = folium.Map(location=[19.0, 73.0], zoom_start=7)
     coords = [(c["lat"], c["lon"]) for c in cities]
     for c in cities:
-        folium.Marker(
-            [c["lat"], c["lon"]],
-            popup=c["name"],
-            tooltip=c["name"],
-            icon=folium.Icon(color="red", icon="music")
-        ).add_to(m)
+        folium.Marker([c["lat"], c["lon"]], popup=c["name"]).add_to(m)
     AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
-
-    if st.session_state.admin:
-        st_folium(m, width=900, height=550)
-    else:
-        st_folium(m, use_container_width=True, height=550)
+    st_folium(m, use_container_width=True, height=550)
 
 # =============================================
 # 사이드바
 # =============================================
 with st.sidebar:
-    st.markdown(f"### {_( 'lang_select')}")
+    st.markdown(f"### {_('lang_select')}")
     lang_choice = st.selectbox(
         "",
-        ["ko", "en", "hi"],
-        format_func=lambda x: {"ko": "한국어", "en": "English", "hi": "हिन्दी"}[x],
-        index=["ko", "en", "hi"].index(st.session_state.lang)
+        ["ko", "en"],
+        format_func=lambda x: {"ko": "한국어", "en": "English"}[x],
+        index=["ko", "en"].index(st.session_state.lang)
     )
     if lang_choice != st.session_state.lang:
         st.session_state.lang = lang_choice
         st.rerun()
 
     st.markdown("---")
-    st.markdown(f"### {_( 'admin_login')}")
+    st.markdown(f"### {_('admin_login')}")
     if not st.session_state.admin:
         pw = st.text_input(_("password"), type="password")
         if st.button(_("login")):
@@ -289,76 +250,39 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 관리자 전용 전체 갱신 버튼 (탭 라인 오른쪽 끝)
+# 자동 새로고침 감지 (일반 사용자)
 # =============================================
-if st.session_state.admin:
-    col1, col2 = st.columns([6, 1])
-    with col1:
-        st.markdown("###")
-    with col2:
-        if st.button(f"{_('admin_refresh')}"):
-            st.session_state.global_refresh_trigger += 1
-            st.success("전체 갱신 명령 전송!")
+if not st.session_state.admin:
+    global_state = load_global_state()
+    if global_state["refresh_counter"] != st.session_state.last_refresh_counter:
+        st.session_state.notice_data = load_json(NOTICE_FILE)
+        st.session_state.last_refresh_counter = global_state["refresh_counter"]
+        st.toast(_("new_notice_alert"))
+        st.markdown(
+            """
+            <script>
+            alert("🔔 새 공지가 등록되었거나 변경되었습니다!");
+            var audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+            audio.play();
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+        st.rerun()
+    else:
+        # 5분 자동 새로고침
+        if (datetime.now() - st.session_state.last_check_time).total_seconds() > 300:
+            st.session_state.notice_data = load_json(NOTICE_FILE)
+            st.session_state.last_check_time = datetime.now()
             st.rerun()
 
 # =============================================
-# 실시간 알림 + 전체 갱신 + 5분 자동 갱신 (100% 작동 보장)
-# =============================================
-current_time = datetime.now()
-
-# 일반 사용자: 관리자 등록 또는 전체 갱신 감지
-if not st.session_state.admin:
-    # 마지막 갱신 트리거 확인
-    if st.session_state.global_refresh_trigger > st.session_state.last_global_refresh:
-        latest_data = load_json(NOTICE_FILE)
-        current_count = len(latest_data)
-        
-        # 새 공지 감지 및 알림
-        if current_count > st.session_state.last_notice_count:
-            old_ids = {n["id"] for n in st.session_state.notice_data}
-            new_notices = [n for n in latest_data if n["id"] not in old_ids]
-            
-            st.session_state.notice_data = latest_data
-            st.session_state.last_notice_count = current_count
-            
-            for notice in new_notices:
-                if notice["id"] not in st.session_state.new_notice_shown:
-                    st.toast(_("new_notice_alert"))
-                    st.session_state.new_notice_shown.add(notice["id"])
-        else:
-            st.session_state.notice_data = latest_data
-            st.session_state.last_notice_count = current_count
-        
-        st.session_state.last_global_refresh = st.session_state.global_refresh_trigger
-        # st.rerun() 제거 → 무한 루프 방지
-
-# 5분마다 자동 갱신 (일반 사용자)
-if not st.session_state.admin:
-    if (current_time - st.session_state.last_check_time).total_seconds() > 300:
-        latest_data = load_json(NOTICE_FILE)
-        current_count = len(latest_data)
-        
-        if current_count > st.session_state.last_notice_count:
-            old_ids = {n["id"] for n in st.session_state.notice_data}
-            new_notices = [n for n in latest_data if n["id"] not in old_ids]
-            
-            st.session_state.notice_data = latest_data
-            st.session_state.last_notice_count = current_count
-            
-            for notice in new_notices:
-                if notice["id"] not in st.session_state.new_notice_shown:
-                    st.toast(_("new_notice_alert"))
-                    st.session_state.new_notice_shown.add(notice["id"])
-        
-        st.session_state.last_check_time = current_time
-
-# =============================================
-# 메인 헤더
+# 본문
 # =============================================
 st.markdown(f"# {_('title')}")
 st.caption(_("caption"))
 
-tab1, tab2 = st.tabs([_('tab_notice'), _('tab_map')])
+tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
 
 with tab1:
     if st.session_state.admin:
@@ -370,7 +294,6 @@ with tab1:
             if st.form_submit_button(_("submit")):
                 if t.strip() and c.strip():
                     add_notice(t, c, img, f)
-                    st.success("공지 등록 완료!")
                 else:
                     st.warning(_("warning"))
     render_notice_list()
