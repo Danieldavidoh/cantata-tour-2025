@@ -68,9 +68,6 @@ LANG = {
         "notice_list": "공지 목록",
         "no_notice": "등록된 공지가 없습니다.",
         "delete": "삭제",
-        "delete_confirm": "정말 이 공지를 삭제하시겠습니까?",
-        "confirm_yes": "예, 삭제합니다",
-        "confirm_no": "취소",
         "map_title": "경로 보기",
         "admin_login": "관리자 로그인",
         "password": "비밀번호",
@@ -96,9 +93,6 @@ LANG = {
         "notice_list": "Notice List",
         "no_notice": "No notices available.",
         "delete": "Delete",
-        "delete_confirm": "Are you sure you want to delete this notice?",
-        "confirm_yes": "Yes, delete",
-        "confirm_no": "Cancel",
         "map_title": "View Route",
         "admin_login": "Admin Login",
         "password": "Password",
@@ -124,9 +118,6 @@ LANG = {
         "notice_list": "सूचना सूची",
         "no_notice": "कोई सूचना उपलब्ध नहीं।",
         "delete": "हटाएं",
-        "delete_confirm": "क्या आप वाकई इस सूचना को हटाना चाहते हैं?",
-        "confirm_yes": "हाँ, हटाएं",
-        "confirm_no": "रद्द करें",
         "map_title": "रूट देखें",
         "admin_login": "एडमिन लॉगिन",
         "password": "पासवर्ड",
@@ -148,14 +139,12 @@ if "lang" not in st.session_state:
     st.session_state.lang = "ko"
 if "notice_data" not in st.session_state:
     st.session_state.notice_data = load_json(NOTICE_FILE)
-if "delete_target" not in st.session_state:
-    st.session_state.delete_target = None
 if "last_notice_count" not in st.session_state:
     st.session_state.last_notice_count = len(st.session_state.notice_data)
 if "last_check_time" not in st.session_state:
     st.session_state.last_check_time = datetime.now()
 if "new_notice_shown" not in st.session_state:
-    st.session_state.new_notice_shown = set()  # 표시된 공지 ID 저장
+    st.session_state.new_notice_shown = set()
 
 # =============================================
 # 번역 함수 정의
@@ -193,9 +182,17 @@ def add_notice(title, content, image_file=None, upload_file=None):
     st.rerun()
 
 def delete_notice(notice_id):
+    # 파일 삭제 처리
+    for n in st.session_state.notice_data:
+        if n.get("id") == notice_id:
+            if n.get("image") and os.path.exists(n["image"]):
+                os.remove(n["image"])
+            if n.get("file") and os.path.exists(n["file"]):
+                os.remove(n["file"])
+            break
+
     st.session_state.notice_data = [n for n in st.session_state.notice_data if n.get("id") != notice_id]
     save_json(NOTICE_FILE, st.session_state.notice_data)
-    st.session_state.delete_target = None
     st.rerun()
 
 def render_notice_list():
@@ -222,18 +219,7 @@ def render_notice_list():
 
             if st.session_state.admin:
                 if st.button(f"{_('delete')}", key=f"del_{nid}_{idx}"):
-                    st.session_state.delete_target = nid
-
-    if st.session_state.delete_target:
-        st.warning(_("delete_confirm"))
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button(_("confirm_yes"), key="yes_delete"):
-                delete_notice(st.session_state.delete_target)
-        with col2:
-            if st.button(_("confirm_no"), key="cancel_delete"):
-                st.session_state.delete_target = None
-                st.rerun()
+                    delete_notice(nid)  # 즉시 삭제
 
 # =============================================
 # 지도 (모바일 최적화)
@@ -294,35 +280,27 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 실시간 알림 + 5분 갱신 (무한 루프 완전 차단)
+# 실시간 알림 + 5분 갱신 (무한 루프 방지)
 # =============================================
 current_time = datetime.now()
 
-# 1. 5분마다 파일 체크 (일반 사용자만)
+# 5분마다 파일 체크 (일반 사용자만)
 if not st.session_state.admin:
     if (current_time - st.session_state.last_check_time).total_seconds() > 300:
         latest_data = load_json(NOTICE_FILE)
         if len(latest_data) > st.session_state.last_notice_count:
-            # 새로운 공지 ID 추출
             old_ids = {n["id"] for n in st.session_state.notice_data}
             new_notices = [n for n in latest_data if n["id"] not in old_ids]
             
-            # 세션 업데이트
             st.session_state.notice_data = latest_data
             st.session_state.last_notice_count = len(latest_data)
             
-            # 새로운 공지만 알림
             for notice in new_notices:
                 if notice["id"] not in st.session_state.new_notice_shown:
-                    st.toast(_("new_notice_alert"), icon="")
+                    st.toast(_("new_notice_alert"))
                     st.session_state.new_notice_shown.add(notice["id"])
         
         st.session_state.last_check_time = current_time
-        # st.rerun() 제거 → 무한 갱신 방지
-
-# 2. 관리자 등록 후 즉시 반영 (rerun 1회만)
-if st.session_state.admin and len(st.session_state.notice_data) > st.session_state.last_notice_count:
-    st.session_state.last_notice_count = len(st.session_state.notice_data)
 
 # =============================================
 # 메인 헤더
