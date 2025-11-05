@@ -40,7 +40,7 @@ if "venues" not in st.session_state:
 LANG = {
     "ko": {
         "title": "칸타타 투어 2025",
-        "caption": "마하라스트라 지역 투어 관리 시스템",
+        "caption": "마하라스트라",
         "tab_notice_user": "공지 현황",
         "tab_notice_admin": "공지 관리",
         "tab_map": "투어 경로",
@@ -143,7 +143,7 @@ def delete_notice(notice_id):
     st.rerun()
 
 # =============================================
-# 공지 리스트
+# 공지 리스트 (일반 모드 날짜 형식: 11/05 08:15)
 # =============================================
 def render_notice_list(show_delete=False):
     data = load_json(NOTICE_FILE)
@@ -151,7 +151,8 @@ def render_notice_list(show_delete=False):
         st.info(_["no_notice"])
         return
     for idx, n in enumerate(data):
-        with st.expander(f"{n['date']} | {n['title']}"):
+        date_str = n["date"]  # "11/05 08:15" 형식 유지
+        with st.expander(f"{date_str} | {n['title']}"):
             st.markdown(n["content"])
             if n.get("image") and os.path.exists(n["image"]):
                 st.image(n["image"], use_container_width=True)
@@ -181,7 +182,7 @@ if not st.session_state.admin and AUTO_REFRESH:
         st.session_state.last_notice_count = new_count
 
 # =============================================
-# 사이드바
+# 사이드바 (언어 선택 라벨 제거)
 # =============================================
 with st.sidebar:
     st.markdown("### 언어 선택")
@@ -189,7 +190,7 @@ with st.sidebar:
     lang_labels = ["한국어", "English", "हिन्दी"]
     current_idx = lang_options.index(st.session_state.lang)
     new_lang = st.selectbox(
-        _["lang_select"],
+        "",
         lang_options,
         format_func=lambda x: lang_labels[lang_options.index(x)],
         index=current_idx
@@ -223,7 +224,7 @@ st.caption(_["caption"])
 
 # 탭 이름 동적 변경
 notice_tab_name = _["tab_notice_admin"] if st.session_state.admin else _["tab_notice_user"]
-tab1, tab2 = tab1, tab2 = st.tabs([notice_tab_name, _["tab_map"]])
+tab1, tab2 = st.tabs([notice_tab_name, _["tab_map"]])
 
 with tab1:
     if st.session_state.admin:
@@ -306,10 +307,23 @@ with tab2:
         "Khatav": (17.66, 74.36), "Koregaon": (17.70, 74.17), "Man": (18.15, 74.44), "Wai": (17.95, 73.89)
     }
 
-    # 관리자 전용 도시 추가 (입력창 완전 깨끗)
+    # 거리 및 소요시간 계산 (추정치, Google Maps API 대체)
+    def calculate_distance_time(lat1, lon1, lat2, lon2):
+        # 단순화된 Haversine 공식 (km 단위)
+        from math import radians, sin, cos, sqrt, atan2
+        R = 6371  # 지구 반지름 (km)
+        dlat = radians(lat2 - lat1)
+        dlon = radians(lon2 - lon1)
+        a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
+        c = 2 * atan2(sqrt(a), sqrt(1-a))
+        distance = R * c
+        # 속도 60km/h로 가정 (소요시간 계산)
+        time_hours = distance / 60
+        return round(distance, 1), round(time_hours, 1)
+
+    # 관리자 전용 도시 추가 (입력 후 초기화)
     if st.session_state.admin:
         with st.expander("도시 추가", expanded=False):
-            st.markdown("#### 공연 도시 입력")
             selected_city = st.selectbox("도시 선택", CITIES, index=0)
             col1, col2 = st.columns([3, 1])
             with col1:
@@ -335,44 +349,95 @@ with tab2:
                         "IndoorOutdoor": indoor_outdoor
                     })
                     st.success(_["venue_registered"])
+                    # 입력란 초기화
+                    venue_input = ""
+                    seat_count = 0
+                    google_link = ""
+                    notes = ""
                     st.rerun()
 
-    # 투어 경로 표시 (깨끗하게)
+    # 투어 경로 표시 (거리/소요시간 추가)
     st.subheader(_["tour_route"])
-    for city in st.session_state.route:
-        venues = st.session_state.venues.get(city, [])
-        with st.expander(f"**{city}**", expanded=False):
-            if venues:
-                for v in venues:
+    for i in range(len(st.session_state.route) - 1):
+        city1 = st.session_state.route[i]
+        city2 = st.session_state.route[i + 1]
+        venues1 = st.session_state.venues.get(city1, [])
+        venues2 = st.session_state.venues.get(city2, [])
+        car_icon1 = ""
+        car_icon2 = ""
+        if venues1 and venues1[0]["Google Maps Link"].startswith("http"):
+            car_icon1 = f'[자동차]({venues1[0]["Google Maps Link"]})'
+        if venues2 and venues2[0]["Google Maps Link"].startswith("http"):
+            car_icon2 = f'[자동차]({venues2[0]["Google Maps Link"]})'
+        with st.expander(f"**{city1}** → **{city2}**", expanded=False):
+            st.write(f"**거리**: {calculate_distance_time(coords[city1][0], coords[city1][1], coords[city2][0], coords[city2][1])[0]} km")
+            st.write(f"**소요시간**: {calculate_distance_time(coords[city1][0], coords[city1][1], coords[city2][0], coords[city2][1])[1]} h")
+            if venues1:
+                for v in venues1:
                     st.write(f"**{v['Venue']}**")
                     st.caption(f"{v['Seats']} {_['seats']} | {v.get('Special Notes','')} | {v['IndoorOutdoor']}")
                     if v["Google Maps Link"].startswith("http"):
-                        st.markdown(f"[자동차 구글맵]({v['Google Maps Link']})", unsafe_allow_html=True)
+                        st.markdown(f"[자동차]({v['Google Maps Link']})", unsafe_allow_html=True)
+            if venues2:
+                for v in venues2:
+                    st.write(f"**{v['Venue']}**")
+                    st.caption(f"{v['Seats']} {_['seats']} | {v.get('Special Notes','')} | {v['IndoorOutdoor']}")
+                    if v["Google Maps Link"].startswith("http"):
+                        st.markdown(f"[자동차]({v['Google Maps Link']})", unsafe_allow_html=True)
 
-    # 지도 (말풍선 너비 800px)
+    # 지도 (말풍선 조정 + 총 거리/소요시간)
     st.subheader("Tour Map")
     center = (19.75, 75.71)
     m = folium.Map(location=center, zoom_start=7, tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", attr="Google")
     points = []
+    total_distance = 0
+    total_time = 0
     for city in st.session_state.route:
         lat, lon = coords.get(city, center)
         points.append((lat, lon))
         venues = st.session_state.venues.get(city, [])
         popup_lines = []
         for v in venues:
-            line = f"<b>{v['Venue']}</b><br>{v['Seats']}석 | {v['IndoorOutdoor']}"
+            line = f"<b style='font-size: 1.2em;'>{v['Venue']}</b><br><span style='font-size: 1.2em;'>{v['Seats']}석 | {v['IndoorOutdoor']}</span>"
             if v.get('Special Notes'):
-                line += f"<br>{v['Special Notes']}"
+                line += f"<br><span style='font-size: 1.2em;'>{v['Special Notes']}</span>"
             if v["Google Maps Link"].startswith("http"):
-                line += f"<br><a href='{v['Google Maps Link']}' target='_blank'>자동차 구글맵</a>"
+                # 🚗 아이콘 사용 시 클릭 가능 여부 확인 불가, 텍스트 대체
+                line += f"<br><a href='{v['Google Maps Link']}' target='_blank' style='font-size: 1.2em;'>구글맵</a>"
             popup_lines.append(line + "<hr>")
-        popup_html = "<br>".join(popup_lines) if popup_lines else f"<b>{city}</b>"
+        popup_html = "<br>".join(popup_lines) if popup_lines else f"<b style='font-size: 1.2em;'>{city}</b>"
         folium.Marker(
             location=[lat, lon],
-            popup=folium.Popup(popup_html, max_width=800),  # 너비 800px
+            popup=folium.Popup(popup_html, max_width=850, max_height=300),  # 너비 850px, 높이 300px
             tooltip=None,
             icon=folium.Icon(icon="map-marker", prefix="fa", color="red")
         ).add_to(m)
     if len(points) > 1:
+        for i in range(len(points) - 1):
+            dist, time_h = calculate_distance_time(points[i][0], points[i][1], points[i + 1][0], points[i + 1][1])
+            total_distance += dist
+            total_time += time_h
         AntPath(points, color="#ff1744", weight=5, delay=1000, dash_array=[10, 20]).add_to(m)
+        # 총 거리/소요시간 (2025-11-05 기준)
+        total_info = f"<b>총 거리: {total_distance:.1f} km</b><br><b>총 소요시간: {total_time:.1f} h (2025-11-05 기준)</b>"
+        folium.Marker(
+            location=points[-1],
+            icon=folium.Icon(icon="info-sign", prefix="fa", color="blue"),
+            popup=folium.Popup(total_info, max_width=300)
+        ).add_to(m)
+
     st_folium(m, width=700, height=500)
+
+# =============================================
+# 거리/소요시간 계산 (추정치)
+# =============================================
+def calculate_distance_time(lat1, lon1, lat2, lon2):
+    from math import radians, sin, cos, sqrt, atan2
+    R = 6371  # 지구 반지름 (km)
+    dlat = radians(lat2 - lat1)
+    dlon = radians(lon2 - lon1)
+    a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
+    c = 2 * atan2(sqrt(a), sqrt(1-a))
+    distance = R * c
+    time_hours = distance / 60  # 60km/h로 가정
+    return round(distance, 1), round(time_hours, 1)
