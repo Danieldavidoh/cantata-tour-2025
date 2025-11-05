@@ -1,3 +1,4 @@
+# app.py
 import streamlit as st
 from datetime import datetime
 import folium
@@ -41,7 +42,7 @@ india_time = datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
 st.markdown(f"<p style='text-align:right;color:gray;font-size:0.9rem;'>🕓 {india_time} (Mumbai)</p>", unsafe_allow_html=True)
 
 # =============================================
-# 다국어
+# 다국어 (ko, en, hi)
 # =============================================
 LANG = {
     "ko": {
@@ -76,6 +77,75 @@ LANG = {
         "outdoor": "실외",
         "register": "등록",
         "edit": "수정",
+        "city": "도시",
+    },
+    "en": {
+        "title": "Cantata Tour 2025",
+        "caption": "Maharashtra Tour Management System",
+        "tab_notice": "Notices",
+        "tab_map": "Tour Route",
+        "add_notice": "Add New Notice",
+        "title_label": "Title",
+        "content_label": "Content",
+        "upload_image": "Upload Image (Optional)",
+        "upload_file": "Upload File (Optional)",
+        "submit": "Submit",
+        "warning": "Please enter both title and content.",
+        "notice_list": "Notice List",
+        "no_notice": "No notices registered.",
+        "delete": "Delete",
+        "map_title": "View Route",
+        "admin_login": "Admin Login",
+        "password": "Password",
+        "login": "Login",
+        "logout": "Logout",
+        "wrong_pw": "Incorrect password.",
+        "file_download": "📎 Download File",
+        "add_city": "Add City",
+        "select_city": "Select City",
+        "venue": "Venue",
+        "seats": "Seats",
+        "note": "Notes",
+        "google_link": "Enter Google Maps Link",
+        "indoor": "Indoor",
+        "outdoor": "Outdoor",
+        "register": "Register",
+        "edit": "Edit",
+        "city": "City",
+    },
+    "hi": {
+        "title": "कांताता टूर 2025",
+        "caption": "महाराष्ट्र क्षेत्र टूर प्रबंधन प्रणाली",
+        "tab_notice": "सूचनाएँ",
+        "tab_map": "टूर मार्ग",
+        "add_notice": "नई सूचना जोड़ें",
+        "title_label": "शीर्षक",
+        "content_label": "सामग्री",
+        "upload_image": "छवि अपलोड करें (वैकल्पिक)",
+        "upload_file": "फ़ाइल अपलोड करें (वैकल्पिक)",
+        "submit": "जमा करें",
+        "warning": "कृपया शीर्षक और सामग्री दोनों दर्ज करें।",
+        "notice_list": "सूचना सूची",
+        "no_notice": "कोई सूचना पंजीकृत नहीं है।",
+        "delete": "हटाएं",
+        "map_title": "मार्ग देखें",
+        "admin_login": "प्रशासक लॉगिन",
+        "password": "पासवर्ड",
+        "login": "लॉगिन",
+        "logout": "लॉगआउट",
+        "wrong_pw": "गलत पासवर्ड।",
+        "file_download": "📎 फ़ाइल डाउनलोड",
+        "add_city": "शहर जोड़ें",
+        "select_city": "शहर चुनें",
+        "venue": "स्थल",
+        "seats": "सीटें",
+        "note": "टिप्पणियाँ",
+        "google_link": "गूगल मैप लिंक दर्ज करें",
+        "indoor": "इनडोर",
+        "outdoor": "आउटडोर",
+        "register": "पंजीकृत करें",
+        "edit": "संपादित करें",
+        "city": "शहर",
     },
 }
 _ = LANG[st.session_state.lang]
@@ -107,7 +177,7 @@ def extract_latlon_from_shortlink(short_url):
 
 def make_navigation_link(lat, lon):
     """OS별 네비게이션 링크 생성"""
-    ua = st.session_state.get("user_agent", "")
+    ua = st.context.headers.get("User-Agent", "") if hasattr(st, "context") else ""
     if "Android" in ua:
         return f"google.navigation:q={lat},{lon}"
     elif "iPhone" in ua or "iPad" in ua:
@@ -155,7 +225,9 @@ def render_notice_list(show_delete=False):
             if n.get("image") and os.path.exists(n["image"]):
                 st.image(n["image"], use_container_width=True)
             if n.get("file") and os.path.exists(n["file"]):
-                href = f'<a href="data:file/octet-stream;base64,{base64.b64encode(open(n["file"],"rb").read()).decode()}" download="{os.path.basename(n["file"])}">{_["file_download"]}</a>'
+                with open(n["file"], "rb") as f:
+                    b64 = base64.b64encode(f.read()).decode()
+                href = f'<a href="data:file/octet-stream;base64,{b64}" download="{os.path.basename(n["file"])}">{_["file_download"]}</a>'
                 st.markdown(href, unsafe_allow_html=True)
             if show_delete and st.button(_["delete"], key=f"del_{idx}"):
                 data.remove(n)
@@ -171,17 +243,17 @@ def render_map():
 
     if st.session_state.admin:
         with st.expander("➕ 도시 추가", expanded=False):
-            # cities_list.json 존재하지 않으면 150개 기본 도시면 자동 생성
             if not os.path.exists(CITY_LIST_FILE):
                 default_cities = ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad",
-                                  "Kolhapur", "Solapur", "Thane", "Ratnagiri", "Sangli"]  # 실제 150개 버전 별도 생성 가능
+                                  "Kolhapur", "Solapur", "Thane", "Ratnagiri", "Sangli"]
                 save_json(CITY_LIST_FILE, default_cities)
             cities_list = load_json(CITY_LIST_FILE)
 
             city = st.selectbox(_["select_city"], cities_list)
             st.session_state.venue_input = st.text_input(_["venue"], st.session_state.venue_input)
             st.session_state.seat_count = st.number_input(_["seats"], min_value=0, step=50, value=st.session_state.seat_count)
-            st.session_state.venue_type = st.radio("공연형태", [_["indoor"], _["outdoor"]], horizontal=True)
+            st.session_state.venue_type = st.radio("공연형태", [_["indoor"], _["outdoor"]], horizontal=True,
+                                                   index=0 if st.session_state.venue_type == _["indoor"] else 1)
             st.session_state.map_link = st.text_input(_["google_link"], st.session_state.map_link)
             st.session_state.note_input = st.text_area(_["note"], st.session_state.note_input)
 
@@ -207,34 +279,61 @@ def render_map():
                 st.toast("✅ 도시가 추가되었습니다.")
                 st.rerun()
 
-    # 지도 출력
-    m = folium.Map(location=[19.0, 73.0], zoom_start=6)
+    # === 지도 출력 ===
+    m = folium.Map(location=[19.0, 73.0], zoom_start=6, tiles="CartoDB positron")
     data = load_json(CITY_FILE)
     coords = []
+
     for c in data:
         if not all(k in c for k in ["city", "lat", "lon"]):
-            continue  # KeyError 방지
+            continue
+
+        venue = c.get('venue', '-')
+        seats = c.get('seats', 0)
+        venue_type = c.get('type', '')
+
         popup_html = f"""
-        <b>{c['city']}</b><br>
-        장소: {c.get('venue', '')}<br>
-        좌석수: {c.get('seats', '')}<br>
-        형태: {c.get('type', '')}<br>
-        <a href="{c.get('nav_url', '#')}" target="_blank">🚗 길안내</a><br>
-        특이사항: {c.get('note', '')}
+        <div style="
+            font-family: 'Malgun Gothic', 'Segoe UI', sans-serif;
+            font-size: 14px;
+            text-align: center;
+            white-space: nowrap;
+            padding: 10px 16px;
+            min-width: 380px;
+            max-width: 500px;
+            line-height: 1.6;
+        ">
+            <b>{c['city']}</b> | {venue} | {seats}석 | {venue_type}
+        </div>
         """
-        folium.Marker([c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
-                      icon=folium.Icon(color="red", icon="music")).add_to(m)
+
+        folium.Marker(
+            [c["lat"], c["lon"]],
+            popup=folium.Popup(popup_html, max_width=500),
+            tooltip=c["city"],
+            icon=folium.Icon(color="red", icon="music", prefix="fa")
+        ).add_to(m)
+
         coords.append((c["lat"], c["lon"]))
-    if coords:
-        AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
-    st_folium(m, width=900, height=550)
+
+    if len(coords) > 1:
+        AntPath(coords, color="#ff1744", weight=5, opacity=0.8, delay=800, dash_array=[20, 30]).add_to(m)
+
+    st_folium(m, width=900, height=550, key="tour_map")
 
 # =============================================
 # 사이드바
 # =============================================
 with st.sidebar:
     st.markdown("### 언어 선택")
-    new_lang = st.selectbox("Language", ["ko"], index=0)
+    lang_options = {"한국어": "ko", "English": "en", "हिन्दी": "hi"}
+    display_options = list(lang_options.keys())
+    current_idx = display_options.index(
+        next((k for k, v in lang_options.items() if v == st.session_state.lang), "한국어")
+    )
+    selected_display = st.selectbox("Language", display_options, index=current_idx)
+    new_lang = lang_options[selected_display]
+
     if new_lang != st.session_state.lang:
         st.session_state.lang = new_lang
         st.rerun()
