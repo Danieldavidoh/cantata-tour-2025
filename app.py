@@ -16,9 +16,6 @@ st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 NOTICE_FILE = "notice.json"
 UPLOAD_DIR = "uploads"
 
-# =============================================
-# 폴더 준비
-# =============================================
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # =============================================
@@ -44,7 +41,7 @@ def get_file_download_link(file_path, label):
     return href
 
 # =============================================
-# 다국어 지원
+# 다국어
 # =============================================
 LANG = {
     "ko": {
@@ -63,6 +60,8 @@ LANG = {
         "no_notice": "등록된 공지가 없습니다.",
         "delete": "삭제",
         "delete_confirm": "정말 이 공지를 삭제하시겠습니까?",
+        "confirm_yes": "✅ 예, 삭제합니다",
+        "confirm_no": "❌ 취소",
         "map_title": "경로 보기",
         "admin_login": "관리자 로그인",
         "password": "비밀번호",
@@ -71,31 +70,6 @@ LANG = {
         "wrong_pw": "비밀번호가 틀렸습니다.",
         "lang_select": "언어 선택",
         "file_download": "📎 파일 다운로드"
-    },
-    "en": {
-        "title": "Cantata Tour 2025",
-        "caption": "Maharashtra Tour Management",
-        "tab_notice": "Notice Board",
-        "tab_map": "Tour Route",
-        "add_notice": "Add Notice",
-        "title_label": "Title",
-        "content_label": "Content",
-        "upload_image": "Upload Image (optional)",
-        "upload_file": "Upload File (optional)",
-        "submit": "Submit",
-        "warning": "Please fill in both title and content.",
-        "notice_list": "Notice List",
-        "no_notice": "No notices yet.",
-        "delete": "Delete",
-        "delete_confirm": "Are you sure you want to delete this notice?",
-        "map_title": "View Route",
-        "admin_login": "Admin Login",
-        "password": "Password",
-        "login": "Login",
-        "logout": "Logout",
-        "wrong_pw": "Wrong password.",
-        "lang_select": "Language",
-        "file_download": "📎 Download File"
     }
 }
 
@@ -110,13 +84,11 @@ if "notice_data" not in st.session_state:
     st.session_state.notice_data = load_json(NOTICE_FILE)
 if "delete_target" not in st.session_state:
     st.session_state.delete_target = None
-if "last_notice_count" not in st.session_state:
-    st.session_state.last_notice_count = len(st.session_state.notice_data)
 
 _ = LANG[st.session_state.lang]
 
 # =============================================
-# 공지 관리 함수
+# 공지 함수
 # =============================================
 def add_notice(title, content, image_file=None, upload_file=None):
     img_path, file_path = None, None
@@ -142,20 +114,12 @@ def add_notice(title, content, image_file=None, upload_file=None):
 
     st.session_state.notice_data.insert(0, new_notice)
     save_json(NOTICE_FILE, st.session_state.notice_data)
-    st.session_state.last_notice_count = len(st.session_state.notice_data)
     st.rerun()
 
 def delete_notice(notice_id):
-    for n in st.session_state.notice_data:
-        if n["id"] == notice_id:
-            if n.get("image") and os.path.exists(n["image"]):
-                os.remove(n["image"])
-            if n.get("file") and os.path.exists(n["file"]):
-                os.remove(n["file"])
     st.session_state.notice_data = [n for n in st.session_state.notice_data if n["id"] != notice_id]
     save_json(NOTICE_FILE, st.session_state.notice_data)
     st.session_state.delete_target = None
-    st.session_state.last_notice_count = len(st.session_state.notice_data)
     st.rerun()
 
 def render_notice_list():
@@ -166,8 +130,8 @@ def render_notice_list():
         return
 
     for idx, n in enumerate(st.session_state.notice_data):
-        with st.expander(f"📅 {n.get('date','?')} | {n.get('title','(제목 없음)')}"):
-            st.markdown(n.get("content", ""))
+        with st.expander(f"📅 {n['date']} | {n['title']}"):
+            st.markdown(n["content"])
 
             if n.get("image") and os.path.exists(n["image"]):
                 st.image(n["image"], use_container_width=True)
@@ -175,28 +139,24 @@ def render_notice_list():
             if n.get("file") and os.path.exists(n["file"]):
                 st.markdown(get_file_download_link(n["file"], _["file_download"]), unsafe_allow_html=True)
 
-            # ✅ 관리자만 삭제 버튼 표시
             if st.session_state.admin:
-                if st.button(f"🗑️ {_['delete']}", key=f"del_{n['id']}_{idx}"):
+                if st.button(f"🗑️ {_['delete']}", key=f"del_{n['id']}"):
                     st.session_state.delete_target = n["id"]
 
-# =============================================
-# 삭제 확인 모달
-# =============================================
-if st.session_state.delete_target:
-    with st.modal("⚠️ " + _["delete_confirm"]):
-        st.warning("삭제 시 복구할 수 없습니다.")
+    # 삭제 대상이 있으면 확인 영역 표시
+    if st.session_state.delete_target:
+        st.warning(_["delete_confirm"])
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("✅ 확인"):
+            if st.button(_["confirm_yes"]):
                 delete_notice(st.session_state.delete_target)
         with col2:
-            if st.button("❌ 취소"):
+            if st.button(_["confirm_no"]):
                 st.session_state.delete_target = None
                 st.rerun()
 
 # =============================================
-# 지도 렌더링
+# 지도
 # =============================================
 def render_map():
     st.subheader(_["map_title"])
@@ -221,20 +181,8 @@ def render_map():
 # 사이드바
 # =============================================
 with st.sidebar:
-    new_lang = st.selectbox(
-        _["lang_select"],
-        ["ko", "en"],
-        format_func=lambda x: {"ko": "한국어", "en": "English"}[x],
-        index=["ko", "en"].index(st.session_state.lang)
-    )
-    if new_lang != st.session_state.lang:
-        st.session_state.lang = new_lang
-        st.rerun()
-
-    st.markdown("---")
-
+    st.markdown(f"### 🔐 {_['admin_login']}")
     if not st.session_state.admin:
-        st.markdown(f"### 🔐 {_['admin_login']}")
         pw = st.text_input(_["password"], type="password")
         if st.button(_["login"]):
             if pw == "0000":
@@ -254,12 +202,6 @@ with st.sidebar:
 # =============================================
 st.markdown(f"# {_['title']} 🎄")
 st.caption(_['caption'])
-
-# 새 공지 감지 시 알림
-current_count = len(load_json(NOTICE_FILE))
-if current_count > st.session_state.last_notice_count:
-    st.toast("🔔 새 공지가 등록되었습니다!")
-    st.session_state.last_notice_count = current_count
 
 tab1, tab2 = st.tabs([_['tab_notice'], _['tab_map']])
 
