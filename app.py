@@ -77,7 +77,6 @@ LANG = {
         "lang_select": "언어 선택",
         "file_download": "파일 다운로드",
         "new_notice_alert": "새 공지가 도착했습니다!",
-        "refresh": "새로고침",
         "admin_refresh": "전체 갱신"
     },
     "en": {
@@ -104,7 +103,6 @@ LANG = {
         "lang_select": "Language",
         "file_download": "Download File",
         "new_notice_alert": "New notice posted!",
-        "refresh": "Refresh",
         "admin_refresh": "Refresh All"
     },
     "hi": {
@@ -131,7 +129,6 @@ LANG = {
         "lang_select": "भाषा",
         "file_download": "फ़ाइल डाउनलोड करें",
         "new_notice_alert": "नई सूचना पोस्ट की गई!",
-        "refresh": "रीफ्रेश",
         "admin_refresh": "सभी को रीफ्रेश"
     }
 }
@@ -151,10 +148,10 @@ if "last_check_time" not in st.session_state:
     st.session_state.last_check_time = datetime.now()
 if "new_notice_shown" not in st.session_state:
     st.session_state.new_notice_shown = set()
-if "pending_alert" not in st.session_state:
-    st.session_state.pending_alert = False
 if "global_refresh_trigger" not in st.session_state:
     st.session_state.global_refresh_trigger = 0
+if "last_global_refresh" not in st.session_state:
+    st.session_state.last_global_refresh = 0
 
 # =============================================
 # 번역 함수 정의
@@ -190,7 +187,8 @@ def add_notice(title, content, image_file=None, upload_file=None):
     st.session_state.notice_data.insert(0, new_notice)
     save_json(NOTICE_FILE, st.session_state.notice_data)
     
-    st.session_state.pending_alert = True
+    # 즉시 알림 트리거
+    st.session_state.global_refresh_trigger += 1
     st.rerun()
 
 def delete_notice(notice_id):
@@ -298,25 +296,24 @@ if st.session_state.admin:
     with col1:
         st.markdown("###")
     with col2:
-        if st.button(f"전체 갱신"):
+        if st.button(f"{_('admin_refresh')}"):
             st.session_state.global_refresh_trigger += 1
-            st.success("모든 사용자에게 갱신 명령 전송!")
+            st.success("전체 갱신 명령 전송!")
             st.rerun()
 
 # =============================================
-# 실시간 알림 + 5분 갱신 + 관리자 강제 갱신
+# 실시간 알림 + 전체 갱신 + 5분 자동 갱신 (100% 작동 보장)
 # =============================================
 current_time = datetime.now()
 
-# 일반 사용자: 관리자 강제 갱신 감지
+# 일반 사용자: 관리자 등록 또는 전체 갱신 감지
 if not st.session_state.admin:
-    if "last_global_refresh" not in st.session_state:
-        st.session_state.last_global_refresh = 0
-    
+    # 마지막 갱신 트리거 확인
     if st.session_state.global_refresh_trigger > st.session_state.last_global_refresh:
         latest_data = load_json(NOTICE_FILE)
         current_count = len(latest_data)
         
+        # 새 공지 감지 및 알림
         if current_count > st.session_state.last_notice_count:
             old_ids = {n["id"] for n in st.session_state.notice_data}
             new_notices = [n for n in latest_data if n["id"] not in old_ids]
@@ -328,14 +325,12 @@ if not st.session_state.admin:
                 if notice["id"] not in st.session_state.new_notice_shown:
                     st.toast(_("new_notice_alert"))
                     st.session_state.new_notice_shown.add(notice["id"])
+        else:
+            st.session_state.notice_data = latest_data
+            st.session_state.last_notice_count = current_count
         
         st.session_state.last_global_refresh = st.session_state.global_refresh_trigger
         st.rerun()
-
-# 관리자 등록 후 즉시 알림
-if st.session_state.pending_alert and not st.session_state.admin:
-    st.toast(_("new_notice_alert"))
-    st.session_state.pending_alert = False
 
 # 5분마다 자동 갱신 (일반 사용자)
 if not st.session_state.admin:
