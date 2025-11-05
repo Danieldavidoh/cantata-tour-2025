@@ -1,11 +1,14 @@
+# app.py
 import streamlit as st
 from datetime import datetime
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
-import json, os, uuid, base64
+import json
+import os
+import uuid
+import base64
 import pytz
-from streamlit_autorefresh import st_autorefresh
 
 # =============================================
 # 기본 설정
@@ -53,7 +56,12 @@ LANG = {
         "logout": "로그아웃",
         "wrong_pw": "비밀번호가 틀렸습니다.",
         "lang_select": "언어 선택",
-        "file_download": "📎 파일 다운로드"
+        "file_download": "파일 다운로드",
+        "add_city": "도시 추가",
+        "city_name": "도시 이름",
+        "latitude": "위도",
+        "longitude": "경도",
+        "city_added": "도시가 추가되었습니다."
     },
 }
 
@@ -65,7 +73,10 @@ _ = LANG[st.session_state.lang]
 def load_json(filename):
     if os.path.exists(filename):
         with open(filename, "r", encoding="utf-8") as f:
-            return json.load(f)
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                return []
     return []
 
 def save_json(filename, data):
@@ -114,7 +125,7 @@ def add_notice(title, content, image_file=None, upload_file=None):
     data.insert(0, new_notice)
     save_json(NOTICE_FILE, data)
 
-    st.toast("✅ 공지가 등록되었습니다.")
+    st.toast("공지가 등록되었습니다.")
     st.rerun()
 
 def delete_notice(notice_id):
@@ -127,7 +138,7 @@ def delete_notice(notice_id):
                 os.remove(n["file"])
     data = [n for n in data if n["id"] != notice_id]
     save_json(NOTICE_FILE, data)
-    st.toast("🗑️ 공지가 삭제되었습니다.")
+    st.toast("공지가 삭제되었습니다.")
     st.rerun()
 
 # =============================================
@@ -139,7 +150,7 @@ def render_notice_list(show_delete=False):
         st.info(_["no_notice"])
         return
     for idx, n in enumerate(data):
-        with st.expander(f"📅 {n['date']} | {n['title']}"):
+        with st.expander(f"{n['date']} | {n['title']}"):
             st.markdown(n["content"])
             if n.get("image") and os.path.exists(n["image"]):
                 st.image(n["image"], use_container_width=True)
@@ -150,7 +161,7 @@ def render_notice_list(show_delete=False):
                     delete_notice(n["id"])
 
 # =============================================
-# 지도
+# 지도 + 도시 추가 기능 복구
 # =============================================
 def render_map():
     st.subheader(_["map_title"])
@@ -180,42 +191,46 @@ def render_map():
 
     st_folium(m, width=900, height=550)
 
-    # 관리자 모드에서 도시 추가
+    # 관리자 모드에서 도시 추가 (복구!)
     if st.session_state.admin:
-        st.markdown("### 🗺️ 도시 추가")
+        st.markdown("### " + _("add_city"))
         with st.form("add_city_form", clear_on_submit=True):
-            name = st.text_input("도시 이름")
-            lat = st.number_input("위도", step=0.0001)
-            lon = st.number_input("경도", step=0.0001)
+            col1, col2 = st.columns(2)
+            with col1:
+                name = st.text_input(_("city_name"))
+            with col2:
+                lat = st.number_input(_("latitude"), step=0.0001, format="%.6f")
+            lon = st.number_input(_("longitude"), step=0.0001, format="%.6f")
             submitted = st.form_submit_button("추가")
             if submitted and name.strip():
                 cities.append({"name": name, "lat": lat, "lon": lon})
                 save_json(CITY_FILE, cities)
-                st.toast("✅ 도시가 추가되었습니다.")
+                st.toast(_("city_added"))
                 st.rerun()
 
 # =============================================
-# 자동 새로고침 (3초마다)
+# 자동 새로고침 (3초마다) + 알림
 # =============================================
 if not st.session_state.admin:
     count = len(load_json(NOTICE_FILE))
     if st.session_state.last_notice_count == 0:
         st.session_state.last_notice_count = count
 
+    # 3초마다 자동 갱신
     st_autorefresh(interval=3 * 1000, key="auto_refresh")
 
     new_count = len(load_json(NOTICE_FILE))
     if new_count > st.session_state.last_notice_count:
-        st.toast("🔔 새 공지가 등록되었습니다!")
-        st.audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg")
+        st.toast("새 공지가 등록되었습니다!")
+        st.audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg", format="audio/ogg")
         st.session_state.last_notice_count = new_count
 
 # =============================================
 # 사이드바
 # =============================================
 with st.sidebar:
-    st.markdown("### 언어 선택")
-    new_lang = st.selectbox("Language", ["ko"], index=0)
+    st.markdown("### " + _("lang_select"))
+    new_lang = st.selectbox("", ["ko"], index=0)
     if new_lang != st.session_state.lang:
         st.session_state.lang = new_lang
         st.rerun()
@@ -223,25 +238,25 @@ with st.sidebar:
     st.markdown("---")
 
     if not st.session_state.admin:
-        st.markdown("### 🔐 관리자 로그인")
-        pw = st.text_input(_["password"], type="password")
-        if st.button(_["login"]):
+        st.markdown("### " + _("admin_login"))
+        pw = st.text_input(_("password"), type="password")
+        if st.button(_("login")):
             if pw == "0000":
                 st.session_state.admin = True
-                st.success("✅ 관리자 모드 ON")
+                st.success("관리자 모드 ON")
                 st.rerun()
             else:
-                st.error(_["wrong_pw"])
+                st.error(_("wrong_pw"))
     else:
-        st.success("✅ 관리자 모드")
-        if st.button(_["logout"]):
+        st.success("관리자 모드")
+        if st.button(_("logout")):
             st.session_state.admin = False
             st.rerun()
 
 # =============================================
 # 메인
 # =============================================
-st.markdown(f"# {_['title']} 🎄")
+st.markdown(f"# {_['title']} ")
 st.caption(_["caption"])
 
 tab1, tab2 = st.tabs([_["tab_notice"], _["tab_map"]])
@@ -249,19 +264,19 @@ tab1, tab2 = st.tabs([_["tab_notice"], _["tab_map"]])
 with tab1:
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
-            t = st.text_input(_["title_label"])
-            c = st.text_area(_["content_label"])
-            img = st.file_uploader(_["upload_image"], type=["png", "jpg", "jpeg"])
-            f = st.file_uploader(_["upload_file"])
-            if st.form_submit_button(_["submit"]):
+            t = st.text_input(_("title_label"))
+            c = st.text_area(_("content_label"))
+            img = st.file_uploader(_("upload_image"), type=["png", "jpg", "jpeg"])
+            f = st.file_uploader(_("upload_file"))
+            if st.form_submit_button(_("submit")):
                 if t.strip() and c.strip():
                     add_notice(t, c, img, f)
                 else:
-                    st.warning(_["warning"])
+                    st.warning(_("warning"))
         render_notice_list(show_delete=True)
     else:
         render_notice_list(show_delete=False)
-        if st.button("🔄 새로고침"):
+        if st.button("새로고침"):
             st.rerun()
 
 with tab2:
