@@ -77,7 +77,36 @@ LANG = {
         "logout": "로그아웃",
         "wrong_pw": "비밀번호가 틀렸습니다.",
         "file_download": "📎 파일 다운로드",
-        "new_notice_alert": "📢 새로운 공지가 등록되었습니다!"
+        "new_notice_alert": "📢 새로운 공지가 등록되었습니다!",
+        "lang_select": "언어 선택"
+    },
+    "en": {
+        "title": "Cantata Tour 2025",
+        "caption": "Maharashtra Tour Management System",
+        "tab_notice": "Notice Board",
+        "tab_map": "Tour Route",
+        "add_notice": "Add New Notice",
+        "title_label": "Title",
+        "content_label": "Content",
+        "upload_image": "Upload Image (optional)",
+        "upload_file": "Upload File (optional)",
+        "submit": "Submit",
+        "warning": "Please enter both title and content.",
+        "notice_list": "Notice List",
+        "no_notice": "No notices available.",
+        "delete": "Delete",
+        "delete_confirm": "Are you sure you want to delete this notice?",
+        "confirm_yes": "✅ Yes, delete",
+        "confirm_no": "❌ Cancel",
+        "map_title": "View Route",
+        "admin_login": "Admin Login",
+        "password": "Password",
+        "login": "Login",
+        "logout": "Logout",
+        "wrong_pw": "Incorrect password.",
+        "file_download": "📎 Download File",
+        "new_notice_alert": "📢 A new notice has been posted!",
+        "lang_select": "Language"
     }
 }
 
@@ -96,8 +125,6 @@ if "last_notice_count" not in st.session_state:
     st.session_state.last_notice_count = len(st.session_state.notice_data)
 if "show_new_alert" not in st.session_state:
     st.session_state.show_new_alert = False
-if "last_refresh" not in st.session_state:
-    st.session_state.last_refresh = time.time()
 
 _ = LANG[st.session_state.lang]
 
@@ -198,9 +225,16 @@ def render_map():
     st_folium(m, width=900, height=550)
 
 # =============================================
-# 사이드바
+# 사이드바 (언어 + 로그인)
 # =============================================
 with st.sidebar:
+    st.markdown("### 🌐 언어 / Language")
+    lang_choice = st.selectbox("언어 선택 / Language", ["ko", "en"], index=0 if st.session_state.lang == "ko" else 1)
+    if lang_choice != st.session_state.lang:
+        st.session_state.lang = lang_choice
+        st.rerun()
+    _ = LANG[st.session_state.lang]
+
     st.markdown(f"### 🔐 {_['admin_login']}")
     if not st.session_state.admin:
         pw = st.text_input(_["password"], type="password")
@@ -218,18 +252,18 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 자동 새로고침 (2분 간격) + 알림
+# 자동 새로고침 (3초 주기) + 알림
 # =============================================
 if not st.session_state.admin:
-    now = time.time()
-    if now - st.session_state.last_refresh > 120:
-        latest_data = load_json(NOTICE_FILE)
-        if len(latest_data) > st.session_state.last_notice_count:
-            st.session_state.show_new_alert = True
-        st.session_state.notice_data = latest_data
-        st.session_state.last_notice_count = len(latest_data)
-        st.session_state.last_refresh = now
-        st.rerun()
+    st_autorefresh = st.empty()
+    st_autorefresh.write("")  # 더미출력
+    time.sleep(3)  # 3초 대기
+    latest_data = load_json(NOTICE_FILE)
+    if len(latest_data) > st.session_state.last_notice_count:
+        st.session_state.show_new_alert = True
+    st.session_state.notice_data = latest_data
+    st.session_state.last_notice_count = len(latest_data)
+    st.rerun()
 
 if st.session_state.show_new_alert and not st.session_state.admin:
     st.toast(_["new_notice_alert"])
