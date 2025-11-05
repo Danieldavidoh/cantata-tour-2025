@@ -1,4 +1,4 @@
-from streamlit_autorefresh import st_autorefresh  # ← Streamlit Cloud에 미설치from streamlit_autorefresh import st_autorefresh  # ← Streamlit Cloud에 미설치# app.py
+# app.py
 import streamlit as st
 from datetime import datetime
 import folium
@@ -68,16 +68,16 @@ LANG = {
         "no_notice": "등록된 공지가 없습니다.",
         "delete": "삭제",
         "delete_confirm": "정말 이 공지를 삭제하시겠습니까?",
-        "confirm_yes": "✅ 예, 삭제합니다",
-        "confirm_no": "❌ 취소",
+        "confirm_yes": "예, 삭제합니다",
+        "confirm_no": "취소",
         "map_title": "경로 보기",
         "admin_login": "관리자 로그인",
         "password": "비밀번호",
         "login": "로그인",
         "logout": "로그아웃",
         "wrong_pw": "비밀번호가 틀렸습니다.",
-        "file_download": "📎 파일 다운로드",
-        "new_notice_alert": "📢 새로운 공지가 등록되었습니다!",
+        "file_download": "파일 다운로드",
+        "new_notice_alert": "새로운 공지가 등록되었습니다!",
         "lang_select": "언어 선택"
     },
     "en": {
@@ -96,16 +96,16 @@ LANG = {
         "no_notice": "No notices available.",
         "delete": "Delete",
         "delete_confirm": "Are you sure you want to delete this notice?",
-        "confirm_yes": "✅ Yes, delete",
-        "confirm_no": "❌ Cancel",
+        "confirm_yes": "Yes, delete",
+        "confirm_no": "Cancel",
         "map_title": "View Route",
         "admin_login": "Admin Login",
         "password": "Password",
         "login": "Login",
         "logout": "Logout",
         "wrong_pw": "Incorrect password.",
-        "file_download": "📎 Download File",
-        "new_notice_alert": "📢 A new notice has been posted!",
+        "file_download": "Download File",
+        "new_notice_alert": "A new notice has been posted!",
         "lang_select": "Language"
     }
 }
@@ -180,7 +180,7 @@ def render_notice_list():
         content = n.get("content", "")
         nid = n.get("id", str(uuid.uuid4()))
 
-        with st.expander(f"📅 {date} | {title}"):
+        with st.expander(f"{date} | {title}"):
             st.markdown(content)
 
             if n.get("image") and os.path.exists(n["image"]):
@@ -190,7 +190,7 @@ def render_notice_list():
                 st.markdown(get_file_download_link(n["file"], _("file_download")), unsafe_allow_html=True)
 
             if st.session_state.admin:
-                if st.button(f"🗑️ {_('delete')}", key=f"del_{nid}_{idx}"):
+                if st.button(f"{_('delete')}", key=f"del_{nid}_{idx}"):
                     st.session_state.delete_target = nid
 
     if st.session_state.delete_target:
@@ -230,33 +230,32 @@ def render_map():
 # 사이드바 (언어 + 로그인)
 # =============================================
 with st.sidebar:
-    st.markdown("### 🌐 언어 / Language")
+    st.markdown("### 언어 / Language")
     lang_choice = st.selectbox("언어 선택 / Language", ["ko", "en"], index=0 if st.session_state.lang == "ko" else 1)
     if lang_choice != st.session_state.lang:
         st.session_state.lang = lang_choice
         st.rerun()
 
-    st.markdown(f"### 🔐 {_( 'admin_login')}")
+    st.markdown(f"### {_( 'admin_login')}")
     if not st.session_state.admin:
         pw = st.text_input(_("password"), type="password")
         if st.button(_("login")):
             if pw == "0000":
                 st.session_state.admin = True
-                st.success("✅ 관리자 모드 ON")
+                st.success("관리자 모드 ON")
                 st.rerun()
             else:
                 st.error(_("wrong_pw"))
     else:
-        st.success("✅ 관리자 모드")
+        st.success("관리자 모드")
         if st.button(_("logout")):
             st.session_state.admin = False
             st.rerun()
 
 # =============================================
-# 자동 새로고침 (5분 주기) + 알림 (내장 rerun으로 대체)
+# 자동 새로고침 (5분 주기) + 알림 (내장 기능)
 # =============================================
 if not st.session_state.admin:
-    # 5분마다 체크 (간단한 타이머 시뮬레이션)
     current_time = datetime.now()
     if not hasattr(st.session_state, 'last_check_time'):
         st.session_state.last_check_time = current_time
@@ -276,7 +275,7 @@ if st.session_state.show_new_alert and not st.session_state.admin:
 # =============================================
 # 메인
 # =============================================
-st.markdown(f"# {_('title')} 🎄")
+st.markdown(f"# {_('title')}")
 st.caption(_['caption'])
 
 tab1, tab2 = st.tabs([_['tab_notice'], _['tab_map']])
