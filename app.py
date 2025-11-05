@@ -223,7 +223,7 @@ st.caption(_["caption"])
 
 # 탭 이름 동적 변경
 notice_tab_name = _["tab_notice_admin"] if st.session_state.admin else _["tab_notice_user"]
-tab1, tab2 = st.tabs([notice_tab_name, _["tab_map"]])
+tab1, tab2 = tab1, tab2 = st.tabs([notice_tab_name, _["tab_map"]])
 
 with tab1:
     if st.session_state.admin:
@@ -306,7 +306,7 @@ with tab2:
         "Khatav": (17.66, 74.36), "Koregaon": (17.70, 74.17), "Man": (18.15, 74.44), "Wai": (17.95, 73.89)
     }
 
-    # 관리자 전용 도시 추가 (입력창 깨끗하게!)
+    # 관리자 전용 도시 추가 (입력창 완전 깨끗)
     if st.session_state.admin:
         with st.expander("도시 추가", expanded=False):
             st.markdown("#### 공연 도시 입력")
@@ -337,24 +337,19 @@ with tab2:
                     st.success(_["venue_registered"])
                     st.rerun()
 
-    # 투어 경로 표시
+    # 투어 경로 표시 (깨끗하게)
     st.subheader(_["tour_route"])
     for city in st.session_state.route:
         venues = st.session_state.venues.get(city, [])
-        car_icon = ""
-        if venues:
-            link = venues[0]["Google Maps Link"]
-            if link and link.startswith("http"):
-                car_icon = f'<span style="float:right">[자동차]({link})</span>'
-        with st.expander(f"**{city}**{car_icon}", expanded=False):
+        with st.expander(f"**{city}**", expanded=False):
             if venues:
                 for v in venues:
                     st.write(f"**{v['Venue']}**")
                     st.caption(f"{v['Seats']} {_['seats']} | {v.get('Special Notes','')} | {v['IndoorOutdoor']}")
                     if v["Google Maps Link"].startswith("http"):
-                        st.markdown(f'<div style="text-align:right">[자동차]({v["Google Maps Link"]})</div>', unsafe_allow_html=True)
+                        st.markdown(f"[자동차 구글맵]({v['Google Maps Link']})", unsafe_allow_html=True)
 
-    # 지도 (항상 표시)
+    # 지도 (말풍선 너비 800px)
     st.subheader("Tour Map")
     center = (19.75, 75.71)
     m = folium.Map(location=center, zoom_start=7, tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", attr="Google")
@@ -374,7 +369,7 @@ with tab2:
         popup_html = "<br>".join(popup_lines) if popup_lines else f"<b>{city}</b>"
         folium.Marker(
             location=[lat, lon],
-            popup=folium.Popup(popup_html, max_width=450),
+            popup=folium.Popup(popup_html, max_width=800),  # 너비 800px
             tooltip=None,
             icon=folium.Icon(icon="map-marker", prefix="fa", color="red")
         ).add_to(m)
