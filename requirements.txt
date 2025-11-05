@@ -1,6 +1,4 @@
 streamlit
-folium
 streamlit-folium
-flask
-flask-socketio
-eventlet
+folium
+websockets
