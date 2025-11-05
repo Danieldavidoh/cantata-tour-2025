@@ -74,6 +74,27 @@ LANG = {
 _ = LANG[st.session_state.lang]
 
 # =============================================
+# 기본 도시 리스트 (150개 주요 도시)
+# =============================================
+DEFAULT_CITIES = [
+    "Mumbai","Pune","Nagpur","Nashik","Aurangabad","Kolhapur","Solapur","Amravati","Sangli","Thane",
+    "Kalyan","Vasai","Bhiwandi","Latur","Dhule","Ahmednagar","Jalgaon","Chandrapur","Parbhani","Beed",
+    "Nanded","Ratnagiri","Wardha","Yavatmal","Satara","Baramati","Osmanabad","Hingoli","Gondia","Buldhana",
+    "Palghar","Raigad","Sindhudurg","Washim","Akola","Panvel","Ulhasnagar","Karad","Malegaon","Ichalkaranji",
+    "Miraj","Ambajogai","Talegaon","Dombivli","Badlapur","Boisar","Khopoli","Shirpur","Manmad","Phaltan",
+    "Sinnar","Shirdi","Junnar","Lonar","Alibag","Pen","Murbad","Mangaon","Vita","Tasgaon","Sawantwadi",
+    "Kudal","Rajapur","Lanja","Kankavli","Dapoli","Chiplun","Mahad","Poladpur","Roha","Neral","Karjat",
+    "Matheran","Bhor","Velhe","Mulshi","Paud","Lonavala","Khandala","Wai","Panchgani","Mahabaleshwar",
+    "Koregaon","Malkapur","Shegaon","Nandurbar","Taloda","Shahada","Dondaicha","Bhusawal","Erandol","Raver",
+    "Yawal","Muktainagar","Jalna","Partur","Ambad","Paithan","Sillod","Kannad","Vaijapur","Georai","Manjlegaon",
+    "Patoda","Kaij","Parli","Gangakhed","Pathri","Loha","Hadgaon","Kinwat","Arni","Darwha","Pusad","Ner",
+    "Deoli","Seloo","Katol","Kalmeshwar","Ramtek","Parseoni","Umred","Bhiwapur","Kuhi","Karanja Lad","Morshi",
+    "Warud","Chandur","Achalpur","Anjangaon","Daryapur","Akot","Telhara","Patur","Risod","Mangrulpir","Malegaon (Washim)",
+    "Nagbhid","Bramhapuri","Armori","Gadchiroli","Sironcha","Etapalli","Aheri","Desaiganj","Sakoli","Tirora",
+    "Arjuni Morgaon","Deori","Amgaon","Salekasa"
+]
+
+# =============================================
 # 유틸
 # =============================================
 def load_json(filename):
@@ -166,7 +187,13 @@ def render_map():
 
     if st.session_state.admin:
         with st.expander("➕ 도시 추가", expanded=False):
-            cities_list = load_json("cities_list.json") if os.path.exists("cities_list.json") else ["공연없음"]
+            # 파일이 있으면 로드, 없으면 기본 150개 사용
+            if os.path.exists("cities_list.json"):
+                with open("cities_list.json", "r", encoding="utf-8") as f:
+                    cities_list = json.load(f)
+            else:
+                cities_list = DEFAULT_CITIES
+
             city = st.selectbox(_["select_city"], cities_list)
             st.session_state.venue_input = st.text_input(_["venue"], st.session_state.venue_input)
             st.session_state.seat_count = st.number_input(_["seats"], min_value=0, step=50, value=st.session_state.seat_count)
