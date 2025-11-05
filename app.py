@@ -3,7 +3,6 @@ import pandas as pd
 from datetime import datetime
 import folium
 from streamlit_folium import st_folium
-from folium.plugins import AntPath
 import json, os, uuid, base64
 
 # =============================================
@@ -18,16 +17,16 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # =============================================
 # 세션 초기화
 # =============================================
-defaults = {
-    "admin": False,
-    "lang": "ko",
-    "last_notice_count": 0,
-    "route": [],
-    "venues": {}
-}
-for k, v in defaults.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
+if "admin" not in st.session_state:
+    st.session_state.admin = False
+if "lang" not in st.session_state:
+    st.session_state.lang = "ko"
+if "last_notice_count" not in st.session_state:
+    st.session_state.last_notice_count = 0
+if "route" not in st.session_state:
+    st.session_state.route = []
+if "venues" not in st.session_state:
+    st.session_state.venues = {}
 
 # =============================================
 # 다국어
@@ -70,15 +69,93 @@ LANG = {
         "venue_registered": "등록 완료",
         "indoor": "실내",
         "outdoor": "실외"
-    },
-    "en": { ... },  # 생략 (필요시 추가)
-    "hi": { ... }   # 생략 (필요시 추가)
+    }
 }
 
 _ = LANG[st.session_state.lang]
 
 # =============================================
-# 도시/좌표 정의 (NameError 해결)
+# JSON 유틸
+# =============================================
+def load_json(filename):
+    if os.path.exists(filename):
+        with open(filename, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+def save_json(filename, data):
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def get_file_download_link(file_path, label):
+    if not os.path.exists(file_path):
+        return ""
+    with open(file_path, "rb") as f:
+        data = f.read()
+    b64 = base64.b64encode(data).decode()
+    return f'<a href="data:file/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
+
+# =============================================
+# 공지 추가/삭제
+# =============================================
+def add_notice(title, content, image_file=None, upload_file=None):
+    img_path, file_path = None, None
+    if image_file:
+        img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{image_file.name}")
+        with open(img_path, "wb") as f:
+            f.write(image_file.read())
+    if upload_file:
+        file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{upload_file.name}")
+        with open(file_path, "wb") as f:
+            f.write(upload_file.read())
+    new_notice = {
+        "id": str(uuid.uuid4()),
+        "title": title,
+        "content": content,
+        "date": datetime.now().strftime("%m/%d %H:%M"),
+        "image": img_path,
+        "file": file_path
+    }
+    data = load_json(NOTICE_FILE)
+    data.insert(0, new_notice)
+    save_json(NOTICE_FILE, data)
+    st.toast("공지가 등록되었습니다.")
+    st.rerun()
+
+def delete_notice(notice_id):
+    data = load_json(NOTICE_FILE)
+    for n in data:
+        if n["id"] == notice_id:
+            if n.get("image") and os.path.exists(n["image"]):
+                os.remove(n["image"])
+            if n.get("file") and os.path.exists(n["file"]):
+                os.remove(n["file"])
+    data = [n for n in data if n["id"] != notice_id]
+    save_json(NOTICE_FILE, data)
+    st.toast("공지가 삭제되었습니다.")
+    st.rerun()
+
+# =============================================
+# 공지 리스트 (먼저 정의!)
+# =============================================
+def render_notice_list(show_delete=False):
+    data = load_json(NOTICE_FILE)
+    if not data:
+        st.info(_["no_notice"])
+        return
+    for idx, n in enumerate(data):
+        with st.expander(f"{n['date']} | {n['title']}"):
+            st.markdown(n["content"])
+            if n.get("image") and os.path.exists(n["image"]):
+                st.image(n["image"], use_container_width=True)
+            if n.get("file") and os.path.exists(n["file"]):
+                st.markdown(get_file_download_link(n["file"], _["file_download"]), unsafe_allow_html=True)
+            if show_delete:
+                if st.button(_["delete"], key=f"del_{n['id']}_{idx}"):
+                    delete_notice(n["id"])
+
+# =============================================
+# 도시/좌표 정의
 # =============================================
 coords = {
     "Mumbai": (19.07, 72.88), "Pune": (18.52, 73.86), "Nagpur": (21.15, 79.08), "Nashik": (20.00, 73.79),
@@ -95,19 +172,11 @@ coords = {
 }
 
 # =============================================
-# 사이드바 + 로그인
+# 사이드바
 # =============================================
 with st.sidebar:
     st.markdown("### 언어 선택")
-    lang_options = ["ko", "en", "hi"]
-    lang_labels = ["한국어", "English", "हिन्दी"]
-    current_idx = lang_options.index(st.session_state.lang)
-    new_lang = st.selectbox(
-        _["lang_select"],
-        lang_options,
-        format_func=lambda x: lang_labels[lang_options.index(x)],
-        index=current_idx
-    )
+    new_lang = st.selectbox("Language", ["ko"], index=0)
     if new_lang != st.session_state.lang:
         st.session_state.lang = new_lang
         st.rerun()
@@ -137,6 +206,9 @@ st.caption(_["caption"])
 
 tab1, tab2 = st.tabs([_["tab_notice"], _["tab_map"]])
 
+# =============================================
+# 공지 탭
+# =============================================
 with tab1:
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
@@ -254,7 +326,7 @@ with tab2:
                 radius=12,
                 color="#90EE90",
                 fill_color="#8B0000",
-                popup=folium.Popup(popup_html, max_width=400),
+                popup=folium.Popup(popup_html, max_width=450),
                 tooltip=None  # 툴팁 제거
             ).add_to(m)
         if len(points) > 1:
