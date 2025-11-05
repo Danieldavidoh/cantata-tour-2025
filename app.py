@@ -62,7 +62,11 @@ _ = LANG[st.session_state.lang]
 def load_json(filename):
     if os.path.exists(filename):
         with open(filename, "r", encoding="utf-8") as f:
-            return json.load(f)
+            try:
+                data = json.load(f)
+                return data if isinstance(data, list) else []
+            except:
+                return []
     return []
 
 def save_json(filename, data):
@@ -129,9 +133,10 @@ def render_map():
                 st.rerun()
 
             # 수정 및 삭제
-            if data:
-                target = st.selectbox("수정/삭제할 도시 선택", [d["city"] for d in data])
-                target_data = next((d for d in data if d["city"] == target), None)
+            valid_data = [d for d in data if "city" in d]
+            if valid_data:
+                target = st.selectbox("수정/삭제할 도시 선택", [d["city"] for d in valid_data])
+                target_data = next((d for d in valid_data if d["city"] == target), None)
                 if target_data and st.button(_["delete"], key="del_city"):
                     data.remove(target_data)
                     save_json(CITY_FILE, data)
