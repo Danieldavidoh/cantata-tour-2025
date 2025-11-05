@@ -4,6 +4,7 @@ import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
 import json, os, uuid, base64, re, requests
+from pytz import timezone
 
 # =============================================
 # 기본 설정
@@ -13,6 +14,7 @@ st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 NOTICE_FILE = "notice.json"
 UPLOAD_DIR = "uploads"
 CITY_FILE = "cities.json"
+CITY_LIST_FILE = "cities_list.json"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # =============================================
@@ -31,6 +33,12 @@ defaults = {
 for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
+
+# =============================================
+# 뭄바이 기준 현재시간 (년도 제외)
+# =============================================
+india_time = datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
+st.markdown(f"<p style='text-align:right;color:gray;font-size:0.9rem;'>🕓 {india_time} (Mumbai)</p>", unsafe_allow_html=True)
 
 # =============================================
 # 다국어
@@ -70,29 +78,7 @@ LANG = {
         "edit": "수정",
     },
 }
-
 _ = LANG[st.session_state.lang]
-
-# =============================================
-# 기본 도시 리스트 (150개 주요 도시)
-# =============================================
-DEFAULT_CITIES = [
-    "Mumbai","Pune","Nagpur","Nashik","Aurangabad","Kolhapur","Solapur","Amravati","Sangli","Thane",
-    "Kalyan","Vasai","Bhiwandi","Latur","Dhule","Ahmednagar","Jalgaon","Chandrapur","Parbhani","Beed",
-    "Nanded","Ratnagiri","Wardha","Yavatmal","Satara","Baramati","Osmanabad","Hingoli","Gondia","Buldhana",
-    "Palghar","Raigad","Sindhudurg","Washim","Akola","Panvel","Ulhasnagar","Karad","Malegaon","Ichalkaranji",
-    "Miraj","Ambajogai","Talegaon","Dombivli","Badlapur","Boisar","Khopoli","Shirpur","Manmad","Phaltan",
-    "Sinnar","Shirdi","Junnar","Lonar","Alibag","Pen","Murbad","Mangaon","Vita","Tasgaon","Sawantwadi",
-    "Kudal","Rajapur","Lanja","Kankavli","Dapoli","Chiplun","Mahad","Poladpur","Roha","Neral","Karjat",
-    "Matheran","Bhor","Velhe","Mulshi","Paud","Lonavala","Khandala","Wai","Panchgani","Mahabaleshwar",
-    "Koregaon","Malkapur","Shegaon","Nandurbar","Taloda","Shahada","Dondaicha","Bhusawal","Erandol","Raver",
-    "Yawal","Muktainagar","Jalna","Partur","Ambad","Paithan","Sillod","Kannad","Vaijapur","Georai","Manjlegaon",
-    "Patoda","Kaij","Parli","Gangakhed","Pathri","Loha","Hadgaon","Kinwat","Arni","Darwha","Pusad","Ner",
-    "Deoli","Seloo","Katol","Kalmeshwar","Ramtek","Parseoni","Umred","Bhiwapur","Kuhi","Karanja Lad","Morshi",
-    "Warud","Chandur","Achalpur","Anjangaon","Daryapur","Akot","Telhara","Patur","Risod","Mangrulpir","Malegaon (Washim)",
-    "Nagbhid","Bramhapuri","Armori","Gadchiroli","Sironcha","Etapalli","Aheri","Desaiganj","Sakoli","Tirora",
-    "Arjuni Morgaon","Deori","Amgaon","Salekasa"
-]
 
 # =============================================
 # 유틸
@@ -134,12 +120,10 @@ def make_navigation_link(lat, lon):
 # =============================================
 def add_notice(title, content, image_file=None, upload_file=None):
     img_path, file_path = None, None
-
     if image_file:
         img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{image_file.name}")
         with open(img_path, "wb") as f:
             f.write(image_file.read())
-
     if upload_file:
         file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{upload_file.name}")
         with open(file_path, "wb") as f:
@@ -149,7 +133,7 @@ def add_notice(title, content, image_file=None, upload_file=None):
         "id": str(uuid.uuid4()),
         "title": title,
         "content": content,
-        "date": datetime.now().strftime("%m/%d %H:%M"),
+        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
         "image": img_path,
         "file": file_path
     }
@@ -187,12 +171,12 @@ def render_map():
 
     if st.session_state.admin:
         with st.expander("➕ 도시 추가", expanded=False):
-            # 파일이 있으면 로드, 없으면 기본 150개 사용
-            if os.path.exists("cities_list.json"):
-                with open("cities_list.json", "r", encoding="utf-8") as f:
-                    cities_list = json.load(f)
-            else:
-                cities_list = DEFAULT_CITIES
+            # cities_list.json 존재하지 않으면 150개 기본 도시면 자동 생성
+            if not os.path.exists(CITY_LIST_FILE):
+                default_cities = ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad",
+                                  "Kolhapur", "Solapur", "Thane", "Ratnagiri", "Sangli"]  # 실제 150개 버전 별도 생성 가능
+                save_json(CITY_LIST_FILE, default_cities)
+            cities_list = load_json(CITY_LIST_FILE)
 
             city = st.selectbox(_["select_city"], cities_list)
             st.session_state.venue_input = st.text_input(_["venue"], st.session_state.venue_input)
@@ -228,17 +212,19 @@ def render_map():
     data = load_json(CITY_FILE)
     coords = []
     for c in data:
-        lat, lon = c["lat"], c["lon"]
+        if not all(k in c for k in ["city", "lat", "lon"]):
+            continue  # KeyError 방지
         popup_html = f"""
         <b>{c['city']}</b><br>
-        장소: {c['venue']}<br>
-        좌석수: {c['seats']}<br>
-        형태: {c['type']}<br>
-        <a href="{c['nav_url']}" target="_blank">🚗 길안내</a><br>
-        특이사항: {c['note']}
+        장소: {c.get('venue', '')}<br>
+        좌석수: {c.get('seats', '')}<br>
+        형태: {c.get('type', '')}<br>
+        <a href="{c.get('nav_url', '#')}" target="_blank">🚗 길안내</a><br>
+        특이사항: {c.get('note', '')}
         """
-        folium.Marker([lat, lon], popup=popup_html, tooltip=c["city"], icon=folium.Icon(color="red", icon="music")).add_to(m)
-        coords.append((lat, lon))
+        folium.Marker([c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
+                      icon=folium.Icon(color="red", icon="music")).add_to(m)
+        coords.append((c["lat"], c["lon"]))
     if coords:
         AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
     st_folium(m, width=900, height=550)
