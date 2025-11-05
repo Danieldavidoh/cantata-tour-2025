@@ -242,7 +242,7 @@ with tab1:
         render_notice_list(show_delete=False)
 
 # =============================================
-# 투어 경로 탭 (항상 표시)
+# 투어 경로 탭
 # =============================================
 with tab2:
     # 도시 리스트
@@ -306,18 +306,18 @@ with tab2:
         "Khatav": (17.66, 74.36), "Koregaon": (17.70, 74.17), "Man": (18.15, 74.44), "Wai": (17.95, 73.89)
     }
 
-    # 관리자 전용 도시 추가
+    # 관리자 전용 도시 추가 (입력창 깨끗하게!)
     if st.session_state.admin:
         with st.expander("도시 추가", expanded=False):
             st.markdown("#### 공연 도시 입력")
             selected_city = st.selectbox("도시 선택", CITIES, index=0)
             col1, col2 = st.columns([3, 1])
             with col1:
-                venue_input = st.text_input(_["venue_name"])
+                venue_input = st.text_input(_["venue_name"], value="")
             with col2:
                 seat_count = st.number_input(_["seats"], value=0, step=50, min_value=0)
-            google_link = st.text_input(_["google_link"])
-            notes = st.text_area(_["special_notes"])
+            google_link = st.text_input(_["google_link"], value="")
+            notes = st.text_area(_["special_notes"], value="")
             indoor_outdoor = st.radio("형태", [_["indoor"], _["outdoor"]], horizontal=True)
             if st.button(_["register"], key="register_city_main"):
                 if not venue_input:
