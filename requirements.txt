@@ -1,5 +1,5 @@
-streamlit>=1.27.0
+streamlit
 streamlit-folium
 folium
 websockets
-requests
+streamlit-autorefresh
