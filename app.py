@@ -293,17 +293,22 @@ def render_notice_list(show_delete=False):
 
         with st.container():
             # 헤더 (제목 + 삭제 버튼)
-            col1, col2 = st.columns([6, 1]) if show_delete else st.columns([1])
-            with col1:
-                if st.button(f"📢 {n['title']}", key=toggle_key, use_container_width=True):
-                    st.session_state.expanded_notices[notice_id] = not is_expanded
-                    st.rerun()
-                st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
             if show_delete:
+                col1, col2 = st.columns([6, 1])
+                with col1:
+                    if st.button(f"📢 {n['title']}", key=toggle_key, use_container_width=True):
+                        st.session_state.expanded_notices[notice_id] = not is_expanded
+                        st.rerun()
+                    st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
                 with col2:
                     del_key = f"del_{notice_id}_{uuid.uuid4().hex[:8]}"
                     if st.button("삭제", key=del_key):
                         delete_notice(notice_id)
+            else:
+                if st.button(f"📢 {n['title']}", key=toggle_key, use_container_width=True):
+                    st.session_state.expanded_notices[notice_id] = not is_expanded
+                    st.rerun()
+                st.caption(f"{n['timestamp'][:16].replace('T',' ')}")
 
             # 내용 (펼쳐졌을 때만)
             if is_expanded:
