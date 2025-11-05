@@ -21,7 +21,7 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # =============================================
-# 세션 초기화
+# 세션 초기화 (가장 먼저!)
 # =============================================
 if "admin" not in st.session_state:
     st.session_state.admin = False
@@ -31,7 +31,7 @@ if "last_notice_count" not in st.session_state:
     st.session_state.last_notice_count = 0
 
 # =============================================
-# 다국어
+# 다국어 사전 (세션 후 즉시!)
 # =============================================
 LANG = {
     "ko": {
@@ -65,7 +65,11 @@ LANG = {
     },
 }
 
-_ = LANG[st.session_state.lang]
+# =============================================
+# 번역 함수 정의 (사전 후 즉시!)
+# =============================================
+def _(key):
+    return LANG[st.session_state.lang].get(key, key)
 
 # =============================================
 # JSON 유틸
@@ -147,7 +151,7 @@ def delete_notice(notice_id):
 def render_notice_list(show_delete=False):
     data = load_json(NOTICE_FILE)
     if not data:
-        st.info(_["no_notice"])
+        st.info(_("no_notice"))
         return
     for idx, n in enumerate(data):
         with st.expander(f"{n['date']} | {n['title']}"):
@@ -155,16 +159,16 @@ def render_notice_list(show_delete=False):
             if n.get("image") and os.path.exists(n["image"]):
                 st.image(n["image"], use_container_width=True)
             if n.get("file") and os.path.exists(n["file"]):
-                st.markdown(get_file_download_link(n["file"], _["file_download"]), unsafe_allow_html=True)
+                st.markdown(get_file_download_link(n["file"], _("file_download")), unsafe_allow_html=True)
             if show_delete:
-                if st.button(_["delete"], key=f"del_{n['id']}_{idx}"):
+                if st.button(_("delete"), key=f"del_{n['id']}_{idx}"):
                     delete_notice(n["id"])
 
 # =============================================
-# 지도 + 도시 추가 기능 복구
+# 지도 + 도시 추가 기능
 # =============================================
 def render_map():
-    st.subheader(_["map_title"])
+    st.subheader(_("map_title"))
     cities = load_json(CITY_FILE)
 
     # 기본 도시
@@ -191,7 +195,7 @@ def render_map():
 
     st_folium(m, width=900, height=550)
 
-    # 관리자 모드에서 도시 추가 (복구!)
+    # 관리자 모드에서 도시 추가
     if st.session_state.admin:
         st.markdown("### " + _("add_city"))
         with st.form("add_city_form", clear_on_submit=True):
@@ -226,7 +230,7 @@ if not st.session_state.admin:
         st.session_state.last_notice_count = new_count
 
 # =============================================
-# 사이드바
+# 사이드바 (이제 _() 사용 가능!)
 # =============================================
 with st.sidebar:
     st.markdown("### " + _("lang_select"))
