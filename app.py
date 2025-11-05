@@ -50,7 +50,7 @@ def get_file_download_link(file_path, label):
     return href
 
 # =============================================
-# 다국어 사전
+# 다국어 사전 (힌디어 추가 완료)
 # =============================================
 LANG = {
     "ko": {
@@ -108,6 +108,34 @@ LANG = {
         "lang_select": "Language",
         "file_download": "Download File",
         "new_notice_alert": "New notice posted!"
+    },
+    "hi": {
+        "title": "कांताता टूर 2025",
+        "caption": "महाराष्ट्र टूर मैनेजमेंट सिस्टम",
+        "tab_notice": "सूचना बोर्ड",
+        "tab_map": "टूर रूट",
+        "add_notice": "नई सूचना जोड़ें",
+        "title_label": "शीर्षक",
+        "content_label": "सामग्री",
+        "upload_image": "छवि अपलोड करें (वैकल्पिक)",
+        "upload_file": "फ़ाइल अपलोड करें (वैकल्पिक)",
+        "submit": "जमा करें",
+        "warning": "कृपया शीर्षक और सामग्री दोनों भरें।",
+        "notice_list": "सूचना सूची",
+        "no_notice": "कोई सूचना उपलब्ध नहीं।",
+        "delete": "हटाएं",
+        "delete_confirm": "क्या आप वाकई इस सूचना को हटाना चाहते हैं?",
+        "confirm_yes": "हाँ, हटाएं",
+        "confirm_no": "रद्द करें",
+        "map_title": "रूट देखें",
+        "admin_login": "एडमिन लॉगिन",
+        "password": "पासवर्ड",
+        "login": "लॉगिन",
+        "logout": "लॉगआउट",
+        "wrong_pw": "गलत पासवर्ड।",
+        "lang_select": "भाषा",
+        "file_download": "फ़ाइल डाउनलोड करें",
+        "new_notice_alert": "नई सूचना पोस्ट की गई!"
     }
 }
 
@@ -128,7 +156,7 @@ if "last_check_time" not in st.session_state:
     st.session_state.last_check_time = datetime.now()
 
 # =============================================
-# 번역 함수 정의 (세션 후 즉시!)
+# 번역 함수 정의
 # =============================================
 def _(key):
     return LANG[st.session_state.lang].get(key, key)
@@ -229,15 +257,15 @@ def render_map():
     st_folium(m, width=900, height=550)
 
 # =============================================
-# 사이드바 (언어 + 로그인)
+# 사이드바 (힌디어 포함)
 # =============================================
 with st.sidebar:
     st.markdown(f"### {_( 'lang_select')}")
     lang_choice = st.selectbox(
         "",
-        ["ko", "en"],
-        format_func=lambda x: {"ko": "한국어", "en": "English"}[x],
-        index=0 if st.session_state.lang == "ko" else 1
+        ["ko", "en", "hi"],
+        format_func=lambda x: {"ko": "국내어", "en": "English", "hi": "हिन्दी"}[x],
+        index=["ko", "en", "hi"].index(st.session_state.lang)
     )
     if lang_choice != st.session_state.lang:
         st.session_state.lang = lang_choice
@@ -281,7 +309,7 @@ if len(st.session_state.notice_data) > st.session_state.last_notice_count and no
     st.session_state.last_notice_count = len(st.session_state.notice_data)
 
 # =============================================
-# 메인 헤더 (함수 사용!)
+# 메인 헤더
 # =============================================
 st.markdown(f"# {_('title')}")
 st.caption(_("caption"))
