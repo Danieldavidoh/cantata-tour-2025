@@ -23,6 +23,10 @@ if "lang" not in st.session_state:
     st.session_state.lang = "ko"
 if "last_notice_count" not in st.session_state:
     st.session_state.last_notice_count = 0
+if "route" not in st.session_state:
+    st.session_state.route = []
+if "venues" not in st.session_state:
+    st.session_state.venues = {}
 
 # =============================================
 # 다국어
@@ -50,7 +54,16 @@ LANG = {
         "logout": "로그아웃",
         "wrong_pw": "비밀번호가 틀렸습니다.",
         "lang_select": "언어 선택",
-        "file_download": "📎 파일 다운로드"
+        "file_download": "📎 파일 다운로드",
+        "add_city": "도시 추가",
+        "select_city": "도시 선택",
+        "venue_name": "공연장 이름",
+        "seats": "좌석 수",
+        "google_link": "구글 지도 링크",
+        "special_notes": "특이사항",
+        "register": "등록",
+        "navigate": "길찾기",
+        "enter_venue_name": "공연장 이름을 입력하세요."
     },
 }
 
@@ -234,3 +247,85 @@ with tab1:
 
 with tab2:
     render_map()
+
+# ----------------------------------------------------------------------
+# 6. 도시 추가 (관리자 모드에서만)
+# ----------------------------------------------------------------------
+if st.session_state.admin:
+    st.markdown("### 도시 추가")
+    avail = [c for c in cities if c not in st.session_state.route]
+    if avail:
+        c1, c2 = st.columns([3,1])
+        with c1:
+            next_city = st.selectbox(_["select_city"], avail + ["공연없음"], index=len(avail), key="next_city_select")
+        with c2:
+            if st.button(_["add_city_btn"], key="add_city_btn"):
+                st.session_state.route.append(next_city)
+                st.rerun()
+
+# ----------------------------------------------------------------------
+# 7. 투어 경로 (박스 추가)
+# ----------------------------------------------------------------------
+st.subheader(_["tour_route"])
+for city in st.session_state.route:
+    t = st.session_state.venues
+    has = city in t and not t.get(city, pd.DataFrame()).empty
+    car_icon = ""
+    if has:
+        link = t[city].iloc[0]["Google Maps Link"]
+        if link and link.startswith("http"):
+            car_icon = f'<span style="float:right">[🚗]({nav(link)})</span>'
+    with st.expander(f"**{city}**{car_icon}", expanded=False):
+        # 등록 폼
+        if (st.session_state.admin or st.session_state.get("guest_mode")) and not has:
+            st.markdown("---")
+            venue_name = st.text_input(_["venue_name"], key=f"v_{city}")
+            seats = st.number_input(_["seats"], 1, step=50, key=f"s_{city}")
+            google_link = st.text_input(_["google_link"], placeholder="https://...", key=f"l_{city}")
+            special_notes = st.text_area(_["special_notes"], key=f"sn_{city}")
+            _, btn = st.columns([4,1])
+            with btn:
+                if st.button(_["register"], key=f"reg_{city}"):
+                    if not venue_name:
+                        st.error(_["enter_venue_name"])
+                    else:
+                        new_row = pd.DataFrame([{
+                            "Venue": venue_name,
+                            "Seats": seats,
+                            "Google Maps Link": google_link,
+                            "Special Notes": special_notes
+                        }])
+                        t[city] = pd.concat([t.get(city, pd.DataFrame(columns=cols)), new_row], ignore_index=True)
+                        st.success(_["venue_registered"])
+                        for k in [f"v_{city}", f"s_{city}", f"l_{city}", f"sn_{city}"]:
+                            st.session_state.pop(k, None)
+                        st.rerun()
+
+        # 등록된 공연장
+        if has:
+            for idx, row in t[city].iterrows():
+                c1, c2, c3 = st.columns([3,1,1])
+                with c1:
+                    st.write(f"**{row['Venue']}**")
+                    st.caption(f"{row['Seats']} {_['seats']} | {row.get('Special Notes','')}")
+                with c3:
+                    if row["Google Maps Link"].startswith("http"):
+                        st.markdown(f'<div style="text-align:right">[🚗]({nav(row["Google Maps Link"])})</div>', unsafe_allow_html=True)
+
+# ----------------------------------------------------------------------
+# 9. 오른쪽 컬럼 – 지도
+# ----------------------------------------------------------------------
+with right:
+    st.subheader("Tour Map")
+    center = coords.get(st.session_state.route[0] if st.session_state.route else "Mumbai", (19.75, 75.71))
+    m = folium.Map(location=center, zoom_start=7, tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", attr="Google")
+    if len(st.session_state.route) > 1:
+        points = [coords[c] for c in st.session_state.route]
+        folium.PolyLine(points, color="red", weight=4).add_to(m)
+    for city in st.session_state.route:
+        df = st.session_state.venues.get(city, pd.DataFrame(columns=cols))
+        link = next((r["Google Maps Link"] for _, r in df.iterrows() if r["Google Maps Link"].startswith("http")), None)
+        popup_html = f"<b style='color:#8B0000'>{city}</b>"
+        if link: popup_html = f'<a href="{nav(link)}" target="_blank" style="color:#90EE90">{popup_html}<br><i>{_["navigate"]}</i></a>'
+        folium.CircleMarker(location=coords[city], radius=15, color="#90EE90", fill_color="#8B0000", popup=folium.Popup(popup_html, max_width=300)).add_to(m)
+    st_folium(m, width=700, height=500)
