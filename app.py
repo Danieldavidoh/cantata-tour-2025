@@ -1,38 +1,36 @@
-# app.py - 긴급 패치 (2025.11.07) 🔥 NameError 완전 차단 + 모든 기능 복구
-# 문제: st.tabs()가 _() 함수 호출 전에 실행됨 → 언어 로드 미완 → NameError
-
-# ==================== [핵심 수정] _() 함수 먼저 정의 → st.tabs() 나중에 호출 ====================
-
+# app.py - 완전 정리판 (2025.11.07) 🔥 마커 복구 + 크리스마스 알림음 유지 (안정화)
 import streamlit as st
 from datetime import datetime
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
-import json, os, uuid, base64
+import json, os, uuid, base64, re, requests
 from pytz import timezone
 from streamlit_autorefresh import st_autorefresh
 from math import radians, sin, cos, sqrt, asin
 
-# --- 1. 하버신 거리 ---
+# Haversine (완전 클린)
 def haversine(lat1, lon1, lat2, lon2):
     lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
-    dlon, dlat = lon2 - lon1, lat2 - lat1
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
     a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
-    return 6371 * 2 * asin(sqrt(a))
+    c = 2 * asin(sqrt(a))
+    return 6371 * c
 
-# --- 2. 자동 리프레시 ---
+# 3초 리프레시 (관리자 아닐 때만)
 if not st.session_state.get("admin", False):
     st_autorefresh(interval=3000, key="auto")
 
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
-# --- 3. 파일/디렉토리 ---
 NOTICE_FILE = "notice.json"
 UPLOAD_DIR = "uploads"
 CITY_FILE = "cities.json"
+CITY_LIST_FILE = "cities_list.json"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# --- 4. 세션 초기화 ---
+# 세션 기본값 (sound_played 추가)
 defaults = {
     "admin": False, "lang": "ko", "edit_city": None, "expanded": {}, "adding_cities": [],
     "pw": "0009", "seen_notices": [], "active_tab": "공지", "new_notice": False, "sound_played": False
@@ -40,7 +38,7 @@ defaults = {
 for k, v in defaults.items():
     if k not in st.session_state: st.session_state[k] = v
 
-# --- 5. 다국어 사전 ---
+# 다국어
 LANG = {
     "ko": { "title_base": "칸타타 투어", "caption": "마하라스트라", "tab_notice": "공지", "tab_map": "투어 경로",
             "map_title": "경로 보기", "add_city": "도시 추가", "password": "비밀번호", "login": "로그인",
@@ -67,30 +65,27 @@ LANG = {
             "remove": "हटाएं", "date": "तारीख", "performance_date": "प्रदर्शन तिथि", "cancel": "रद्द करें",
             "title_label": "शीर्षक", "content_label": "सामग्री", "upload_image": "छवि अपलोड करें",
             "upload_file": "फ़ाइल अपलोड करें", "submit": "जमा करें", "warning": "शीर्षक और सामग्री दोनों दर्ज करें।",
-            "file_download": "फ़ाइल डाउन로드 करें" }
+            "file_download": "फ़ाइल डाउनलोड करें" }
 }
-
-# --- 6. _() 함수 먼저 정의 (NameError 방지 핵심!) ---
 _ = lambda key: LANG[st.session_state.lang].get(key, key)
 
-# --- 7. 크리스마스 테마 + 5초 Jingle Bells ---
-JINGLE_BELLS_WAV = "UklGRnoGAABXQVZFZm10IBAAAAABAAEAIlYAAIlYAABQTFRFAAAAAP4AAAD8AAAAAAAAAAAAAAACAgIC..."
-
-st.markdown(f"""
+# 테마 (모든 이모지, 볼드 제거)
+st.markdown("""
 <style>
-.stApp {{ background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #f0f0f0; }}
-.christmas-title {{ text-align: center; margin: 20px 0; }}
-.cantata {{ font-size: 3em; color: #e74c3c; text-shadow: 0 0 10px #ff6b6b; }}
-.year {{ font-size: 2.8em; color: #ecf0f1; text-shadow: 0 0 8px #ffffff; }}
-.maha {{ font-size: 1.8em; color: #3498db; font-style: italic; text-shadow: 0 0 6px #74b9ff; }}
-.snowflake {{ color: rgba(255,255,255,0.5); font-size: 1.2em; position: absolute; top: -10px; animation: fall linear forwards; }}
-@keyframes fall {{ to {{ transform: translateY(100vh); opacity: 0;}}}}
-.stButton>button {{ background: #c0392b !important; color: white !important; border: 2px solid #e74c3c !important; border-radius: 12px !important; }}
-.stButton>button:hover {{ background: #e74c3c !important; }}
-.new-badge {{ background: #e74c3c; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7em; margin-left: 5px; }}
+.stApp { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #f0f0f0; overflow: hidden; }
+.christmas-title { text-align: center; margin: 20px 0; }
+.cantata { font-size: 3em; color: #e74c3c; text-shadow: 0 0 10px #ff6b6b; }
+.year { font-size: 2.8em; color: #ecf0f1; text-shadow: 0 0 8px #ffffff; }
+.maha { font-size: 1.8em; color: #3498db; font-style: italic; text-shadow: 0 0 6px #74b9ff; }
+.snowflake { color: rgba(255,255,255,0.5); font-size: 1.2em; position: absolute; top: -10px; animation: fall linear forwards; }
+@keyframes fall { to { transform: translateY(100vh); opacity: 0; }}
+.stButton>button { background: #c0392b !important; color: white !important; border: 2px solid #e74c3c !important; border-radius: 12px !important; }
+.stButton>button:hover { background: #e74c3c !important; }
+.new-badge { background: #e74c3c; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7em; margin-left: 5px; }
 </style>
+
 <script>
-function createSnowflake() {{
+function createSnowflake() {
     const s = document.createElement('div'); s.classList.add('snowflake');
     s.innerText = ['❅','❆','✻','✼'][Math.floor(Math.random()*4)];
     s.style.left = Math.random()*100 + 'vw';
@@ -98,16 +93,17 @@ function createSnowflake() {{
     s.style.opacity = Math.random()*0.4 + 0.3;
     document.body.appendChild(s);
     setTimeout(() => s.remove(), 18000);
-}}
+}
 setInterval(createSnowflake, 400);
-function playJingleBells() {{
-    const audio = new Audio('data:audio/wav;base64,{JINGLE_BELLS_WAV}');
-    audio.play().catch(() => {{}});
-}}
+
+function playNotification() {
+    const a = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAIlYAAIlYAABQTFRFAAAAAP4AAAD8AAA');
+    a.play().catch(()=>{});
+}
 </script>
 """, unsafe_allow_html=True)
 
-# --- 8. 제목 ---
+# 제목 (볼드 제거)
 st.markdown(f"""
 <div class="christmas-title">
 <div class="cantata">{_('title_base')}</div>
@@ -116,13 +112,13 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --- 9. 사이드바 ---
+# 사이드바
 with st.sidebar:
     lang_options = ["한국어", "English", "हिंदी"]
     lang_map = {"한국어":"ko", "English":"en", "हिंदी":"hi"}
-    selected = st.selectbox("언어", lang_options, index=[i for i, l in enumerate(lang_options) if lang_map[l] == st.session_state.lang][0])
-    if lang_map[selected] != st.session_state.lang:
-        st.session_state.lang = lang_map[selected]
+    selected_lang = st.selectbox("언어", lang_options, index=lang_options.index(next(l for l in lang_options if lang_map[l]==st.session_state.lang)))
+    if lang_map[selected_lang] != st.session_state.lang:
+        st.session_state.lang = lang_map[selected_lang]
         st.rerun()
 
     st.markdown("---")
@@ -132,37 +128,39 @@ with st.sidebar:
             if pw == st.session_state.pw:
                 st.session_state.admin = True
                 st.rerun()
-            elif pw in ["0691", "0692"]:
-                st.session_state.pw = "9000" if pw == "0691" else "0009"
+            elif pw == "0691":
+                st.session_state.pw = "9000"
+                st.rerun()
+            elif pw == "0692":
+                st.session_state.pw = "0009"
                 st.rerun()
             else:
                 st.error(_("wrong_pw"))
     else:
-        st.success("🎅 관리자 모드")
+        st.success("관리자 모드")
         if st.button(_("logout")):
             st.session_state.admin = False
             st.rerun()
 
-# --- 10. JSON 헬퍼 ---
-def load_json(f): return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
-def save_json(f, d): json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
-
-# --- 11. 공지 ---
+# 공지
 def add_notice(title, content, img=None, file=None):
     img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{img.name}") if img else None
     file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.name}") if file else None
     if img: open(img_path, "wb").write(img.read())
     if file: open(file_path, "wb").write(file.read())
-
+    
     notice = {
-        "id": str(uuid.uuid4()), "title": title, "content": content,
+        "id": str(uuid.uuid4()),
+        "title": title,
+        "content": content,
         "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
-        "image": img_path, "file": file_path
+        "image": img_path,
+        "file": file_path
     }
     data = load_json(NOTICE_FILE)
     data.insert(0, notice)
     save_json(NOTICE_FILE, data)
-
+    
     st.session_state.seen_notices = []
     st.session_state.new_notice = True
     st.session_state.active_tab = "공지"
@@ -176,82 +174,127 @@ def render_notices():
         if new: has_new = True
         title = f"{n['date']} | {n['title']}"
         if new: title += ' <span class="new-badge">NEW</span>'
-
-        with st.expander(title, expanded=False):
+        
+        with st.expander(title, expanded=st.session_state.expanded.get(f"n{i}", False)):
             st.markdown(n["content"])
-            if n.get("image") and os.path.exists(n["image"]): st.image(n["image"], use_container_width=True)
+            if n.get("image") and os.path.exists(n["image"]):
+                st.image(n["image"], use_container_width=True)
             if n.get("file") and os.path.exists(n["file"]):
-                with open(n["file"], "rb") as f:
-                    b64 = base64.b64encode(f.read()).decode()
-                st.markdown(f'<a href="data:file/octet-stream;base64,{b64}" download="{os.path.basename(n["file"])}">📥 {_("file_download")}</a>', unsafe_allow_html=True)
-            if st.session_state.admin and st.button("🗑️ 삭제", key=f"del_n{i}"):
-                data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
+                st.markdown(f'<a href="data:file/octet-stream;base64,{base64.b64encode(open(n["file"],"rb").read()).decode()}" download="{os.path.basename(n["file"])}">파일 다운로드</a>', unsafe_allow_html=True)
+            if st.session_state.admin and st.button("삭제", key=f"del{i}"):
+                data.pop(i)
+                save_json(NOTICE_FILE, data)
+                st.rerun()
             if new and not st.session_state.admin:
                 st.session_state.seen_notices.append(n["id"])
-
+    
     if has_new and not st.session_state.get("sound_played", False):
-        st.markdown("<script>playJingleBells();</script>", unsafe_allow_html=True)
+        st.markdown("<script>playNotification();</script>", unsafe_allow_html=True)
         st.session_state.sound_played = True
     elif not has_new:
         st.session_state.sound_played = False
 
-# --- 12. 지도 ---
+def load_json(f):
+    return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
+
+def save_json(f, d):
+    json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+
+# 지도 (안정화된 버전)
 def render_map():
     st.subheader(_('map_title'))
-    if st.session_state.admin and st.button(_('add_city'), key="add_city_top"):
-        st.session_state.adding_cities.append(None)
-        st.rerun()
+    if st.session_state.admin:
+        if st.button(_('add_city')):
+            st.session_state.adding_cities.append(None)
+            st.rerun()
 
     cities = sorted(load_json(CITY_FILE), key=lambda x: x.get("perf_date", "9999-12-31"))
-    if not cities:
-        st.info("⚠️ 등록된 도시가 없습니다.")
-        return
-
+    
+    # 기존 도시 목록 (모든 아이콘 제거)
     total_dist = 0
+    avg_speed = 65
     for i, c in enumerate(cities):
-        with st.expander(f"🎄 {c['city']} | {c.get('perf_date', '미정')}"):
-            st.write(f"📅 등록일: {c.get('date', '—')}")
-            st.write(f"🎭 공연 날짜: {c.get('perf_date', '—')}")
-            st.write(f"🏟️ 장소: {c.get('venue', '—')}")
-            st.write(f"👥 인원: {c.get('seats', '—')}")
-            st.write(f"📝 특이사항: {c.get('note', '—')}")
-
+        with st.expander(f"{c.get('city','(무명)')} | {c.get('perf_date', '')}"):
+            st.write(f"등록일: {c.get('date', '')}")
+            st.write(f"공연 날짜: {c.get('perf_date', '')}")
+            st.write(f"공연장소: {c.get('venue', '')}")
+            st.write(f"예상 인원: {c.get('seats', '')}")
+            st.write(f"특이사항: {c.get('note', '')}")
+            
             if st.session_state.admin:
                 c1, c2 = st.columns(2)
                 with c1:
-                    if st.button("✏️ 수정", key=f"edit_{i}"): st.session_state.edit_city = c["city"]; st.rerun()
+                    if st.button("수정", key=f"e{i}"):
+                        st.session_state.edit_city = c.get("city")
+                        st.rerun()
                 with c2:
-                    if st.button("🗑️ 삭제", key=f"del_{i}"): cities.pop(i); save_json(CITY_FILE, cities); st.rerun()
-
+                    if st.button("삭제", key=f"d{i}"):
+                        cities.pop(i)
+                        save_json(CITY_FILE, cities)
+                        st.rerun()
+        
         if i < len(cities)-1:
-            d = haversine(c['lat'], c['lon'], cities[i+1]['lat'], cities[i+1]['lon'])
-            total_dist += d
-            st.markdown(f"<div style='text-align:center;color:#2ecc71;font-weight:bold'>📍 {d:.0f}km</div>", unsafe_allow_html=True)
-
+            # 좌표가 없으면 계산 건너뛰기
+            if all(k in c and k in cities[i+1] for k in ("lat","lon")):
+                d = haversine(c['lat'], c['lon'], cities[i+1]['lat'], cities[i+1]['lon'])
+                total_dist += d
+                st.markdown(f"<div style='text-align:center;color:#2ecc71'>{d:.0f}km</div>", unsafe_allow_html=True)
+    
     if len(cities) > 1:
-        st.markdown(f"<div style='text-align:center;color:#e74c3c;font-size:1.3em;margin:15px 0'>🎅 총 거리: {total_dist:.0f}km 🎄</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align:center;color:#e74c3c'>총 거리: {total_dist:.0f}km</div>", unsafe_allow_html=True)
 
-    m = folium.Map(location=[19.0, 73.0], zoom_start=7, tiles="CartoDB positron")
+    # 지도 생성
+    # 기본 중심은 마하라스트라 대략 중앙 (변경 가능)
+    m = folium.Map(location=[19.0, 73.0], zoom_start=6, tiles="OpenStreetMap")
     coords = []
     for c in cities:
-        icon = folium.Icon(color="red", icon="tree-christmas", prefix="fa", icon_color="white")
-        popup = f"<b style='color:#e74c3c'>🎄 {c['city']}</b><br>📅 {c.get('perf_date','—')}<br>🎭 {c.get('venue','—')}"
-        folium.Marker([c["lat"], c["lon"]], popup=popup, tooltip=c["city"], icon=icon).add_to(m)
+        # 좌표 유효성 검사
+        if not all(k in c for k in ("lat","lon")):
+            continue
+
+        # 안전한 아이콘 이름 사용: 'tree' 기본, 또는 cities 데이터에 명시된 icon 사용
+        icon_name = c.get("icon", "tree")
+        try:
+            icon = folium.Icon(color="red", icon=icon_name, prefix="fa")
+        except Exception:
+            icon = folium.Icon(color="red", icon="info-sign")
+
+        popup_html = (
+            f"<b style='font-size:1.05em'>{c.get('city','(무명)')}</b><br>"
+            f"📅 {c.get('perf_date','—')}<br>"
+            f"🎭 {c.get('venue','—')}<br>"
+            f"👥 {c.get('seats','—')}명<br>"
+            f"📝 {c.get('note','—')}"
+        )
+        folium.Marker(
+            [c["lat"], c["lon"]],
+            popup=folium.Popup(popup_html, max_width=300),
+            tooltip=f"🎄 {c.get('city','(무명)')}",
+            icon=icon
+        ).add_to(m)
         coords.append((c["lat"], c["lon"]))
-    if coords:
-        AntPath(coords, color="#e74c3c", weight=6, opacity=0.9, delay=800).add_to(m)
 
-    st_folium(m, width=900, height=550, key=f"map_{len(cities)}", returned_objects=[])
+    # AntPath는 좌표 2개 이상일 때만 추가
+    if len(coords) > 1:
+        try:
+            AntPath(coords, color="#e74c3c", weight=6, opacity=0.8, delay=600).add_to(m)
+        except Exception:
+            # 실패하더라도 기본 폴리라인으로 표시 (대체)
+            folium.PolyLine(coords, color="#e74c3c", weight=4, opacity=0.7).add_to(m)
 
-# --- 13. 탭 (이제 _() 안전!) ---
+    # 지도 표시
+    st_folium(m, width=900, height=550, key="tour_map")
+
+# 탭 + 강제 이동
 tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
 
-if st.session_state.get("new_notice", False):
+# 새 공지 시 강제 이동
+if st.session_state.new_notice:
     st.session_state.active_tab = "공지"
     st.session_state.new_notice = False
-    st.rerun()
 
 with tab1:
+    st.session_state.active_tab = "공지"
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
             t = st.text_input(_("title_label"))
@@ -266,4 +309,5 @@ with tab1:
     render_notices()
 
 with tab2:
-    render_map()
+    if st.session_state.active_tab != "공지":
+        render_map()
