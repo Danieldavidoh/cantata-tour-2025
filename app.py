@@ -28,6 +28,7 @@ defaults = {
     "venue_type": "실내",
     "note_input": "",
     "map_link": "",
+    "mode": None,                     # add / edit
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -105,12 +106,22 @@ def make_navigation_link(lat, lon):
 def render_city_section():
     st.subheader(_["show_route"])
 
+    # ------------------------------------------------------------------
+    # 1. 항상 최신 파일을 읽어옴
+    # ------------------------------------------------------------------
+    cities_data = load_json(CITY_FILE)
+    city_names = [c["city"] for c in cities_data]
+
+    # ------------------------------------------------------------------
+    # 2. 관리자 UI
+    # ------------------------------------------------------------------
     if st.session_state.admin:
         col1, col2 = st.columns([5, 1])
         with col1:
             st.markdown("#### 🏙️ 도시 목록")
         with col2:
             if st.button("➕ 도시 추가"):
+                # 새 도시 입력 모드 초기화
                 st.session_state.selected_city = None
                 st.session_state.venue_input = ""
                 st.session_state.seat_count = 0
@@ -118,18 +129,29 @@ def render_city_section():
                 st.session_state.note_input = ""
                 st.session_state.map_link = ""
                 st.session_state.mode = "add"
+                st.rerun()
 
-        cities_data = load_json(CITY_FILE)
-        city_names = [c["city"] for c in cities_data] if cities_data else []
+        # ------------------------------------------------------------------
+        # 3. 도시 선택 (key 로 강제 리프레시)
+        # ------------------------------------------------------------------
+        selected = st.selectbox(
+            _["select_city"],
+            ["(새 도시 추가)"] + city_names,
+            key=f"city_select_{len(city_names)}"   # 도시 개수 바뀔 때마다 key 바뀜 → 자동 리프레시
+        )
 
-        selected = st.selectbox(_["select_city"], ["(새 도시 추가)"] + city_names)
+        # ------------------------------------------------------------------
+        # 4. 선택에 따라 입력 폼 초기화
+        # ------------------------------------------------------------------
         if selected == "(새 도시 추가)":
-            city_name = st.text_input("도시 이름")
+            city_name = st.text_input("도시 이름", key="new_city_name")
             st.session_state.mode = "add"
         else:
-            st.session_state.selected_city = selected
             city_name = selected
+            st.session_state.selected_city = selected
             st.session_state.mode = "edit"
+
+            # 기존 데이터 자동 채우기
             city_info = next((c for c in cities_data if c["city"] == selected), None)
             if city_info:
                 st.session_state.venue_input = city_info.get("venue", "")
@@ -145,64 +167,86 @@ def render_city_section():
         st.text_input(_["google_link"], key="map_link")
         st.text_area(_["note"], key="note_input")
 
+        # ------------------------------------------------------------------
+        # 5. 등록 / 삭제 / 취소
+        # ------------------------------------------------------------------
         c1, c2, c3 = st.columns(3)
         with c1:
             if st.button(_["register"]):
                 lat, lon = extract_latlon_from_shortlink(st.session_state.map_link)
                 if not lat or not lon:
                     st.warning(_["warning"])
-                    return
-                nav_url = make_navigation_link(lat, lon)
-                new_data = {
-                    "city": city_name,
-                    "venue": st.session_state.venue_input,
-                    "seats": st.session_state.seat_count,
-                    "type": st.session_state.venue_type,
-                    "note": st.session_state.note_input,
-                    "lat": lat,
-                    "lon": lon,
-                    "nav_url": nav_url,
-                }
-
-                if st.session_state.mode == "add":
-                    cities_data.append(new_data)
-                    st.toast("✅ 도시가 추가되었습니다.")
                 else:
-                    for i, c in enumerate(cities_data):
-                        if c["city"] == city_name:
-                            cities_data[i] = new_data
-                    st.toast("✏️ 도시 정보가 수정되었습니다.")
-                save_json(CITY_FILE, cities_data)
-                st.rerun()
+                    nav_url = make_navigation_link(lat, lon)
+                    new_data = {
+                        "city": city_name,
+                        "venue": st.session_state.venue_input,
+                        "seats": st.session_state.seat_count,
+                        "type": st.session_state.venue_type,
+                        "note": st.session_state.note_input,
+                        "lat": lat,
+                        "lon": lon,
+                        "nav_url": nav_url,
+                    }
+
+                    if st.session_state.mode == "add":
+                        cities_data.append(new_data)
+                        st.success("✅ 도시가 추가되었습니다.")
+                    else:
+                        for i, c in enumerate(cities_data):
+                            if c["city"] == city_name:
+                                cities_data[i] = new_data
+                                break
+                        st.success("✏️ 도시 정보가 수정되었습니다.")
+
+                    save_json(CITY_FILE, cities_data)
+                    # 입력 폼 초기화 + 강제 리프레시
+                    st.session_state.selected_city = None
+                    st.session_state.mode = None
+                    st.rerun()
+
         with c2:
             if st.session_state.mode == "edit" and st.button(_["delete"]):
                 cities_data = [c for c in cities_data if c["city"] != city_name]
                 save_json(CITY_FILE, cities_data)
-                st.toast("🗑️ 도시가 삭제되었습니다.")
-                st.rerun()
-        with c3:
-            if st.button("취소"):
+                st.success("🗑️ 도시가 삭제되었습니다.")
+                st.session_state.selected_city = None
+                st.session_state.mode = None
                 st.rerun()
 
-    # 지도 표시
+        with c3:
+            if st.button("취소"):
+                st.session_state.selected_city = None
+                st.session_state.mode = None
+                st.rerun()
+
+    # ------------------------------------------------------------------
+    # 6. 지도 표시 (항상 최신 데이터)
+    # ------------------------------------------------------------------
     st.markdown("---")
     m = folium.Map(location=[19.0, 73.0], zoom_start=6)
-    data = load_json(CITY_FILE)
+    data = load_json(CITY_FILE)          # 최신 파일 다시 로드
     coords = []
     for c in data:
         popup_html = f"""
         <b>{c['city']}</b><br>
-        장소: {c.get('venue', '')}<br>
-        인원: {c.get('seats', '')}<br>
-        형태: {c.get('type', '')}<br>
-        <a href='{c.get('nav_url', '#')}' target='_blank'>🚗 길안내</a><br>
-        특이사항: {c.get('note', '')}
+        장소: {c.get('venue','')}<br>
+        인원: {c.get('seats','')}<br>
+        형태: {c.get('type','')}<br>
+        <a href='{c.get('nav_url','#')}' target='_blank'>🚗 길안내</a><br>
+        특이사항: {c.get('note','')}
         """
-        folium.Marker([c["lat"], c["lon"]], popup=popup_html,
-                      tooltip=c["city"], icon=folium.Icon(color="red", icon="music")).add_to(m)
+        folium.Marker(
+            [c["lat"], c["lon"]],
+            popup=popup_html,
+            tooltip=c["city"],
+            icon=folium.Icon(color="red", icon="music")
+        ).add_to(m)
         coords.append((c["lat"], c["lon"]))
+
     if coords:
         AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
+
     st_folium(m, width=900, height=550)
 
 # =============================================
