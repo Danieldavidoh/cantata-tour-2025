@@ -44,104 +44,11 @@ for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
-# 다국어 (숫자 제외한 제목만 번역)
+# 다국어
 LANG = {
-    "ko": { 
-        "title_base": "칸타타 투어", 
-        "caption": "마하라스트라", 
-        "tab_notice": "공지 관리", 
-        "tab_map": "투어 경로", 
-        "map_title": "경로 보기", 
-        "add_city": "도시 추가", 
-        "password": "비밀번호", 
-        "login": "로그인", 
-        "logout": "로그아웃", 
-        "wrong_pw": "비밀번호가 틀렸습니다.", 
-        "select_city": "도시 선택", 
-        "venue": "공연장소", 
-        "seats": "예상 인원", 
-        "note": "특이사항", 
-        "google_link": "구글맵 링크", 
-        "indoor": "실내", 
-        "outdoor": "실외", 
-        "register": "등록", 
-        "edit": "수정", 
-        "remove": "삭제", 
-        "date": "등록일", 
-        "performance_date": "공연 날짜", 
-        "cancel": "취소", 
-        "title_label": "제목", 
-        "content_label": "내용", 
-        "upload_image": "이미지 업로드", 
-        "upload_file": "파일 업로드", 
-        "submit": "등록", 
-        "warning": "제목과 내용을 모두 입력해주세요.", 
-        "file_download": "파일 다운로드" 
-    },
-    "en": { 
-        "title_base": "Cantata Tour", 
-        "caption": "Maharashtra", 
-        "tab_notice": "Notice", 
-        "tab_map": "Tour Route", 
-        "map_title": "View Route", 
-        "add_city": "Add City", 
-        "password": "Password", 
-        "login": "Login", 
-        "logout": "Logout", 
-        "wrong_pw": "Wrong password.", 
-        "select_city": "Select City", 
-        "venue": "Venue", 
-        "seats": "Expected Attendance", 
-        "note": "Notes", 
-        "google_link": "Google Maps Link", 
-        "indoor": "Indoor", 
-        "outdoor": "Outdoor", 
-        "register": "Register", 
-        "edit": "Edit", 
-        "remove": "Remove", 
-        "date": "Registered On", 
-        "performance_date": "Performance Date", 
-        "cancel": "Cancel", 
-        "title_label": "Title", 
-        "content_label": "Content", 
-        "upload_image": "Upload Image", 
-        "upload_file": "Upload File", 
-        "submit": "Submit", 
-        "warning": "Please enter both title and content.", 
-        "file_download": "Download File" 
-    },
-    "hi": { 
-        "title_base": "कांताता टूर", 
-        "caption": "महाराष्ट्र", 
-        "tab_notice": "सूचना", 
-        "tab_map": "टूर मार्ग", 
-        "map_title": "मार्ग देखें", 
-        "add_city": "शहर जोड़ें", 
-        "password": "पासवर्ड", 
-        "login": "लॉगिन", 
-        "logout": "लॉगआउट", 
-        "wrong_pw": "गलत पासवर्ड।", 
-        "select_city": "शहर चुनें", 
-        "venue": "स्थल", 
-        "seats": "अपेक्षित उपस्थिति", 
-        "note": "नोट्स", 
-        "google_link": "गूगल मैप्स लिंक", 
-        "indoor": "इनडोर", 
-        "outdoor": "आउटडोर", 
-        "register": "रजिस्टर", 
-        "edit": "संपादित करें", 
-        "remove": "हटाएं", 
-        "date": "तारीख", 
-        "performance_date": "प्रदर्शन तिथि", 
-        "cancel": "रद्द करें", 
-        "title_label": "शीर्षक", 
-        "content_label": "सामग्री", 
-        "upload_image": "छवि अपलोड करें", 
-        "upload_file": "फ़ाइल अपलोड करें", 
-        "submit": "जमा करें", 
-        "warning": "शीर्षक और सामग्री दोनों दर्ज करें।", 
-        "file_download": "फ़ाइल डाउनलोड करें" 
-    }
+    "ko": { "title_base": "칸타타 투어", "caption": "마하라스트라", "tab_notice": "공지", "tab_map": "투어 경로", "map_title": "경로 보기", "add_city": "도시 추가", "password": "비밀번호", "login": "로그인", "logout": "로그아웃", "wrong_pw": "비밀번호가 틀렸습니다.", "select_city": "도시 선택", "venue": "공연장소", "seats": "예상 인원", "note": "특이사항", "google_link":88 "구글맵 링크", "indoor": "실내", "outdoor": "실외", "register": "등록", "edit": "수정", "remove": "삭제", "date": "등록일", "performance_date": "공연 날짜", "cancel": "취소", "title_label": "제목", "content_label": "내용", "upload_image": "이미지 업로드", "upload_file": "파일 업로드", "submit": "등록", "warning": "제목과 내용을 모두 입력해주세요.", "file_download": "파일 다운로드", "change_pw": "비밀번호 변경", "new_pw": "새 비밀번호", "confirm_pw": "비밀번호 확인", "pw_changed": "비밀번호가 변경되었습니다.", "pw_mismatch": "비밀번호가 일치하지 않습니다." },
+    "en": { "title_base": "Cantata Tour", "caption": "Maharashtra", "tab_notice": "Notice", "tab_map": "Tour Route", "map_title": "View Route", "add_city": "Add City", "password": "Password", "login": "Login", "logout": "Logout", "wrong_pw": "Wrong password.", "select_city": "Select City", "venue": "Venue", "seats": "Expected Attendance", "note": "Notes", "google_link": "Google Maps Link", "indoor": "Indoor", "outdoor": "Outdoor", "register": "Register", "edit": "Edit", "remove": "Remove", "date": "Registered On", "performance_date": "Performance Date", "cancel": "Cancel", "title_label": "Title", "content_label": "Content", "upload_image": "Upload Image", "upload_file": "Upload File", "submit": "Submit", "warning": "Please enter both title and content.", "file_download": "Download File", "change_pw": "Change Password", "new_pw": "New Password", "confirm_pw": "Confirm Password", "pw_changed": "Password changed.", "pw_mismatch": "Passwords do not match." },
+    "hi": { "title_base": "कांताता टूर", "caption": "महाराष्ट्र", "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "map_title": "मार्ग देखें", "add_city": "शहर जोड़ें", "password": "पासवर्ड", "login": "लॉगिन", "logout": "लॉगआउट", "wrong_pw": "गलत पासवर्ड।", "select_city": "शहर चुनें", "venue": "स्थल", "seats": "अपेक्षित उपस्थिति", "note": "नोट्स", "google_link": "गूगल मैप्स लिंक", "indoor": "इनडोर", "outdoor": "आउटडोर", "register": "रजिस्टर", "edit": "संपादित करें", "remove": "हटाएं", "date": "तारीख", "performance_date": "प्रदर्शन तिथि", "cancel": "रद्द करें", "title_label": "शीर्षक", "content_label": "सामग्री", "upload_image": "छवि अपलोड करें", "upload_file": "फ़ाइल अपलोड करें", "submit": "जमा करें", "warning": "शीर्षक और सामग्री दोनों दर्ज करें।", "file_download": "फ़ाइल डाउनलोड करें", "change_pw": "पासवर्ड बदलें", "new_pw": "नया पासवर्ड", "confirm_pw": "पासवर्ड की पुष्टि", "pw_changed": "पासवर्ड बदल दिया गया।", "pw_mismatch": "पासवर्ड मेल नहीं खाते।" }
 }
 _ = lambda key: LANG[st.session_state.lang].get(key, key)
 
@@ -210,7 +117,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# === 비밀번호 동적 변경 로직 ===
+# === 비밀번호 동적 변경 로직 + 관리자 모드 비밀번호 변경 ===
 with st.sidebar:
     lang_options = ["한국어", "English", "हिंदी"]
     lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
@@ -246,6 +153,24 @@ with st.sidebar:
         if st.button(_("logout")):
             st.session_state.admin = False
             st.rerun()
+
+        # === 비밀번호 변경 항목 (0610 입력 시 활성화) ===
+        st.markdown("---")
+        st.markdown("### 🔑 비밀번호 변경")
+        change_pw_input = st.text_input("관리자 전용 코드", type="password", key="change_pw_input")
+        if change_pw_input == "0610":
+            with st.form("change_pw_form"):
+                new_pw = st.text_input(_("new_pw"), type="password")
+                confirm_pw = st.text_input(_("confirm_pw"), type="password")
+                if st.form_submit_button(_("change_pw")):
+                    if new_pw == confirm_pw and new_pw.strip():
+                        st.session_state.pw = new_pw
+                        st.success(_("pw_changed"))
+                        st.rerun()
+                    else:
+                        st.error(_("pw_mismatch"))
+        else:
+            st.info("코드 입력 시 비밀번호 변경 가능")
 
 # === 나머지 기능 (기존 코드 유지) ===
 # (공지, 지도 등 - 생략하지 않고 전체 포함)
@@ -597,7 +522,8 @@ with tab1:
         render_notice_list(show_delete=True)
     else:
         render_notice_list(show_delete=False)
-        if st.button("새로고침"):
+        if st.button("닫기"):
+            st.session_state.expanded = {}  # 전체 접기
             st.rerun()
 
 with tab2:
