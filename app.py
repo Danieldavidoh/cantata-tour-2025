@@ -22,7 +22,9 @@ defaults = {
     "admin": False,
     "lang": "ko",
     "mode": None,
-    "expanded": {}
+    "edit_city": None,
+    "expanded": {},
+    "current_tab": "tab_map"
 }
 for key, val in defaults.items():
     if key not in st.session_state:
@@ -49,6 +51,9 @@ _ = {
     "indoor": "실내",
     "outdoor": "실외",
     "register": "등록",
+    "edit": "수정",
+    "remove": "삭제",
+    "date": "날짜",
 }
 
 # =============================================
@@ -84,7 +89,12 @@ def generate_google_maps_url(cities_data):
     origin = f"{cities_data[0]['lat']},{cities_data[0]['lon']}"
     destination = f"{cities_data[-1]['lat']},{cities_data[-1]['lon']}"
     waypoints = "|".join([f"{c['lat']},{c['lon']}" for c in cities_data[1:-1]]) if len(cities_data) > 2 else ""
-    params = {"api": 1, "origin": origin, "destination": destination, "travelmode": "driving"}
+    params = {
+        "api": 1,
+        "origin": origin,
+        "destination": destination,
+        "travelmode": "driving"
+    }
     if waypoints:
         params["waypoints"] = waypoints
     return "https://www.google.com/maps/dir/?" + urllib.parse.urlencode(params, doseq=True)
@@ -96,41 +106,41 @@ def render_map():
     st.subheader(_["map_title"])
     cities_data = load_json(CITY_FILE)
 
-    # 관리자: "추가" 버튼
+    # 관리자: 추가 버튼
     if st.session_state.admin:
         col1, col2 = st.columns([8, 2])
         with col2:
-            if st.button("추가", key="add_city_main"):
+            if st.button("추가", key="add_main"):
                 st.session_state.mode = "add"
+                st.session_state.edit_city = None
                 st.rerun()
 
-    # 새 도시 추가 폼
+    # 새 도시 추가
     if st.session_state.mode == "add" and st.session_state.admin:
         if not os.path.exists(CITY_LIST_FILE):
             default_cities = ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad"]
             save_json(CITY_LIST_FILE, default_cities)
         cities_list = load_json(CITY_LIST_FILE)
-
         existing = {c["city"] for c in cities_data}
         available = [c for c in cities_list if c not in existing]
 
         if not available:
-            st.info("모든 도시가 등록되었습니다.")
+            st.info("모든 도시 등록됨")
             if st.button("닫기"):
                 st.session_state.mode = None
                 st.rerun()
         else:
             with st.expander("새 도시 추가", expanded=True):
-                city_name = st.selectbox(_["select_city"], available, key="city_select_add")
-                venue = st.text_input(_["venue"], key="venue_add")
-                seats = st.number_input(_["seats"], min_value=0, step=50, key="seats_add")
-                venue_type = st.radio("공연형태", [_["indoor"], _["outdoor"]], horizontal=True, key="type_add")
-                map_link = st.text_input(_["google_link"], key="link_add")
-                note = st.text_area(_["note"], key="note_add")
+                city_name = st.selectbox(_["select_city"], available, key="add_select")
+                venue = st.text_input(_["venue"], key="add_venue")
+                seats = st.number_input(_["seats"], min_value=0, step=50, key="add_seats")
+                venue_type = st.radio("공연형태", [_["indoor"], _["outdoor"]], horizontal=True, key="add_type")
+                map_link = st.text_input(_["google_link"], key="add_link")
+                note = st.text_area(_["note"], key="add_note")
 
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button(_["register"], key=f"register_{city_name}"):  # 고유 키
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button(_["register"], key=f"reg_{city_name}"):
                         lat, lon = None, None
                         if map_link.strip():
                             lat, lon = extract_latlon_from_shortlink(map_link)
@@ -156,33 +166,108 @@ def render_map():
                         save_json(CITY_FILE, cities_data)
                         st.session_state.mode = None
                         st.session_state.expanded = {}
-                        st.success(f"{city_name} 등록 완료!")
-                        st.rerun()  # 즉시 반영
+                        st.success(f"{city_name} 등록!")
+                        st.rerun()
 
-                with col2:
+                with c2:
                     if st.button("취소", key="cancel_add"):
                         st.session_state.mode = None
                         st.rerun()
 
-    # 등록된 도시 목록
+    # 도시 목록 + 수정/삭제
     for idx, city in enumerate(cities_data):
-        key = f"city_exp_{idx}"
+        key = f"city_{idx}"
         expanded = st.session_state.expanded.get(key, False)
         with st.expander(f"{city['city']}", expanded=expanded):
             st.write(f"**날짜:** {city.get('date', '')}")
             st.write(f"**공연장소:** {city.get('venue', '')}")
             st.write(f"**예상 인원:** {city.get('seats', '')}")
             st.write(f"**특이사항:** {city.get('note', '')}")
+
+            if st.session_state.admin:
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button(_["edit"], key=f"edit_{idx}"):
+                        st.session_state.mode = "edit"
+                        st.session_state.edit_city = city["city"]
+                        st.rerun()
+                with c2:
+                    if st.button(_["remove"], key=f"del_{idx}"):
+                        cities_data.pop(idx)
+                        save_json(CITY_FILE, cities_data)
+                        st.session_state.expanded = {}
+                        st.toast("도시 삭제됨")
+                        st.rerun()
+
         if st.session_state.expanded.get(key, False) != expanded:
             st.session_state.expanded[key] = expanded
 
-    # Google Maps
+    # 수정 모드
+    if st.session_state.mode == "edit" and st.session_state.edit_city and st.session_state.admin:
+        city = next((c for c in cities_data if c["city"] == st.session_state.edit_city), None)
+        if city:
+            with st.expander(f"{city['city']} 수정", expanded=True):
+                venue = st.text_input(_["venue"], value=city["venue"], key="edit_venue")
+                seats = st.number_input(_["seats"], min_value=0, step=50, value=city["seats"], key="edit_seats")
+                venue_type = st.radio("공연형태", [_["indoor"], _["outdoor"]], 
+                                    index=0 if city["type"] == _["indoor"] else 1, 
+                                    horizontal=True, key="edit_type")
+                map_link = st.text_input(_["google_link"], value="", key="edit_link")
+                note = st.text_area(_["note"], value=city["note"], key="edit_note")
+
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button("저장", key="save_edit"):
+                        lat, lon = city["lat"], city["lon"]
+                        if map_link.strip():
+                            new_lat, new_lon = extract_latlon_from_shortlink(map_link)
+                            if new_lat and new_lon:
+                                lat, lon = new_lat, new_lon
+
+                        updated = {
+                            "city": city["city"],
+                            "venue": venue or "미정",
+                            "seats": seats,
+                            "type": venue_type,
+                            "note": note or "없음",
+                            "lat": lat,
+                            "lon": lon,
+                            "date": city["date"]
+                        }
+                        for i, c in enumerate(cities_data):
+                            if c["city"] == city["city"]:
+                                cities_data[i] = updated
+                                break
+                        save_json(CITY_FILE, cities_data)
+                        st.session_state.mode = None
+                        st.session_state.edit_city = None
+                        st.session_state.expanded = {}
+                        st.success("수정 완료!")
+                        st.rerun()
+
+                with c2:
+                    if st.button("취소", key="cancel_edit"):
+                        st.session_state.mode = None
+                        st.session_state.edit_city = None
+                        st.rerun()
+
+    # Google Maps (항상 보임)
     st.markdown("---")
     if cities_data:
         maps_url = generate_google_maps_url(cities_data)
-        st.components.v1.html(f'<iframe width="100%" height="550" src="{maps_url}" frameborder="0" allowfullscreen></iframe>', height=550)
+        iframe = f'''
+        <iframe 
+            width="100%" 
+            height="550" 
+            frameborder="0" 
+            style="border:0" 
+            src="{maps_url}" 
+            allowfullscreen>
+        </iframe>
+        '''
+        st.components.v1.html(iframe, height=550)
     else:
-        st.info("등록된 도시가 없습니다.")
+        st.info("등록된 도시 없음")
 
 # =============================================
 # 사이드바
@@ -212,9 +297,13 @@ st.caption(_["caption"])
 
 tab1, tab2 = st.tabs([_["tab_notice"], _["tab_map"]])
 
+if tab1:
+    st.session_state.current_tab = "tab_notice"
+elif tab2:
+    st.session_state.current_tab = "tab_map"
+
 with tab1:
-    # 공지 기능 (간략)
-    st.write("공지 관리 기능은 정상 작동합니다.")
+    st.write("공지 관리 기능 정상 작동")
 
 with tab2:
     render_map()
