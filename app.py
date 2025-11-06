@@ -1,6 +1,4 @@
-# app.py - 칸타타 투어 2025 (최종 완전판 + 사용자 요청 완벽 반영) 🎄
-# 예상인원: ±50 단위 / 마커: 구글 스타일 (과거 흐림 / 오늘 검은원 / 미래 선명) / 지도 중심: Pune
-
+# app.py - 칸타타 투어 2025 (안정화판)
 import streamlit as st
 from datetime import datetime, date
 import folium
@@ -66,13 +64,13 @@ LANG = {
             "remove": "हटाएं", "date": "तारीख", "performance_date": "प्रदर्शन तिथि", "cancel": "रद्द करें",
             "title_label": "शीर्षक", "content_label": "सामग्री", "upload_image": "छवि अपलोड करें",
             "upload_file": "फ़ाइल अपलोड करें", "submit": "जमा करें", "warning": "शीर्षक और सामग्री दोनों दर्ज करें।",
-            "file_download": "फ़ाइल डाउन로드 करें" }
+            "file_download": "फ़ाइल डाउनलोड करें" }
 }
 
 # --- 6. 번역 함수 ---
 _ = lambda key: LANG[st.session_state.lang].get(key, key)
 
-# --- 7. 크리스마스 테마 + 캐롤 알람음 ---
+# --- 7. 크리스마스 테마 + 캐롤 알람음 (플레이 함수는 HTML에서 호출) ---
 MERRY_CHRISTMAS_WAV = "UklGRu4FAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA..."  # 실제 base64로 교체
 
 st.markdown(f"""
@@ -143,7 +141,7 @@ with st.sidebar:
             st.rerun()
 
 # --- 10. JSON 헬퍼 ---
-def load_json(f): 
+def load_json(f):
     try:
         if os.path.exists(f):
             with open(f, "r", encoding="utf-8") as file:
@@ -152,7 +150,7 @@ def load_json(f):
         pass
     return []
 
-def save_json(f, d): 
+def save_json(f, d):
     with open(f, "w", encoding="utf-8") as file:
         json.dump(d, file, ensure_ascii=False, indent=2)
 
@@ -188,7 +186,7 @@ def render_notices():
 
         with st.expander(title, expanded=False):
             st.markdown(n["content"])
-            if n.get("image") and os.path.exists(n["image"]): 
+            if n.get("image") and os.path.exists(n["image"]):
                 st.image(n["image"], use_container_width=True)
             if n.get("file") and os.path.exists(n["file"]):
                 with open(n["file"], "rb") as f:
@@ -205,7 +203,7 @@ def render_notices():
     elif not has_new:
         st.session_state.sound_played = False
 
-# --- 12. 투어 경로 (요청사항 완벽 반영) ---
+# --- 12. 투어 경로 (안정화된 마커/경로 구현) ---
 def render_map():
     st.subheader(_('map_title'))
 
@@ -299,30 +297,37 @@ def render_map():
         # --- 마커 상태 결정 (구글 스타일) ---
         if perf_date_obj and perf_date_obj < today:
             # 과거: 흐리게
-            opacity = 0.4
-            color = "gray"
-            icon = "circle"
+            opacity = 0.35
+            color = "#9aa0a6"  # 회색톤
+            marker_radius = 6
         elif perf_date_obj and perf_date_obj == today:
             # 오늘: 검은 원
             opacity = 1.0
-            color = "black"
-            icon = "circle"
+            color = "#000000"
+            marker_radius = 8
         else:
-            # 미래: 선명
+            # 미래: 선명 (실내 빨강 / 실외 파랑)
             opacity = 1.0
-            color = "red" if c.get("indoor") else "blue"
-            icon = "tree-christmas"
+            color = "#e74c3c" if c.get("indoor") else "#2475d3"
+            marker_radius = 8
 
-        # --- 마커 추가 ---
-        folium.Marker(
-            [c["lat"], c["lon"]],
-            popup=f"<b style='color:#e74c3c'>{c['city']}</b><br>{c.get('perf_date','—')}<br>{c.get('venue','—')}",
-            tooltip=c["city"],
-            icon=folium.Icon(color=color, icon=icon, prefix="fa", icon_color="white", opacity=opacity)
-        ).add_to(m)
+        # --- CircleMarker 로 색/투명도 처리 (안정적) ---
+        try:
+            folium.CircleMarker(
+                location=[c['lat'], c['lon']],
+                radius=marker_radius,
+                color=color,
+                fill=True,
+                fill_color=color,
+                fill_opacity=opacity,
+                popup=folium.Popup(f"<b style='color:#e74c3c'>{c.get('city','')}</b><br>{c.get('perf_date','—')}<br>{c.get('venue','—')}", max_width=300)
+            ).add_to(m)
+        except Exception:
+            # 좌표 오류 등 안전 처리
+            pass
 
-        # --- 목록 ---
-        with st.expander(f"{c['city']} | {c.get('perf_date', '미정')}"):
+        # --- 목록 (사이드에 보이게) ---
+        with st.expander(f"{c.get('city','(무명)')} | {c.get('perf_date', '미정')}"):
             st.write(f"등록일: {c.get('date', '—')}")
             st.write(f"공연 날짜: {c.get('perf_date', '—')}")
             st.write(f"장소: {c.get('venue', '—')}")
@@ -330,12 +335,11 @@ def render_map():
             st.write(f"특이사항: {c.get('note', '—')}")
             if c.get("google_link"):
                 st.markdown(f"[구글맵 보기]({c['google_link']})")
-
             if st.session_state.admin:
                 c1, c2 = st.columns(2)
                 with c1:
                     if st.button("수정", key=f"edit_{i}"):
-                        st.session_state.edit_city = c["city"]
+                        st.session_state.edit_city = c.get("city")
                         st.rerun()
                 with c2:
                     if st.button("삭제", key=f"del_{i}"):
@@ -346,23 +350,28 @@ def render_map():
         # --- 거리 계산 ---
         if i < len(cities)-1:
             try:
-                d = haversine(c['lat'], c['lon'], cities[i+1]['lat'], cities[i+1]['lon'])
-                total_dist += d
-                st.markdown(f"<div style='text-align:center;color:#2ecc71;font-weight:bold'>→ {d:.0f}km</div>", unsafe_allow_html=True)
+                nextc = cities[i+1]
+                if all(k in c for k in ("lat","lon")) and all(k in nextc for k in ("lat","lon")):
+                    d = haversine(c['lat'], c['lon'], nextc['lat'], nextc['lon'])
+                    total_dist += d
+                    st.markdown(f"<div style='text-align:center;color:#2ecc71;font-weight:bold'>→ {d:.0f}km</div>", unsafe_allow_html=True)
             except:
                 st.markdown("<div style='text-align:center;color:#e74c3c'>거리 계산 불가</div>", unsafe_allow_html=True)
-        coords.append((c['lat'], c['lon']))
+        coords.append((c.get('lat'), c.get('lon')))
 
     # --- 경로선 ---
-    if len(coords) > 1:
-        AntPath(coords, color="#e74c3c", weight=6, opacity=0.9, delay=800).add_to(m)
+    if len([co for co in coords if co and None not in co]) > 1:
+        try:
+            AntPath([co for co in coords if co and None not in co], color="#e74c3c", weight=6, opacity=0.9, delay=800).add_to(m)
+        except Exception:
+            folium.PolyLine([co for co in coords if co and None not in co], color="#e74c3c", weight=4, opacity=0.7).add_to(m)
 
     # --- 총 거리 ---
     if len(cities) > 1:
         st.markdown(f"<div style='text-align:center;color:#e74c3c;font-size:1.3em;margin:15px 0'>총 거리: {total_dist:.0f}km</div>", unsafe_allow_html=True)
 
     # --- 지도 렌더링 (항상 Pune 중심) ---
-    st_folium(m, width=900, height=550, key=f"map_{len(cities)}", returned_objects=[])
+    st_folium(m, width=900, height=550, key=f"map_{len(cities)}")
 
 # --- 13. 탭 ---
 tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
