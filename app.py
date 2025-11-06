@@ -8,14 +8,14 @@ from pytz import timezone
 from streamlit_autorefresh import st_autorefresh
 from math import radians, cos, sin, asin, sqrt
 
-# 거리 계산 함수 (Haversine)
+# 거리 계산 함수
 def haversine(lat1, lon1, lat2, lon2):
     lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
     dlon, dlat = lon2 - lon1, lat2 - lat1
     a = sin(dlat/2)**2 + cos(lat1)*cos(lat2)*sin(dlon/2)**2
-    return 6371 * 2 * asin(sqrt(a))  # km
+    return 6371 * 2 * asin(sqrt(a))
 
-# 새로고침 (일반 사용자용)
+# 새로고침
 if not st.session_state.get("admin", False):
     st_autorefresh(interval=3000, key="auto_refresh")
 
@@ -23,9 +23,9 @@ if not st.session_state.get("admin", False):
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
 NOTICE_FILE = "notice.json"
-UPLOAD_DIR = "uploads"
 CITY_FILE = "cities.json"
 CITY_LIST_FILE = "cities_list.json"
+UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # 세션 초기값
@@ -38,78 +38,57 @@ for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-# 언어 설정
+# 언어
 LANG = {
-    "ko": {
-        "title_base": "칸타타 투어", "caption": "마하라스트라",
-        "tab_notice": "공지", "tab_map": "투어 경로", "map_title": "경로 보기",
-        "add_city": "도시 추가", "password": "비밀번호", "login": "로그인",
-        "logout": "로그아웃", "wrong_pw": "비밀번호가 틀렸습니다.",
-        "select_city": "도시 선택", "venue": "공연장소", "seats": "예상 인원",
-        "note": "특이사항", "google_link": "구글맵 링크",
-        "indoor": "실내", "outdoor": "실외", "register": "등록",
-        "edit": "수정", "remove": "삭제", "date": "등록일",
-        "performance_date": "공연 날짜", "cancel": "취소",
-        "title_label": "제목", "content_label": "내용",
-        "upload_image": "이미지 업로드", "upload_file": "파일 업로드",
-        "submit": "등록", "warning": "제목과 내용을 모두 입력해주세요.",
-        "file_download": "파일 다운로드"
-    }
+    "ko": {"title_base": "칸타타 투어", "caption": "마하라스트라",
+           "tab_notice": "공지", "tab_map": "투어 경로",
+           "map_title": "경로 보기", "add_city": "도시 추가",
+           "password": "비밀번호", "login": "로그인",
+           "logout": "로그아웃", "wrong_pw": "비밀번호가 틀렸습니다.",
+           "title_label": "제목", "content_label": "내용",
+           "upload_image": "이미지 업로드", "upload_file": "파일 업로드",
+           "submit": "등록", "warning": "제목과 내용을 모두 입력해주세요.",
+           "file_download": "파일 다운로드"}
 }
 _ = lambda k: LANG[st.session_state.lang].get(k, k)
 
-# === 크리스마스 밤 테마 + 전체화면 눈 효과 + 알림음 ===
+# === 크리스마스 테마 + 눈 효과 ===
 st.markdown("""
 <style>
 .stApp {
-  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-  color: #f0f0f0;
+  background: radial-gradient(circle at top, #2c3e50 0%, #1c1c2b 100%);
+  color: #f8f8f8;
   font-family: 'Segoe UI', sans-serif;
-  overflow: hidden;
   position: relative;
+  overflow: hidden;
 }
-.christmas-title {
-  text-align: center;
-  margin: 20px 0;
+h1, h2, h3, h4, h5, h6, p, div, span, label {
+  color: #f0f0f0 !important;
 }
-.cantata {
-  font-size: 3em;
-  font-weight: bold;
-  color: #e74c3c;
-  text-shadow: 0 0 10px #ff6b6b;
+.stButton > button {
+  background-color: #e74c3c !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 10px;
+  padding: 0.4em 1em;
+  transition: 0.2s;
 }
-.year {
-  font-size: 2.8em;
-  font-weight: bold;
-  color: #ecf0f1;
-  text-shadow: 0 0 8px #fff;
+.stButton > button:hover {
+  background-color: #ff6b6b !important;
 }
-.maha {
-  font-size: 1.8em;
-  color: #3498db;
-  font-style: italic;
-  text-shadow: 0 0 6px #74b9ff;
-}
-
-/* 눈 효과 */
 .snowflake {
   position: fixed;
   top: -10px;
-  color: rgba(255, 255, 255, 0.8);
-  user-select: none;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1em;
   pointer-events: none;
-  font-size: 1.2em;
-  z-index: 9999;
   animation: fall linear forwards;
+  z-index: 9999;
 }
 @keyframes fall {
-  to {
-    transform: translateY(110vh);
-    opacity: 0;
-  }
+  to { transform: translateY(110vh); opacity: 0; }
 }
 </style>
-
 <script>
 function createSnowflake(){
   const s=document.createElement('div');
@@ -117,10 +96,10 @@ function createSnowflake(){
   s.innerText=['❅','❆','✻','✼'][Math.floor(Math.random()*4)];
   s.style.left=Math.random()*100+'vw';
   s.style.fontSize=(Math.random()*1.5+0.5)+'em';
-  s.style.animationDuration=(Math.random()*8+6)+'s';
-  s.style.opacity=Math.random()*0.6+0.3;
+  s.style.animationDuration=(Math.random()*10+8)+'s';
+  s.style.opacity=Math.random()*0.8+0.2;
   document.body.appendChild(s);
-  setTimeout(()=>s.remove(),14000);
+  setTimeout(()=>s.remove(),15000);
 }
 setInterval(createSnowflake,200);
 
@@ -131,101 +110,91 @@ function playNotification(){
 </script>
 """, unsafe_allow_html=True)
 
-# 타이틀
-st.markdown(f"""
-<div class="christmas-title">
-  <div class="cantata">{_('title_base')}</div>
-  <div class="year">2025</div>
-  <div class="maha">{_('caption')}</div>
-</div>
-""", unsafe_allow_html=True)
+# === 상단 헤더: 제목 + 언어선택 + 관리자 버튼 ===
+colA, colB, colC = st.columns([2, 1, 1])
+with colA:
+    st.markdown(f"<h2 style='margin-top:0;'>🎄 {_('title_base')} 2025 🎶</h2>", unsafe_allow_html=True)
+with colB:
+    lang_sel = st.selectbox("Language", ["ko"], index=["ko"].index(st.session_state.lang))
+    st.session_state.lang = lang_sel
+with colC:
+    if st.session_state.admin:
+        if st.button(_("logout")):
+            st.session_state.admin = False
+            st.toast("관리자 모드 해제됨")
+            st.rerun()
+    else:
+        pw = st.text_input(_("password"), type="password")
+        if st.button(_("login")):
+            if pw == st.session_state.pw:
+                st.session_state.admin = True
+                st.toast("관리자 모드 진입")
+                st.rerun()
+            else:
+                st.warning(_("wrong_pw"))
 
 # === 유틸 ===
 def load_json(f): return json.load(open(f,encoding="utf-8")) if os.path.exists(f) else []
 def save_json(f,d): json.dump(d,open(f,"w",encoding="utf-8"),ensure_ascii=False,indent=2)
 
-# === 공지 기능 ===
+# === 공지 ===
 def add_notice(title, content, image=None, file=None):
     img=file_path=None
-    if image: img=os.path.join(UPLOAD_DIR,f"{uuid.uuid4()}_{image.name}"); open(img,"wb").write(image.read())
-    if file: file_path=os.path.join(UPLOAD_DIR,f"{uuid.uuid4()}_{file.name}"); open(file_path,"wb").write(file.read())
+    if image:
+        img=os.path.join(UPLOAD_DIR,f"{uuid.uuid4()}_{image.name}")
+        open(img,"wb").write(image.read())
+    if file:
+        file_path=os.path.join(UPLOAD_DIR,f"{uuid.uuid4()}_{file.name}")
+        open(file_path,"wb").write(file.read())
     new={"id":str(uuid.uuid4()),"title":title,"content":content,
          "date":datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
          "image":img,"file":file_path}
     data=load_json(NOTICE_FILE); data.insert(0,new); save_json(NOTICE_FILE,data)
-    st.session_state.expanded={}; st.session_state.seen_notices=[]
-    st.toast("새 공지가 등록되었습니다!")
+    st.session_state.expanded={}
     st.session_state.active_tab="notice"
+    st.toast("새 공지 등록 완료!")
     st.rerun()
 
-def render_notice_list(show_delete=False):
+def render_notice_list():
     data=load_json(NOTICE_FILE)
-    has_new=False
     for i,n in enumerate(data):
-        nid=n["id"]
-        is_new=nid not in st.session_state.seen_notices
-        if is_new and not st.session_state.admin:
-            has_new=True
-        title=f"{n['date']} | {n['title']}"
-        with st.expander(title):
+        with st.expander(f"{n['date']} | {n['title']}"):
             st.markdown(n["content"])
             if n.get("image") and os.path.exists(n["image"]):
-                st.image(n["image"],use_container_width=True)
+                st.image(n["image"], use_container_width=True)
             if n.get("file") and os.path.exists(n["file"]):
                 href=f'<a href="data:file/octet-stream;base64,{base64.b64encode(open(n["file"],"rb").read()).decode()}" download="{os.path.basename(n["file"])}">{_("file_download")}</a>'
-                st.markdown(href,unsafe_allow_html=True)
-            if show_delete and st.button(_("remove"),key=f"del_{i}"):
-                data.pop(i); save_json(NOTICE_FILE,data); st.toast("삭제 완료"); st.rerun()
-            if is_new:
-                st.session_state.seen_notices.append(nid)
-    if has_new and not st.session_state.get("sound_played",False):
-        st.markdown('<script>playNotification();</script>',unsafe_allow_html=True)
-        st.session_state.sound_played=True
-        st.session_state.active_tab="notice"
-        st.rerun()
-    elif not has_new:
-        st.session_state.sound_played=False
+                st.markdown(href, unsafe_allow_html=True)
 
 # === 지도 ===
 def render_map():
-    col1,col2=st.columns([5,2])
-    with col1: st.subheader(_( "map_title" ))
-    with col2:
-        if st.session_state.admin and st.button(_( "add_city" ),use_container_width=True):
-            st.session_state.adding_cities.append(None)
-            st.rerun()
-    st.markdown("여기에 지도 및 도시 관리 로직 (이전 코드 그대로 유지)")
-    # (실제 지도 로직 생략 — 기존 코드 그대로 두세요.)
+    st.subheader(_("map_title"))
+    st.write("여기에 지도 표시 (기존 기능 유지)")
+    # 기존 folium 지도 로직 넣으면 됩니다.
 
 # === 탭 ===
-tabs=[_( "tab_notice" ),_( "tab_map" )]
-tab=st.session_state.active_tab
-idx=0 if tab=="notice" else 1
-selected=st.tabs([tabs[0],tabs[1]])
+tabs = [ _("tab_notice"), _("tab_map") ]
+selected_tab = st.tabs(tabs)
 
-# 공지 탭
-with selected[0]:
+with selected_tab[0]:
     if st.session_state.active_tab != "notice":
+        st.session_state.expanded = {}
         st.session_state.active_tab = "notice"
-        st.session_state.expanded = {}
     if st.session_state.admin:
-        with st.form("notice_form",clear_on_submit=True):
-            t=st.text_input(_( "title_label" ))
-            c=st.text_area(_( "content_label" ))
-            img=st.file_uploader(_( "upload_image" ),type=["png","jpg","jpeg"])
-            f=st.file_uploader(_( "upload_file" ))
-            if st.form_submit_button(_( "submit" )):
+        with st.form("notice_form", clear_on_submit=True):
+            t = st.text_input(_("title_label"))
+            c = st.text_area(_("content_label"))
+            img = st.file_uploader(_("upload_image"), type=["png","jpg","jpeg"])
+            f = st.file_uploader(_("upload_file"))
+            if st.form_submit_button(_("submit")):
                 if t.strip() and c.strip():
-                    add_notice(t,c,img,f)
+                    add_notice(t, c, img, f)
                 else:
-                    st.warning(_( "warning" ))
-        render_notice_list(show_delete=True)
-    else:
-        render_notice_list(show_delete=False)
+                    st.warning(_("warning"))
+    render_notice_list()
 
-# 지도 탭
-with selected[1]:
+with selected_tab[1]:
     if st.session_state.active_tab != "map":
-        st.session_state.active_tab = "map"
         st.session_state.expanded = {}
+        st.session_state.active_tab = "map"
     render_map()
