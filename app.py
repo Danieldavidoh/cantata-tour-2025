@@ -3,13 +3,13 @@ from datetime import datetime
 import json, os, uuid, base64, re, requests
 from pytz import timezone
 import urllib.parse
-from streamlit_autorefresh import st_autorefresh  # 3초 자동 새로고침
+from streamlit_autorefresh import st_autorefresh
 
 # =============================================
 # 3초마다 자동 새로고침 (일반 모드)
 # =============================================
 if not st.session_state.get("admin", False):
-    st_autorefresh(interval=3000, key="auto_refresh")  # 3초
+    st_autorefresh(interval=3000, key="auto_refresh")
 
 # =============================================
 # 기본 설정
@@ -64,6 +64,8 @@ LANG = {
         "date": "날짜",
         "add": "추가",
         "cancel": "취소",
+        "notice_added": "공지가 등록되었습니다.",
+        "notice_deleted": "공지가 삭제되었습니다.",
     },
     "en": {
         "title": "Cantata Tour 2025",
@@ -88,6 +90,8 @@ LANG = {
         "date": "Date",
         "add": "Add",
         "cancel": "Cancel",
+        "notice_added": "Notice added.",
+        "notice_deleted": "Notice deleted.",
     },
     "hi": {
         "title": "कांताता टूर 2025",
@@ -112,6 +116,8 @@ LANG = {
         "date": "तारीख",
         "add": "जोड़ें",
         "cancel": "रद्द करें",
+        "notice_added": "सूचना जोड़ी गई।",
+        "notice_deleted": "सूचना हटाई गई।",
     }
 }
 _ = LANG[st.session_state.lang]
@@ -141,6 +147,56 @@ def extract_latlon_from_shortlink(short_url):
     return None, None
 
 # =============================================
+# 공지 기능
+# =============================================
+def add_notice(title, content, image_file=None, upload_file=None):
+    img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{image_file.name}") if image_file else None
+    file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{upload_file.name}") if upload_file else None
+
+    if image_file:
+        with open(img_path, "wb") as f:
+            f.write(image_file.read())
+    if upload_file:
+        with open(file_path, "wb") as f:
+            f.write(upload_file.read())
+
+    new_notice = {
+        "id": str(uuid.uuid4()),
+        "title": title,
+        "content": content,
+        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
+        "image": img_path,
+        "file": file_path
+    }
+    data = load_json(NOTICE_FILE)
+    data.insert(0, new_notice)
+    save_json(NOTICE_FILE, data)
+    st.session_state.expanded = {}
+    st.toast(_["notice_added"])
+    st.rerun()
+
+def render_notice_list(show_delete=False):
+    data = load_json(NOTICE_FILE)
+    for idx, n in enumerate(data):
+        key = f"notice_{idx}"
+        expanded = st.session_state.expanded.get(key, False)
+        with st.expander(f"{n['date']} | {n['title']}", expanded=expanded):
+            st.markdown(n["content"])
+            if n.get("image") and os.path.exists(n["image"]):
+                st.image(n["image"], use_container_width=True)
+            if n.get("file") and os.path.exists(n["file"]):
+                href = f'<a href="data:file/octet-stream;base64,{base64.b64encode(open(n["file"], "rb").read()).decode()}" download="{os.path.basename(n["file"])}">{_["file_download"]}</a>'
+                st.markdown(href, unsafe_allow_html=True)
+            if show_delete and st.button(_["remove"], key=f"del_{idx}"):
+                data.pop(idx)
+                save_json(NOTICE_FILE, data)
+                st.session_state.expanded = {}
+                st.toast(_["notice_deleted"])
+                st.rerun()
+        if st.session_state.expanded.get(key, False) != expanded:
+            st.session_state.expanded[key] = expanded
+
+# =============================================
 # Google Maps URL 생성
 # =============================================
 def generate_google_maps_url(cities_data):
@@ -164,7 +220,7 @@ def generate_google_maps_url(cities_data):
 # =============================================
 def render_map():
     st.subheader(_["map_title"])
-    cities_data = load_json(CITY_FILE)  # 항상 최신 로드
+    cities_data = load_json(CITY_FILE)
 
     # 관리자: 추가 버튼
     if st.session_state.admin:
@@ -328,7 +384,7 @@ def render_map():
             src="{maps_url}">
         </iframe>
         '''
-        st.components.v1.html(iframe, height=550)
+        st.components.v1.html(iframe, height=550, scrolling=True)
     else:
         st.info("कोई शहर पंजीकृत नहीं" if st.session_state.lang == "hi" else "No cities registered." if st.session_state.lang == "en" else "등록된 도시 없음")
 
@@ -380,7 +436,22 @@ elif tab2:
     st.session_state.current_tab = "tab_map"
 
 with tab1:
-    st.write("सूचना प्रबंधन कार्य करता है।" if st.session_state.lang == "hi" else "Notice management works." if st.session_state.lang == "en" else "공지 관리 기능 정상 작동")
+    if st.session_state.admin:
+        with st.form("notice_form", clear_on_submit=True):
+            t = st.text_input(_["title_label"])
+            c = st.text_area(_["content_label"])
+            img = st.file_uploader(_["upload_image"], type=["png", "jpg", "jpeg"])
+            f = st.file_uploader(_["upload_file"])
+            if st.form_submit_button(_["submit"]):
+                if t.strip() and c.strip():
+                    add_notice(t, c, img, f)
+                else:
+                    st.warning(_["warning"])
+        render_notice_list(show_delete=True)
+    else:
+        render_notice_list(show_delete=False)
+        if st.button("새로고침" if st.session_state.lang == "ko" else "Refresh" if st.session_state.lang == "en" else "रीफ्रेश"):
+            st.rerun()
 
 with tab2:
     render_map()
