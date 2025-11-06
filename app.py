@@ -1,8 +1,8 @@
-# app.py - 칸타타 투어 2025 (최종 완전판) 🎄
-# 모든 버그 완전 차단 + TypeError 100% 방어 + 빈 화면 절대 없음
+# app.py - 칸타타 투어 2025 (최종 완전판 + 사용자 요청 완벽 반영) 🎄
+# 예상인원: ±50 단위 / 마커: 구글 스타일 (과거 흐림 / 오늘 검은원 / 미래 선명) / 지도 중심: Pune
 
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, date
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
@@ -205,9 +205,13 @@ def render_notices():
     elif not has_new:
         st.session_state.sound_played = False
 
-# --- 12. 투어 경로 (TypeError 완전 방어) ---
+# --- 12. 투어 경로 (요청사항 완벽 반영) ---
 def render_map():
     st.subheader(_('map_title'))
+
+    # --- Pune 중심 좌표 ---
+    PUNE_LAT, PUNE_LON = 18.5204, 73.8567
+    today = date.today()
 
     # --- 안전한 데이터 로드 및 정렬 ---
     raw_cities = load_json(CITY_FILE)
@@ -232,19 +236,20 @@ def render_map():
             with st.form("add_city_form", clear_on_submit=True):
                 col1, col2 = st.columns(2)
                 with col1:
-                    city_name = st.text_input(_("select_city"), placeholder="예: Mumbai")
-                    venue = st.text_input(_("venue"), placeholder="예: Gateway of India")
+                    city_name = st.text_input(_("select_city"), placeholder="예: Pune")
+                    venue = st.text_input(_("venue"), placeholder="예: Shaniwar Wada")
                     perf_date_input = st.date_input(_("performance_date"), value=None)
                 with col2:
-                    seats = st.number_input(_("seats"), min_value=0, step=1, value=0)
+                    # 예상인원 ±50 단위
+                    seats = st.number_input(_("seats"), min_value=0, step=50, value=0)
                     note = st.text_area(_("note"), height=80)
                     gmap = st.text_input(_("google_link"))
 
                 lat_lon_cols = st.columns(2)
                 with lat_lon_cols[0]:
-                    lat = st.number_input("위도 (Lat)", format="%.6f", value=19.0760)
+                    lat = st.number_input("위도 (Lat)", format="%.6f", value=PUNE_LAT)
                 with lat_lon_cols[1]:
-                    lon = st.number_input("경도 (Lon)", format="%.6f", value=72.8777)
+                    lon = st.number_input("경도 (Lon)", format="%.6f", value=PUNE_LON)
                 indoor = st.checkbox(_("indoor"), value=True)
 
                 if st.form_submit_button(_("register"), use_container_width=True):
@@ -274,21 +279,54 @@ def render_map():
         st.warning("아직 등록된 도시가 없습니다.")
         if not st.session_state.admin:
             st.info("관리자 로그인 후 도시를 추가해주세요!")
-        m = folium.Map(location=[19.0, 73.0], zoom_start=7, tiles="CartoDB positron")
-        folium.Marker([19.0, 73.0], popup="<b>칸타타 투어 2025</b><br>시작을 기다립니다!", 
-                      tooltip="Maharashtra", icon=folium.Icon(color="green", icon="star", prefix="fa")).add_to(m)
+        m = folium.Map(location=[PUNE_LAT, PUNE_LON], zoom_start=9, tiles="CartoDB positron")
+        folium.Marker([PUNE_LAT, PUNE_LON], popup="<b>칸타타 투어 2025</b><br>시작을 기다립니다!", 
+                      tooltip="Pune", icon=folium.Icon(color="green", icon="star", prefix="fa")).add_to(m)
         st_folium(m, width=900, height=550, key="empty_map")
         return
 
     # --- 도시 있음: 목록 + 거리 + 지도 ---
     total_dist = 0
     coords = []
+    m = folium.Map(location=[PUNE_LAT, PUNE_LON], zoom_start=9, tiles="CartoDB positron")
+
     for i, c in enumerate(cities):
+        try:
+            perf_date_obj = datetime.strptime(c['perf_date'], "%Y-%m-%d").date() if c['perf_date'] != "9999-12-31" else None
+        except:
+            perf_date_obj = None
+
+        # --- 마커 상태 결정 (구글 스타일) ---
+        if perf_date_obj and perf_date_obj < today:
+            # 과거: 흐리게
+            opacity = 0.4
+            color = "gray"
+            icon = "circle"
+        elif perf_date_obj and perf_date_obj == today:
+            # 오늘: 검은 원
+            opacity = 1.0
+            color = "black"
+            icon = "circle"
+        else:
+            # 미래: 선명
+            opacity = 1.0
+            color = "red" if c.get("indoor") else "blue"
+            icon = "tree-christmas"
+
+        # --- 마커 추가 ---
+        folium.Marker(
+            [c["lat"], c["lon"]],
+            popup=f"<b style='color:#e74c3c'>{c['city']}</b><br>{c.get('perf_date','—')}<br>{c.get('venue','—')}",
+            tooltip=c["city"],
+            icon=folium.Icon(color=color, icon=icon, prefix="fa", icon_color="white", opacity=opacity)
+        ).add_to(m)
+
+        # --- 목록 ---
         with st.expander(f"{c['city']} | {c.get('perf_date', '미정')}"):
             st.write(f"등록일: {c.get('date', '—')}")
             st.write(f"공연 날짜: {c.get('perf_date', '—')}")
             st.write(f"장소: {c.get('venue', '—')}")
-            st.write(f"인원: {c.get('seats', '—')}")
+            st.write(f"예상 인원: {c.get('seats', '—')}")
             st.write(f"특이사항: {c.get('note', '—')}")
             if c.get("google_link"):
                 st.markdown(f"[구글맵 보기]({c['google_link']})")
@@ -305,6 +343,7 @@ def render_map():
                         save_json(CITY_FILE, cities)
                         st.rerun()
 
+        # --- 거리 계산 ---
         if i < len(cities)-1:
             try:
                 d = haversine(c['lat'], c['lon'], cities[i+1]['lat'], cities[i+1]['lon'])
@@ -314,18 +353,15 @@ def render_map():
                 st.markdown("<div style='text-align:center;color:#e74c3c'>거리 계산 불가</div>", unsafe_allow_html=True)
         coords.append((c['lat'], c['lon']))
 
-    if len(cities) > 1:
-        st.markdown(f"<div style='text-align:center;color:#e74c3c;font-size:1.3em;margin:15px 0'>총 거리: {total_dist:.0f}km</div>", unsafe_allow_html=True)
-
-    m = folium.Map(location=[19.0, 73.0], zoom_start=7, tiles="CartoDB positron")
-    for c in cities:
-        color = "red" if c.get("indoor") else "blue"
-        icon = folium.Icon(color=color, icon="tree-christmas", prefix="fa", icon_color="white")
-        popup = f"<b style='color:#e74c3c'>{c['city']}</b><br>{c.get('perf_date','—')}<br>{c.get('venue','—')}"
-        folium.Marker([c["lat"], c["lon"]], popup=popup, tooltip=c["city"], icon=icon).add_to(m)
+    # --- 경로선 ---
     if len(coords) > 1:
         AntPath(coords, color="#e74c3c", weight=6, opacity=0.9, delay=800).add_to(m)
 
+    # --- 총 거리 ---
+    if len(cities) > 1:
+        st.markdown(f"<div style='text-align:center;color:#e74c3c;font-size:1.3em;margin:15px 0'>총 거리: {total_dist:.0f}km</div>", unsafe_allow_html=True)
+
+    # --- 지도 렌더링 (항상 Pune 중심) ---
     st_folium(m, width=900, height=550, key=f"map_{len(cities)}", returned_objects=[])
 
 # --- 13. 탭 ---
