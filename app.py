@@ -51,6 +51,105 @@ LANG = {
 }
 _ = lambda key: LANG[st.session_state.lang].get(key, key)
 
+# === 크리스마스 테마 CSS + JS ===
+christmas_theme = """
+<style>
+/* 배경: 어두운 밤하늘 */
+.stApp {
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    color: #f0f0f0;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* 눈 효과 */
+.snowflake {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1.2em;
+    position: absolute;
+    top: -10px;
+    animation: fall linear forwards;
+    user-select: none;
+    pointer-events: none;
+}
+@keyframes fall {
+    to { transform: translateY(100vh); opacity: 0; }
+}
+
+/* 제목 스타일 */
+.christmas-title {
+    text-align: center;
+    font-size: 2.8em;
+    font-weight: bold;
+    margin: 20px 0;
+}
+.cantata { color: #e74c3c; } /* 빨간색 */
+.year { color: #ecf0f1; } /* 하얀색 */
+.maha { color: #3498db; } /* 청색 */
+
+/* 버튼 */
+.stButton>button {
+    background: #c0392b !important;
+    color: white !important;
+    border: 2px solid #e74c3c !important;
+    border-radius: 12px !important;
+    font-weight: bold;
+}
+.stButton>button:hover {
+    background: #e74c3c !important;
+    transform: scale(1.05);
+}
+
+/* expander */
+.stExpander {
+    background: rgba(46, 125, 50, 0.2) !important;
+    border: 1px solid #27ae60 !important;
+    border-radius: 12px !important;
+}
+.stExpander > div > label {
+    color: #2ecc71 !important;
+    font-weight: bold;
+}
+
+/* 탭 */
+.css-1v0mbdj { background: #2c3e50 !important; }
+</style>
+
+<!-- 눈 내리는 JS -->
+<script>
+function createSnowflake() {
+    const snow = document.createElement('div');
+    snow.classList.add('snowflake');
+    snow.innerText = ['❅', '❆', '✻', '✼'][Math.floor(Math.random() * 4)];
+    snow.style.left = Math.random() * 100 + 'vw';
+    snow.style.animationDuration = Math.random() * 8 + 5 + 's';
+    snow.style.opacity = Math.random() * 0.6 + 0.4;
+    snow.style.fontSize = Math.random() * 1.2 + 0.8 + 'em';
+    document.body.appendChild(snow);
+    setTimeout(() => snow.remove(), 13000);
+}
+setInterval(createSnowflake, 300);
+</script>
+
+<!-- 크리스마스 아이콘 (이모지) -->
+<div style="text-align:center; margin:15px 0;">
+    🎄🎁🍭🧦🦌🎅
+</div>
+"""
+st.markdown(christmas_theme, unsafe_allow_html=True)
+
+# === 제목 (크리스마스 스타일) ===
+st.markdown(
+    '<div class="christmas-title">'
+    '<span class="cantata">칸타타 투어</span> '
+    '<span class="year">2025</span><br>'
+    '<span class="maha">마하라스트라</span>'
+    '</div>',
+    unsafe_allow_html=True
+)
+
+# === 나머지 기능 (기존 코드 유지) ===
+# (이전 코드와 동일 - 생략하지 않고 전체 포함)
+
 # 유틸
 def load_json(filename):
     if os.path.exists(filename):
@@ -103,12 +202,12 @@ def render_notice_list(show_delete=False):
     for idx, n in enumerate(data):
         key = f"notice_{idx}"
         expanded = st.session_state.expanded.get(key, False)
-        with st.expander(f"{n['date']} | {n['title']}", expanded=expanded):
+        with st.expander(f"🎄 {n['date']} | {n['title']}", expanded=expanded):
             st.markdown(n["content"])
             if n.get("image") and os.path.exists(n["image"]):
                 st.image(n["image"], use_container_width=True)
             if n.get("file") and os.path.exists(n["file"]):
-                href = f'<a href="data:file/octet-stream;base64,{base64.b64encode(open(n["file"], "rb").read()).decode()}" download="{os.path.basename(n["file"])}">{_("file_download")}</a>'
+                href = f'<a href="data:file/octet-stream;base64,{base64.b64encode(open(n["file"], "rb").read()).decode()}" download="{os.path.basename(n["file"])}">🎁 {_("file_download")}</a>'
                 st.markdown(href, unsafe_allow_html=True)
             if show_delete and st.button(_("remove"), key=f"del_{idx}"):
                 data.pop(idx)
@@ -121,13 +220,12 @@ def render_notice_list(show_delete=False):
 
 # 지도 + 도시 관리
 def render_map():
-    # 제목 + 추가 버튼 (컬럼 비율 넓힘)
     col_title, col_add = st.columns([5, 2])
     with col_title:
-        st.subheader(_("map_title"))
+        st.subheader(f"🎅 {_('map_title')}")
     with col_add:
         if st.session_state.admin:
-            if st.button(f"### {_('add_city')}", use_container_width=True, key="btn_add_city"):
+            if st.button(f"🎁 {_('add_city')}", use_container_width=True, key="btn_add_city"):
                 st.session_state.adding_cities.append(None)
                 st.rerun()
 
@@ -151,7 +249,7 @@ def render_map():
                 current = st.session_state.adding_cities[i]
                 idx = options.index(current) if current in options else 0
                 city_name = st.selectbox(
-                    _("select_city"),
+                    f"🌟 {_('select_city')}",
                     options,
                     index=idx,
                     key=f"add_select_{i}"
@@ -159,7 +257,7 @@ def render_map():
                 if city_name != current:
                     st.session_state.adding_cities[i] = city_name
             with col_del:
-                if st.button("×", key=f"remove_add_{i}"):
+                if st.button("❌", key=f"remove_add_{i}"):
                     st.session_state.adding_cities.pop(i)
                     st.rerun()
 
@@ -173,7 +271,7 @@ def render_map():
 
                 c1, c2 = st.columns(2)
                 with c1:
-                    if st.button(_("register"), key=f"reg_{i}", use_container_width=True):
+                    if st.button(f"🎄 {_('register')}", key=f"reg_{i}", use_container_width=True):
                         lat, lon = extract_latlon_from_shortlink(map_link) if map_link.strip() else (None, None)
                         if not lat or not lon:
                             coords = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882), "Nashik": (19.9975, 73.7898), "Aurangabad": (19.8762, 75.3433) }
@@ -197,11 +295,11 @@ def render_map():
                         st.success(f"[{city_name}] 등록 완료!")
                         st.rerun()
                 with c2:
-                    if st.button(_("cancel"), key=f"cancel_{i}", use_container_width=True):
+                    if st.button(f"🧹 {_('cancel')}", key=f"cancel_{i}", use_container_width=True):
                         st.session_state.adding_cities.pop(i)
                         st.rerun()
 
-    # --- 기존 도시 목록 + 중앙 거리 + 버튼 표시 ---
+    # --- 기존 도시 목록 + 중앙 거리 ---
     total_dist = 0
     total_time = 0
     average_speed = 65
@@ -209,22 +307,21 @@ def render_map():
     for idx, city in enumerate(cities_data):
         key = f"city_expander_{idx}"
         expanded = st.session_state.expanded.get(key, False)
-        with st.expander(f"{city['city']} | {city.get('perf_date', '')}", expanded=expanded):
-            st.write(f"**{_('date')}:** {city.get('date', '')}")
-            st.write(f"**{_('performance_date')}:** {city.get('perf_date', '')}")
-            st.write(f"**{_('venue')}:** {city.get('venue', '')}")
-            st.write(f"**{_('seats')}:** {city.get('seats', '')}")
-            st.write(f"**{_('note')}:** {city.get('note', '')}")
+        with st.expander(f"🎁 {city['city']} | {city.get('perf_date', '')}", expanded=expanded):
+            st.write(f"**📅 {_('date')}:** {city.get('date', '')}")
+            st.write(f"**🎤 {_('performance_date')}:** {city.get('perf_date', '')}")
+            st.write(f"**🏛️ {_('venue')}:** {city.get('venue', '')}")
+            st.write(f"**👥 {_('seats')}:** {city.get('seats', '')}")
+            st.write(f"**📝 {_('note')}:** {city.get('note', '')}")
 
-            # 관리자일 때 수정/삭제 버튼 (컬럼으로 넓게)
             if st.session_state.admin:
                 btn_col1, btn_col2 = st.columns([1, 1])
                 with btn_col1:
-                    if st.button(_("edit"), key=f"edit_{idx}_{city['city']}", use_container_width=True):
+                    if st.button(f"✏️ {_('edit')}", key=f"edit_{idx}_{city['city']}", use_container_width=True):
                         st.session_state.edit_city = city["city"]
                         st.rerun()
                 with btn_col2:
-                    if st.button(_("remove"), key=f"remove_{idx}_{city['city']}", use_container_width=True):
+                    if st.button(f"🗑️ {_('remove')}", key=f"remove_{idx}_{city['city']}", use_container_width=True):
                         cities_data.pop(idx)
                         save_json(CITY_FILE, cities_data)
                         st.session_state.expanded = {}
@@ -240,7 +337,7 @@ def render_map():
             time_h = dist / average_speed
             dist_text = f"**{dist:.0f}km / {time_h:.1f}h**"
             st.markdown(
-                f'<div style="text-align:center; margin:15px 0; font-weight:bold;">{dist_text}</div>',
+                f'<div style="text-align:center; margin:15px 0; font-weight:bold; color:#2ecc71;">{dist_text}</div>',
                 unsafe_allow_html=True
             )
             total_dist += dist
@@ -250,7 +347,7 @@ def render_map():
     if len(cities_data) > 1:
         total_text = f"**총 거리 (첫 도시 기준): {total_dist:.0f}km / {total_time:.1f}h**"
         st.markdown(
-            f'<div style="text-align:center; margin:20px 0; font-size:1.2em; font-weight:bold; color:#d32f2f;">{total_text}</div>',
+            f'<div style="text-align:center; margin:20px 0; font-size:1.2em; font-weight:bold; color:#e74c3c;">{total_text}</div>',
             unsafe_allow_html=True
         )
 
@@ -263,7 +360,7 @@ def render_map():
 
         idx = next(i for i, c in enumerate(cities_data) if c["city"] == st.session_state.edit_city)
 
-        st.markdown("### 도시 수정")
+        st.markdown("### 🎄 도시 수정")
         venue = st.text_input(_("venue"), value=edit_city_obj.get("venue", ""), key="edit_venue")
         seats = st.number_input(_("seats"), min_value=0, step=50, value=edit_city_obj.get("seats", 0), key="edit_seats")
         perf_date = st.date_input(_("performance_date"), value=datetime.strptime(edit_city_obj.get("perf_date", "2025-01-01"), "%Y-%m-%d").date(), key="edit_perf_date")
@@ -273,7 +370,7 @@ def render_map():
 
         c1, c2 = st.columns(2)
         with c1:
-            if st.button("수정 완료", key="edit_submit_final", use_container_width=True):
+            if st.button("🎅 수정 완료", key="edit_submit_final", use_container_width=True):
                 lat, lon = extract_latlon_from_shortlink(map_link) if map_link.strip() else (None, None)
                 if not lat or not lon:
                     coords = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882), "Nashik": (19.9975, 73.7898), "Aurangabad": (19.8762, 75.3433) }
@@ -295,7 +392,7 @@ def render_map():
                 st.success(f"[{edit_city_obj['city']}] 수정 완료!")
                 st.rerun()
         with c2:
-            if st.button(_("cancel"), key="edit_cancel_final", use_container_width=True):
+            if st.button("🧹 취소", key="edit_cancel_final", use_container_width=True):
                 st.session_state.edit_city = None
                 st.rerun()
 
@@ -376,7 +473,7 @@ def render_map():
         coords.append((c["lat"], c["lon"]))
 
     if coords:
-        AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
+        AntPath(coords, color="#e74c3c", weight=5, delay=800).add_to(m)
 
     st_folium(m, width=900, height=550)
 
@@ -385,7 +482,7 @@ with st.sidebar:
     lang_options = ["한국어", "English", "हिंदी"]
     lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
     current_idx = lang_options.index("한국어" if st.session_state.lang == "ko" else "English" if st.session_state.lang == "en" else "हिंदी")
-    selected_lang = st.selectbox("언어", lang_options, index=current_idx)
+    selected_lang = st.selectbox("🌐 언어", lang_options, index=current_idx)
     new_lang = lang_map[selected_lang]
     if new_lang != st.session_state.lang:
         st.session_state.lang = new_lang
@@ -393,7 +490,7 @@ with st.sidebar:
 
     st.markdown("---")
     if not st.session_state.admin:
-        st.markdown("### 관리자 로그인")
+        st.markdown("### 🎅 관리자 로그인")
         pw = st.text_input(_("password"), type="password")
         if st.button(_("login")):
             if pw == "0000":
@@ -403,17 +500,13 @@ with st.sidebar:
             else:
                 st.error(_("wrong_pw"))
     else:
-        st.success("관리자 모드")
+        st.success("🎄 관리자 모드")
         if st.button(_("logout")):
             st.session_state.admin = False
             st.rerun()
 
-# 메인 제목
-st.markdown(f"# {_('title')} ")
-st.caption(_("caption"))
-
 # 탭 정의
-tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
+tab1, tab2 = st.tabs([f"🎁 {_('tab_notice')}", f"🗺️ {_('tab_map')}"])
 
 with tab1:
     if st.session_state.admin:
