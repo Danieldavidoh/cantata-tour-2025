@@ -1,5 +1,8 @@
 import streamlit as st
 from datetime import datetime
+import folium
+from streamlit_folium import st_folium
+from folium.plugins import AntPath
 import json, os, uuid, base64, re, requests
 from pytz import timezone
 from streamlit_autorefresh import st_autorefresh
@@ -9,7 +12,7 @@ if not st.session_state.get("admin", False):
     st_autorefresh(interval=3000, key="auto_refresh")
 
 # 기본 설정
-st.set_page_config(page_title="कांताता टूर 2025 | Cantata Tour 2025", layout="wide")
+st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
 NOTICE_FILE = "notice.json"
 UPLOAD_DIR = "uploads"
@@ -62,8 +65,68 @@ LANG = {
         "warning": "제목과 내용을 모두 입력해주세요.",
         "file_download": "파일 다운로드",
     },
-    "en": { ... },  # 생략 (이전과 동일)
-    "hi": { ... }   # 생략 (이전과 동일)
+    "en": {
+        "title": "Cantata Tour 2025",
+        "caption": "Maharashtra Tour Management System",
+        "tab_notice": "Notice",
+        "tab_map": "Tour Route",
+        "map_title": "View Route",
+        "password": "Password",
+        "login": "Login",
+        "logout": "Logout",
+        "wrong_pw": "Wrong password.",
+        "select_city": "Select City",
+        "venue": "Venue",
+        "seats": "Expected Attendance",
+        "note": "Notes",
+        "google_link": "Google Maps Link",
+        "indoor": "Indoor",
+        "outdoor": "Outdoor",
+        "register": "Register",
+        "edit": "Edit",
+        "remove": "Remove",
+        "date": "Date",
+        "add": "Add",
+        "cancel": "Cancel",
+        "title_label": "Title",
+        "content_label": "Content",
+        "upload_image": "Upload Image",
+        "upload_file": "Upload File",
+        "submit": "Submit",
+        "warning": "Please enter both title and content.",
+        "file_download": "Download File",
+    },
+    "hi": {
+        "title": "कांताता टूर 2025",
+        "caption": "महाराष्ट्र टूर प्रबंधन प्रणाली",
+        "tab_notice": "सूचना",
+        "tab_map": "टूर मार्ग",
+        "map_title": "मार्ग देखें",
+        "password": "पासवर्ड",
+        "login": "लॉगिन",
+        "logout": "लॉगआउट",
+        "wrong_pw": "गलत पासवर्ड।",
+        "select_city": "शहर चुनें",
+        "venue": "स्थल",
+        "seats": "अपेक्षित उपस्थिति",
+        "note": "नोट्स",
+        "google_link": "गूगल मैप्स लिंक",
+        "indoor": "इनडोर",
+        "outdoor": "आउटडोर",
+        "register": "रजिस्टर",
+        "edit": "संपादित करें",
+        "remove": "हटाएं",
+        "date": "तारीख",
+        "add": "जोड़ें",
+        "cancel": "रद्द करें",
+        "title_label": "शीर्षक",
+        "content_label": "सामग्री",
+        "upload_image": "छवि अपलोड करें",
+        "upload_file": "फ़ाइल अपलोड करें",
+        "submit": "जमा करें",
+        "warning": "शीर्षक और सामग्री दोनों दर्ज करें।",
+        "file_download": "फ़ाइल डाउनलोड करें",
+    }
 }
 _ = LANG[st.session_state.lang]
 
@@ -88,15 +151,6 @@ def extract_latlon_from_shortlink(short_url):
     except:
         pass
     return None, None
-
-# Google Maps Embed URL (path만)
-def generate_google_maps_embed_url(cities_data):
-    if not cities_data:
-        return "https://www.google.com/maps/embed"
-    center_lat = sum(c['lat'] for c in cities_data) / len(cities_data)
-    center_lon = sum(c['lon'] for c in cities_data) / len(cities_data)
-    path = "path=color:0xff0000ff|weight:5|" + "|".join([f"{c['lat']},{c['lon']}" for c in cities_data])
-    return f"https://www.google.com/maps/embed/v1/view?center={center_lat},{center_lon}&zoom=7&{path}"
 
 # 공지 기능
 def add_notice(title, content, image_file=None, upload_file=None):
@@ -144,7 +198,7 @@ def render_notice_list(show_delete=False):
         if st.session_state.expanded.get(key, False) != expanded:
             st.session_state.expanded[key] = expanded
 
-# 지도 + 도시 관리
+# 지도 + 도시 관리 (Folium 복귀)
 def render_map():
     st.subheader(_["map_title"])
     cities_data = load_json(CITY_FILE)
@@ -237,13 +291,25 @@ def render_map():
         if st.session_state.expanded.get(key, False) != expanded:
             st.session_state.expanded[key] = expanded
 
-    # Google Maps
+    # Folium 지도 (100% 표시)
     st.markdown("---")
-    if cities_data:
-        embed_url = generate_google_maps_embed_url(cities_data)
-        st.components.v1.iframe(embed_url, height=550)
-    else:
-        st.info("등록된 도시 없음")
+    m = folium.Map(location=[19.0, 73.0], zoom_start=6)
+    coords = []
+    for c in cities_data:
+        popup_html = f"""
+        <b>{c['city']}</b><br>
+        장소: {c.get('venue','')}<br>
+        인원: {c.get('seats','')}<br>
+        형태: {c.get('type','')}<br>
+        <a href="{c.get('nav_url','#')}" target="_blank">길안내</a><br>
+        특이사항: {c.get('note','')}
+        """
+        folium.Marker([c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
+                      icon=folium.Icon(color="red", icon="music")).add_to(m)
+        coords.append((c["lat"], c["lon"]))
+    if coords:
+        AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
+    st_folium(m, width=900, height=550)
 
 # 사이드바
 with st.sidebar:
