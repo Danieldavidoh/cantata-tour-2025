@@ -64,7 +64,7 @@ def save_json(filename, data):
 
 def extract_latlon_from_shortlink(short_url):
     try:
-        r = requests.get(short_url, allow_redirects=True, timeout=5)  # ← 여기 수정!
+        r = requests.get(short_url, allow_redirects=True, timeout=5)
         final_url = r.url
         match = re.search(r'@([0-9\.\-]+),([0-9\.\-]+)', final_url)
         if match:
@@ -121,12 +121,13 @@ def render_notice_list(show_delete=False):
 
 # 지도 + 도시 관리
 def render_map():
-    col_title, col_btn = st.columns([6, 1])
+    # 제목 + 추가 버튼 (컬럼 비율 넓힘)
+    col_title, col_add = st.columns([5, 2])
     with col_title:
         st.subheader(_("map_title"))
-    with col_btn:
+    with col_add:
         if st.session_state.admin:
-            if st.button(_("add_city"), key="btn_add_city"):
+            if st.button(f"### {_('add_city')}", use_container_width=True, key="btn_add_city"):
                 st.session_state.adding_cities.append(None)
                 st.rerun()
 
@@ -144,7 +145,7 @@ def render_map():
     for i in range(len(st.session_state.adding_cities)):
         with st.container():
             st.markdown("---")
-            col_sel, col_del = st.columns([8, 1])
+            col_sel, col_del = st.columns([7, 1])
             with col_sel:
                 options = [None] + available
                 current = st.session_state.adding_cities[i]
@@ -172,7 +173,7 @@ def render_map():
 
                 c1, c2 = st.columns(2)
                 with c1:
-                    if st.button(_("register"), key=f"reg_{i}"):
+                    if st.button(_("register"), key=f"reg_{i}", use_container_width=True):
                         lat, lon = extract_latlon_from_shortlink(map_link) if map_link.strip() else (None, None)
                         if not lat or not lon:
                             coords = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882), "Nashik": (19.9975, 73.7898), "Aurangabad": (19.8762, 75.3433) }
@@ -196,11 +197,11 @@ def render_map():
                         st.success(f"[{city_name}] 등록 완료!")
                         st.rerun()
                 with c2:
-                    if st.button(_("cancel"), key=f"cancel_{i}"):
+                    if st.button(_("cancel"), key=f"cancel_{i}", use_container_width=True):
                         st.session_state.adding_cities.pop(i)
                         st.rerun()
 
-    # --- 기존 도시 목록 + 중앙 거리 ---
+    # --- 기존 도시 목록 + 중앙 거리 + 버튼 표시 ---
     total_dist = 0
     total_time = 0
     average_speed = 65
@@ -215,14 +216,15 @@ def render_map():
             st.write(f"**{_('seats')}:** {city.get('seats', '')}")
             st.write(f"**{_('note')}:** {city.get('note', '')}")
 
+            # 관리자일 때 수정/삭제 버튼 (컬럼으로 넓게)
             if st.session_state.admin:
-                c1, c2 = st.columns(2)
-                with c1:
-                    if st.button(_("edit"), key=f"edit_btn_{idx}_{city['city']}"):
+                btn_col1, btn_col2 = st.columns([1, 1])
+                with btn_col1:
+                    if st.button(_("edit"), key=f"edit_{idx}_{city['city']}", use_container_width=True):
                         st.session_state.edit_city = city["city"]
                         st.rerun()
-                with c2:
-                    if st.button(_("remove"), key=f"remove_btn_{idx}_{city['city']}"):
+                with btn_col2:
+                    if st.button(_("remove"), key=f"remove_{idx}_{city['city']}", use_container_width=True):
                         cities_data.pop(idx)
                         save_json(CITY_FILE, cities_data)
                         st.session_state.expanded = {}
@@ -271,7 +273,7 @@ def render_map():
 
         c1, c2 = st.columns(2)
         with c1:
-            if st.button("수정 완료", key="edit_submit_final"):
+            if st.button("수정 완료", key="edit_submit_final", use_container_width=True):
                 lat, lon = extract_latlon_from_shortlink(map_link) if map_link.strip() else (None, None)
                 if not lat or not lon:
                     coords = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882), "Nashik": (19.9975, 73.7898), "Aurangabad": (19.8762, 75.3433) }
@@ -293,7 +295,7 @@ def render_map():
                 st.success(f"[{edit_city_obj['city']}] 수정 완료!")
                 st.rerun()
         with c2:
-            if st.button(_("cancel"), key="edit_cancel_final"):
+            if st.button(_("cancel"), key="edit_cancel_final", use_container_width=True):
                 st.session_state.edit_city = None
                 st.rerun()
 
@@ -303,16 +305,25 @@ def render_map():
     coords = []
     today = datetime.now().date()
 
-    # 폭죽 애니메이션
-    fireworks_js = """
-    <div id="fireworks-container" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden;"></div>
+    # 당일 pulse + 폭죽 애니메이션
+    pulse_and_fireworks = """
     <style>
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.3); }
+        100% { transform: scale(1); }
+    }
+    .today-marker {
+        animation: pulse 1.5s infinite;
+        cursor: pointer;
+    }
     @keyframes firework {
         0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
         100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
     }
     .firework { position: absolute; width: 6px; height: 6px; border-radius: 50%; animation: firework 1s ease-out forwards; }
     </style>
+    <div id="fireworks-container" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden;"></div>
     <script>
     function createFirework(x, y) {
         const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b'];
@@ -337,7 +348,7 @@ def render_map():
     });
     </script>
     """
-    m.get_root().html.add_child(folium.Element(fireworks_js))
+    m.get_root().html.add_child(folium.Element(pulse_and_fireworks))
 
     for c in cities_data:
         perf_date_str = c.get('perf_date')
@@ -355,9 +366,12 @@ def render_map():
         icon = folium.Icon(color="red", icon="music")
         opacity = 1.0 if not perf_date or perf_date >= today else 0.4
 
+        extra_classes = "today-marker" if perf_date == today else ""
+
         folium.Marker(
             [c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
-            icon=icon, opacity=opacity
+            icon=icon, opacity=opacity,
+            extra_classes=extra_classes
         ).add_to(m)
         coords.append((c["lat"], c["lon"]))
 
