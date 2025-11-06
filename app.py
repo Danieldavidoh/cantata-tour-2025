@@ -149,22 +149,21 @@ def extract_latlon_from_shortlink(short_url):
         pass
     return None, None
 
-# Google Maps Embed URL (API 키 없이)
+# Google Maps Embed URL (단순 path만)
 def generate_google_maps_embed_url(cities_data):
     if not cities_data:
         return "https://www.google.com/maps/embed"
     
-    # 중심점 계산
+    # 중심점
     lats = [c['lat'] for c in cities_data]
     lons = [c['lon'] for c in cities_data]
     center_lat = sum(lats) / len(lats)
     center_lon = sum(lons) / len(lons)
     
-    # 마커 & 경로
-    markers = "&markers=" + "|".join([f"label:{c['city'][0]}|{c['lat']},{c['lon']}" for c in cities_data])
-    path = "&path=" + "|".join([f"{c['lat']},{c['lon']}" for c in cities_data])
+    # 경로만
+    path = "path=color:0xff0000ff|weight:5|" + "|".join([f"{c['lat']},{c['lon']}" for c in cities_data])
     
-    return f"https://www.google.com/maps/embed/v1/view?center={center_lat},{center_lon}&zoom=7{markers}{path}&key=AIzaSyDUMMYKEY"
+    return f"https://www.google.com/maps/embed/v1/view?center={center_lat},{center_lon}&zoom=7&{path}"
 
 # 공지 기능
 def add_notice(title, content, image_file=None, upload_file=None):
@@ -188,7 +187,7 @@ def add_notice(title, content, image_file=None, upload_file=None):
     data.insert(0, new_notice)
     save_json(NOTICE_FILE, data)
     st.session_state.expanded = {}
-    st.toast(_["notice_added"] if "notice_added" in _ else "공지가 등록되었습니다.")
+    st.toast("공지가 등록되었습니다.")
     st.rerun()
 
 def render_notice_list(show_delete=False):
@@ -207,7 +206,7 @@ def render_notice_list(show_delete=False):
                 data.pop(idx)
                 save_json(NOTICE_FILE, data)
                 st.session_state.expanded = {}
-                st.toast(_["notice_deleted"] if "notice_deleted" in _ else "공지가 삭제되었습니다.")
+                st.toast("공지가 삭제되었습니다.")
                 st.rerun()
         if st.session_state.expanded.get(key, False) != expanded:
             st.session_state.expanded[key] = expanded
@@ -308,11 +307,21 @@ def render_map():
         if st.session_state.expanded.get(key, False) != expanded:
             st.session_state.expanded[key] = expanded
 
-    # Google Maps Embed (API 키 없이)
+    # Google Maps Embed (path만)
     st.markdown("---")
     if cities_data:
         embed_url = generate_google_maps_embed_url(cities_data)
-        st.components.v1.iframe(embed_url, width=1000, height=550)
+        iframe = f'''
+        <iframe 
+            width="100%" 
+            height="550" 
+            style="border:0" 
+            loading="lazy" 
+            allowfullscreen 
+            src="{embed_url}">
+        </iframe>
+        '''
+        st.components.v1.html(iframe, height=550)
     else:
         st.info("등록된 도시 없음")
 
