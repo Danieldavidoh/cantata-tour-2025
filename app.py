@@ -38,7 +38,7 @@ defaults = {
     "selected_city": None,
     "mode": None,
     "expanded": {},
-    "current_tab": "tab_map"  # 탭 유지
+    "current_tab": "tab_map"  # 기본 탭
 }
 for key, val in defaults.items():
     if key not in st.session_state:
@@ -175,7 +175,7 @@ def render_map():
 
     cities_data = load_json(CITY_FILE)
 
-    # 관리자: + 버튼 (항상 오른쪽 끝에 고정)
+    # 관리자: + 버튼 (오른쪽 끝 고정)
     if st.session_state.admin:
         with st.container():
             col_left, col_right = st.columns([9, 1])
@@ -318,13 +318,40 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 메인 + 탭 상태 유지
+# 메인 + 탭 (항상 내용 출력)
 # =============================================
 st.markdown(f"# {_['title']} ")
 st.caption(_["caption"])
 
-# 탭 선택 유지
-tab_names = [_["tab_notice"], _["tab_map"]]
-tab1, tab2 = st.tabs(tab_names)
+# 탭 생성
+tab1, tab2 = st.tabs([_["tab_notice"], _["tab_map"]])
 
-# 탭 상태 저장
+# 탭 상태 업데이트
+if tab1:
+    st.session_state.current_tab = "tab_notice"
+elif tab2:
+    st.session_state.current_tab = "tab_map"
+
+# 탭 내용 출력 (무조건)
+with tab1:
+    # 공지 관리
+    if st.session_state.admin:
+        with st.form("notice_form", clear_on_submit=True):
+            t = st.text_input(_["title_label"])
+            c = st.text_area(_["content_label"])
+            img = st.file_uploader(_["upload_image"], type=["png", "jpg", "jpeg"])
+            f = st.file_uploader(_["upload_file"])
+            if st.form_submit_button(_["submit"]):
+                if t.strip() and c.strip():
+                    add_notice(t, c, img, f)
+                else:
+                    st.warning(_["warning"])
+        render_notice_list(show_delete=True)
+    else:
+        render_notice_list(show_delete=False)
+        if st.button("새로고침"):
+            st.rerun()
+
+with tab2:
+    # 투어 경로
+    render_map()
