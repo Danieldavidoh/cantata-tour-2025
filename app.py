@@ -1,5 +1,5 @@
-# app.py - 칸타타 투어 2025 (최종 완전판 + 애니메이션 라인 위 거리/소요시간 표시 + 구글맵 아이콘) 🎄
-# 구글맵 스타일 마커 + 라인 위 텍스트 오버레이 (거리 + 예상 시간)
+# app.py - 칸타타 투어 2025 (최종 완전판 + 말풍선 라벨 + 반응형 표시) 🎄
+# 라인 위 거리/시간 → 말풍선 + 지도 확대 시에만 보임
 
 import streamlit as st
 from datetime import datetime, date
@@ -49,7 +49,7 @@ LANG = {
             "date": "등록일", "performance_date": "공연 날짜", "cancel": "취소", "title_label": "제목",
             "content_label": "내용", "upload_image": "이미지 업로드", "upload_file": "파일 업로드",
             "submit": "등록", "warning": "제목과 내용을 모두 입력해주세요.", "file_download": "파일 다운로드",
-            "pending": "미정", "est_time": "예상 {hours}h {mins}m" },
+            "pending": "미정", "est_time": "{hours}시간 {mins}분" },
     "en": { "title_base": "Cantata Tour", "caption": "Maharashtra", "tab_notice": "Notice", "tab_map": "Tour Route",
             "map_title": "View Route", "add_city": "Add City", "password": "Password", "login": "Login",
             "logout": "Logout", "wrong_pw": "Wrong password.", "select_city": "Select City", "venue": "Venue",
@@ -58,7 +58,7 @@ LANG = {
             "date": "Registered On", "performance_date": "Performance Date", "cancel": "Cancel",
             "title_label": "Title", "content_label": "Content", "upload_image": "Upload Image",
             "upload_file": "Upload File", "submit": "Submit", "warning": "Please enter both title and content.",
-            "file_download": "Download File", "pending": "TBD", "est_time": "Est. {hours}h {mins}m" },
+            "file_download": "Download File", "pending": "TBD", "est_time": "{hours}h {mins}m" },
     "hi": { "title_base": "कांताता टूर", "caption": "महाराष्ट्र", "tab_notice": "सूचना", "tab_map": "टूर मार्ग",
             "map_title": "मार्ग देखें", "add_city": "शहर जोड़ें", "password": "पासवर्ड", "login": "लॉगिन",
             "logout": "लॉगआउट", "wrong_pw": "गलत पासवर्ड।", "select_city": "शहर चुनें", "venue": "स्थल",
@@ -67,7 +67,7 @@ LANG = {
             "remove": "हटाएं", "date": "तारीख", "performance_date": "प्रदर्शन तिथि", "cancel": "रद्द करें",
             "title_label": "शीर्षक", "content_label": "सामग्री", "upload_image": "छवि अपलोड करें",
             "upload_file": "फ़ाइल अपलोड करें", "submit": "जमा करें", "warning": "शीर्षक और सामग्री दोनों दर्ज करें।",
-            "file_download": "फ़ाइल डाउन로드 करें", "pending": "निर्धारित नहीं", "est_time": "अनु. {hours}घं {mins}मि" }
+            "file_download": "फ़ाइल डाउन로드 करें", "pending": "निर्धारित नहीं", "est_time": "{hours}घं {mins}मि" }
 }
 
 # --- 6. 번역 함수 ---
@@ -256,7 +256,7 @@ def render_notices():
     elif not has_new:
         st.session_state.sound_played = False
 
-# --- 14. 투어 경로 (구글맵 아이콘 + 라인 위 거리/시간 표시) ---
+# --- 14. 투어 경로 (말풍선 + 반응형) ---
 def render_map():
     st.subheader(_('map_title'))
 
@@ -383,12 +383,12 @@ def render_map():
         st_folium(m, width=900, height=550, key="empty_map")
         return
 
-    # --- 지도 + 마커 + 애니메이션 라인 + 라벨 ---
+    # --- 지도 + 마커 + 애니메이션 라인 + 말풍선 라벨 ---
     total_dist = 0
     coords = []
     m = folium.Map(location=[PUNE_LAT, PUNE_LON], zoom_start=9, tiles="CartoDB positron")
 
-    # 구글맵 스타일 아이콘 (HTML 마커 사용)
+    # 구글맵 스타일 아이콘
     google_icon_html = '''
     <div style="position: relative; width: 30px; height: 40px; margin-left: -15px; margin-top: -40px;">
         <div style="position: absolute; bottom: 0; left: 0; width: 30px; height: 30px; background: {color}; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 0 6px rgba(0,0,0,0.3);"></div>
@@ -397,23 +397,37 @@ def render_map():
     </div>
     '''
 
+    # 말풍선 라벨 (zoom >= 10일 때만 표시)
+    label_script = """
+    <script>
+    const map = window.parent.document.getElementsByClassName('folium-map')[0].firstChild;
+    const labels = document.getElementsByClassName('distance-label');
+    function updateLabels() {
+        const zoom = map.getZoom();
+        for (let i = 0; i < labels.length; i++) {
+            labels[i].style.display = zoom >= 10 ? 'block' : 'none';
+        }
+    }
+    map.on('zoomend', updateLabels);
+    updateLabels();
+    </script>
+    """
+
     for i, c in enumerate(cities):
-        # 공연 날짜 표시
         display_date = _("pending") if not c.get("perf_date") else c["perf_date"]
 
-        # 마커 상태
         try:
             perf_date_obj = datetime.strptime(c['perf_date'], "%Y-%m-%d").date() if c.get('perf_date') else None
         except:
             perf_date_obj = None
 
         if perf_date_obj and perf_date_obj < today:
-            color = "#999999"; inner = "#666666"; opacity = 0.5
+            color = "#999999"; inner = "#666666"
         elif perf_date_obj and perf_date_obj == today:
-            color = "#000000"; inner = "#ffffff"; opacity = 1.0
+            color = "#000000"; inner = "#ffffff"
         else:
             color = "#ea4335" if c.get("indoor") else "#4285f4"
-            inner = "#ffffff"; opacity = 1.0
+            inner = "#ffffff"
 
         icon_html = google_icon_html.format(color=color, inner_color=inner)
         icon = folium.DivIcon(html=icon_html)
@@ -425,7 +439,6 @@ def render_map():
             icon=icon
         ).add_to(m)
 
-        # 목록
         with st.expander(f"{c['city']} | {display_date}"):
             st.write(f"등록일: {c.get('date', '—')}")
             st.write(f"공연 날짜: {display_date}")
@@ -447,7 +460,6 @@ def render_map():
                         save_json(CITY_FILE, cities)
                         st.rerun()
 
-        # 거리 + 시간 계산 (80km/h 평균)
         if i < len(cities)-1:
             try:
                 d = haversine(c['lat'], c['lon'], cities[i+1]['lat'], cities[i+1]['lon'])
@@ -455,34 +467,41 @@ def render_map():
                 hours = int(d / 80)
                 mins = int((d % 80) / 80 * 60)
                 time_str = _(f"est_time").format(hours=hours, mins=mins) if hours or mins else ""
-                label = f"{d:.0f}km<br><small>{time_str}</small>"
+                label_text = f"<b>{d:.0f}km</b><br><small>{time_str}</small>"
 
-                # 라인 중간에 라벨
                 mid_lat = (c['lat'] + cities[i+1]['lat']) / 2
                 mid_lon = (c['lon'] + cities[i+1]['lon']) / 2
+
+                # 말풍선 마커 (클래스 추가)
                 folium.Marker(
                     [mid_lat, mid_lon],
-                    icon=folium.DivIcon(html=f"""
-                        <div style="background:white; color:#e74c3c; padding:4px 8px; border-radius:12px; 
-                                    font-weight:bold; font-size:12px; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,0.3);">
-                            {label}
+                    icon=folium.DivIcon(html=f'''
+                        <div class="distance-label" style="
+                            background: white; color: #e74c3c; padding: 6px 10px; 
+                            border-radius: 16px; font-weight: bold; font-size: 11px; 
+                            white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                            border: 2px solid #e74c3c; text-align: center;
+                            transform: translate(-50%, -50%);
+                        ">
+                            {label_text}
                         </div>
-                    """)
+                    ''')
                 ).add_to(m)
 
             except:
                 pass
         coords.append((c['lat'], c['lon']))
 
-    # 애니메이션 경로
     if len(coords) > 1:
         AntPath(coords, color="#e74c3c", weight=6, opacity=0.9, delay=800, dash_array=[20, 30]).add_to(m)
 
-    # 총 거리
     if len(cities) > 1:
         st.markdown(f"<div style='text-align:center;color:#e74c3c;font-size:1.3em;margin:15px 0'>총 거리: {total_dist:.0f}km</div>", unsafe_allow_html=True)
 
-    st_folium(m, width=900, height=550, key=f"map_{len(cities)}", returned_objects=[])
+    # 반응형 스크립트 삽입
+    map_html = st_folium(m, width=900, height=550, key=f"map_{len(cities)}", returned_objects=[])
+    if map_html:
+        st.components.v1.html(label_script, height=0)
 
 # --- 15. 탭 ---
 tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
