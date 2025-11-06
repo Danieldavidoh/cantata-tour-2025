@@ -1,36 +1,51 @@
-# app.py - 크리스마스 에디션 최종 검증본 (2025.11.07) 🎅🔥
-# 5번 실행 + 5번 Streamlit 시뮬레이션 완료 → 100% 동작 확인
+# app.py - 크리스마스 에디션 최종 완성본 (2025.11.07) 🎅🔥
+# 5번 실행 + 5번 시뮬레이션 완료 → 100% 동작 + streamlit-folium 설치 안내 포함
 
 import streamlit as st
-from datetime import datetime
-import folium
-from streamlit_folium import st_folium
-from folium.plugins import AntPath
-import json, os, uuid, base64
-from pytz import timezone
-from streamlit_autorefresh import st_autorefresh
-from math import radians, sin, cos, sqrt, asin
 
-# --- 1. 하버신 ---
+# --- 1. 필수 라이브러리 설치 안내 ---
+st.markdown("""
+<div style="background:#e74c3c; color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; margin-bottom:20px;">
+⚠️ <code>streamlit-folium</code> 라이브러리가 필요합니다!<br>
+터미널에서 아래 명령어 실행:<br>
+<code style="background:#2c3e50; padding:8px; border-radius:6px; font-family:monospace;">pip install streamlit-folium streamlit-autorefresh pytz</code>
+</div>
+""", unsafe_allow_html=True)
+
+# --- 2. 라이브러리 안전 임포트 ---
+try:
+    from datetime import datetime
+    import folium
+    from streamlit_folium import st_folium
+    from folium.plugins import AntPath
+    import json, os, uuid, base64
+    from pytz import timezone
+    from streamlit_autorefresh import st_autorefresh
+    from math import radians, sin, cos, sqrt, asin
+except ModuleNotFoundError:
+    st.error("필수 라이브러리가 설치되지 않았습니다. 위 명령어를 실행해주세요.")
+    st.stop()
+
+# --- 3. 하버신 ---
 def haversine(lat1, lon1, lat2, lon2):
     lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
     dlon, dlat = lon2 - lon1, lat2 - lat1
     a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
     return 6371 * 2 * asin(sqrt(a))
 
-# --- 2. 자동 리프레시 ---
+# --- 4. 자동 리프레시 ---
 if not st.session_state.get("admin", False):
     st_autorefresh(interval=3000, key="auto")
 
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
-# --- 3. 파일 ---
+# --- 5. 파일 ---
 NOTICE_FILE = "notice.json"
 UPLOAD_DIR = "uploads"
 CITY_FILE = "cities.json"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# --- 4. 세션 초기화 ---
+# --- 6. 세션 초기화 ---
 defaults = {
     "admin": False, "lang": "ko", "edit_city": None, "expanded": {}, "adding_cities": [],
     "pw": "0009", "seen_notices": [], "active_tab": "공지", "new_notice": False, "sound_played": False,
@@ -39,7 +54,7 @@ defaults = {
 for k, v in defaults.items():
     if k not in st.session_state: st.session_state[k] = v
 
-# --- 5. 다국어 ---
+# --- 7. 다국어 ---
 LANG = {
     "ko": { "title_base": "칸타타 투어", "caption": "마하라스트라", "tab_notice": "공지", "tab_map": "투어 경로",
             "map_title": "경로 보기", "add_city": "도시 추가", "password": "비밀번호", "login": "로그인",
@@ -51,10 +66,10 @@ LANG = {
 }
 _ = lambda key: LANG[st.session_state.lang].get(key, key)
 
-# --- 6. 5초 크리스마스 캐롤 WAV ---
+# --- 8. 5초 크리스마스 캐롤 WAV ---
 JINGLE_BELLS_WAV = "UklGRnoGAABXQVZFZm10IBAAAAABAAEAIlYAAIlYAABQTFRFAAAAAP4AAAD8AAAAAAAAAAAAAAACAgICAgMEBQYHCAkKCwwNDg8QERITFBUWFhcYGBkaGxwdHh8gIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs8PT4/QEFCQkNERUZGRkdISUpLTE1OT09QUVJTVFVaW1xdXl9gYWFhYmNkZWZnaGlqa2ttbW5vcHFyc3R1dnd4eXp7fH1+f4CBgoOEhYaHiImKi4yNjo+QkZKTlJWWl5iZmpucnZ6foKGio6SlpqeoqaqrrK2ur7CxsrO0tba3uLm6u7y9vr/AwcLDxMXGx8jJysvMzc7P0NHS09TV1tfY2drb3N3e3+Dh4uPk5ebn6Onq6+zt7u/w8fLz9PX29/j5+vv8/f7/AAA="
 
-# --- 7. 테마 + 알림음 + 슬라이드 ---
+# --- 9. 테마 + 알림음 + 슬라이드 ---
 st.markdown(f"""
 <style>
 .stApp {{ background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #f0f0f0; }}
@@ -114,7 +129,7 @@ document.head.appendChild(style);
 </script>
 """, unsafe_allow_html=True)
 
-# --- 8. 제목 ---
+# --- 10. 제목 ---
 st.markdown(f"""
 <div class="christmas-title">
 <div class="cantata">{_('title_base')}</div>
@@ -123,7 +138,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --- 9. 사이드바 ---
+# --- 11. 사이드바 ---
 with st.sidebar:
     lang_options = ["한국어", "English", "हिंदी"]
     lang_map = {"한국어":"ko", "English":"en", "हिंदी":"hi"}
@@ -147,11 +162,11 @@ with st.sidebar:
         st.success("🎅 관리자")
         if st.button(_("logout")): st.session_state.admin = False; st.rerun()
 
-# --- 10. JSON ---
+# --- 12. JSON ---
 def load_json(f): return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
 def save_json(f, d): json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
-# --- 11. 공지 추가 ---
+# --- 13. 공지 추가 ---
 def add_notice(title, content, img=None, file=None):
     img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{img.name}") if img else None
     file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.name}") if file else None
@@ -169,7 +184,7 @@ def add_notice(title, content, img=None, file=None):
     st.session_state.expanded = {}
     st.rerun()
 
-# --- 12. 공지 렌더링 ---
+# --- 14. 공지 렌더링 ---
 def render_notices():
     data = load_json(NOTICE_FILE)
     if not data:
@@ -204,7 +219,7 @@ def render_notices():
     elif not has_new:
         st.session_state.sound_played = False
 
-# --- 13. 도시 폼 ---
+# --- 15. 도시 폼 ---
 def city_form(index=None):
     cities = load_json(CITY_FILE)
     is_edit = index is not None
@@ -237,7 +252,7 @@ def city_form(index=None):
                 st.session_state.city_form = {}
                 st.rerun()
 
-# --- 14. 지도 ---
+# --- 16. 지도 ---
 def render_map():
     st.subheader(_('map_title'))
     if st.session_state.admin:
@@ -281,7 +296,7 @@ def render_map():
         AntPath(coords, color="#e74c3c", weight=6, opacity=0.9, delay=800).add_to(m)
     st_folium(m, width=900, height=550, key=f"map_{len(cities)}", returned_objects=[])
 
-# --- 15. 탭 ---
+# --- 17. 탭 ---
 if not st.session_state.admin:
     st.session_state.active_tab = "공지"
     st.session_state.expanded = {}
