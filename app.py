@@ -73,7 +73,7 @@ def extract_latlon_from_shortlink(short_url):
         pass
     return None, None
 
-# 공지 기능 (생략 - 동일)
+# 공지 기능 (동일)
 def add_notice(title, content, image_file=None, upload_file=None):
     # ... (동일)
     pass
@@ -105,16 +105,16 @@ def render_map():
 
     # --- 동적 추가 폼 ---
     for i in range(len(st.session_state.adding_cities)):
-        # ... (동일, 생략)
+        # ... (동일)
         pass
 
-    # --- 기존 도시 목록 + 거리/시간 ---
+    # --- 기존 도시 목록 + 중앙 정렬 거리 ---
     total_dist = 0
     total_time = 0
-    average_speed = 65  # km/h
+    average_speed = 65
 
     for idx, city in enumerate(cities_data):
-        key = f"city_{idx}"
+        key = f"city_expander_{idx}"
         expanded = st.session_state.expanded.get(key, False)
         with st.expander(f"{city['city']} | {city.get('perf_date', '')}", expanded=expanded):
             st.write(f"**{_('date')}:** {city.get('date', '')}")
@@ -126,11 +126,12 @@ def render_map():
             if st.session_state.admin:
                 c1, c2 = st.columns(2)
                 with c1:
-                    if st.button(_("edit"), key=f"edit_{idx}"):
+                    # 수정 버튼 - 고유 키 + 정확한 도시 저장
+                    if st.button(_("edit"), key=f"edit_btn_{idx}_{city['city']}"):
                         st.session_state.edit_city = city["city"]
                         st.rerun()
                 with c2:
-                    if st.button(_("remove"), key=f"del_{idx}"):
+                    if st.button(_("remove"), key=f"remove_btn_{idx}_{city['city']}"):
                         cities_data.pop(idx)
                         save_json(CITY_FILE, cities_data)
                         st.session_state.expanded = {}
@@ -139,19 +140,71 @@ def render_map():
         if st.session_state.expanded.get(key, False) != expanded:
             st.session_state.expanded[key] = expanded
 
-        # 도시 사이 거리/시간 (도시 이름 제거)
+        # 중앙 정렬 거리/시간
         if idx < len(cities_data) - 1:
             next_city = cities_data[idx + 1]
             dist = haversine(city['lat'], city['lon'], next_city['lat'], next_city['lon'])
             time_h = dist / average_speed
-            st.write(f"**{dist:.0f}km / {time_h:.1f}h**")
+            dist_text = f"**{dist:.0f}km / {time_h:.1f}h**"
+            st.markdown(
+                f'<div style="text-align:center; margin:10px 0; font-weight:bold;">{dist_text}</div>',
+                unsafe_allow_html=True
+            )
             total_dist += dist
             total_time += time_h
 
-    # 총합
+    # 중앙 정렬 총합
     if len(cities_data) > 1:
-        st.markdown("---")
-        st.markdown(f"**총 거리 (첫 도시 기준): {total_dist:.0f}km / {total_time:.1f}h**")
+        total_text = f"**총 거리 (첫 도시 기준): {total_dist:.0f}km / {total_time:.1f}h**"
+        st.markdown(
+            f'<div style="text-align:center; margin:20px 0; font-size:1.1em; font-weight:bold; color:#d32f2f;">{total_text}</div>',
+            unsafe_allow_html=True
+        )
+
+    # --- 수정 모드 ---
+    if st.session_state.edit_city:
+        edit_city_obj = next((c for c in cities_data if c["city"] == st.session_state.edit_city), None)
+        if not edit_city_obj:
+            st.session_state.edit_city = None
+            st.rerun()
+
+        idx = next(i for i, c in enumerate(cities_data) if c["city"] == st.session_state.edit_city)
+
+        st.markdown("### 도시 수정")
+        venue = st.text_input(_("venue"), value=edit_city_obj.get("venue", ""), key="edit_venue")
+        seats = st.number_input(_("seats"), min_value=0, step=50, value=edit_city_obj.get("seats", 0), key="edit_seats")
+        perf_date = st.date_input(_("performance_date"), value=datetime.strptime(edit_city_obj.get("perf_date", "2025-01-01"), "%Y-%m-%d").date(), key="edit_perf_date")
+        venue_type = st.radio("공연형태", [_("indoor"), _("outdoor")], index=0 if edit_city_obj.get("type") == _("indoor") else 1, horizontal=True, key="edit_type")
+        map_link = st.text_input(_("google_link"), value=edit_city_obj.get("map_link", ""), key="edit_link")
+        note = st.text_area(_("note"), value=edit_city_obj.get("note", ""), key="edit_note")
+
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("수정 완료", key="edit_submit_final"):
+                lat, lon = extract_latlon_from_shortlink(map_link) if map_link.strip() else (None, None)
+                if not lat or not lon:
+                    coords = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882), "Nashik": (19.9975, 73.7898), "Aurangabad": (19.8762, 75.3433) }
+                    lat, lon = coords.get(edit_city_obj["city"], (19.0, 73.0))
+
+                cities_data[idx].update({
+                    "venue": venue or "미정",
+                    "seats": seats,
+                    "type": venue_type,
+                    "perf_date": perf_date.strftime("%Y-%m-%d"),
+                    "map_link": map_link,
+                    "note": note or "없음",
+                    "lat": lat,
+                    "lon": lon,
+                    "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
+                })
+                save_json(CITY_FILE, cities_data)
+                st.session_state.edit_city = None
+                st.success(f"[{edit_city_obj['city']}] 수정 완료!")
+                st.rerun()
+        with c2:
+            if st.button(_("cancel"), key="edit_cancel_final"):
+                st.session_state.edit_city = None
+                st.rerun()
 
     # --- 지도 ---
     st.markdown("---")
@@ -159,49 +212,41 @@ def render_map():
     coords = []
     today = datetime.now().date()
 
-    # 폭죽 애니메이션 HTML/CSS/JS (설치 없이 가능)
-    fireworks_html = """
-    <div id="fireworks-container" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9999; overflow:hidden;">
-        <style>
-        @keyframes firework {
-            0% { transform: translateY(0) scale(0); opacity: 1; }
-            100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+    # 폭죽 애니메이션 (JS/CSS)
+    fireworks_js = """
+    <div id="fireworks-container" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden;"></div>
+    <style>
+    @keyframes firework {
+        0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+    }
+    .firework { position: absolute; width: 6px; height: 6px; border-radius: 50%; animation: firework 1s ease-out forwards; }
+    </style>
+    <script>
+    function createFirework(x, y) {
+        const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b'];
+        const container = document.getElementById('fireworks-container');
+        for (let i = 0; i < 30; i++) {
+            const p = document.createElement('div');
+            p.className = 'firework';
+            const angle = (Math.PI * 2 * i) / 30;
+            const vel = 3 + Math.random() * 3;
+            p.style.left = (x + vel * Math.cos(angle)) + 'px';
+            p.style.top = (y + vel * Math.sin(angle)) + 'px';
+            p.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            container.appendChild(p);
+            setTimeout(() => p.remove(), 1000);
         }
-        .firework {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            animation: firework 1s ease-out forwards;
+    }
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.leaflet-marker-icon')) {
+            const rect = e.target.getBoundingClientRect();
+            createFirework(rect.left + rect.width/2, rect.top + rect.height/2);
         }
-        </style>
-        <script>
-        function createFirework(x, y) {
-            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b'];
-            for (let i = 0; i < 30; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'firework';
-                const angle = (Math.PI * 2 * i) / 30;
-                const velocity = 3 + Math.random() * 3;
-                particle.style.left = x + 'px';
-                particle.style.top = y + 'px';
-                particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-                particle.style.transform = `translate(${velocity * Math.cos(angle)}px, ${velocity * Math.sin(angle)}px)`;
-                document.getElementById('fireworks-container').appendChild(particle);
-                setTimeout(() => particle.remove(), 1000);
-            }
-        }
-        // 마커 클릭 시 폭죽
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('.leaflet-marker-icon')) {
-                const rect = e.target.getBoundingClientRect();
-                createFirework(rect.left + rect.width/2, rect.top + rect.height/2);
-            }
-        });
-        </script>
-    </div>
+    });
+    </script>
     """
-    m.get_root().html.add_child(folium.Element(fireworks_html))
+    m.get_root().html.add_child(folium.Element(fireworks_js))
 
     for c in cities_data:
         perf_date_str = c.get('perf_date')
@@ -217,10 +262,7 @@ def render_map():
         특이사항: {c.get('note','')}
         """
         icon = folium.Icon(color="red", icon="music")
-        opacity = 1.0
-
-        if perf_date and perf_date < today:
-            opacity = 0.4  # 지난 날짜
+        opacity = 1.0 if not perf_date or perf_date >= today else 0.4
 
         folium.Marker(
             [c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
