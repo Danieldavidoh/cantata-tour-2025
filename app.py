@@ -119,7 +119,7 @@ LANG = {
         "register": "रजिस्टर",
         "edit": "संपादित करें",
         "remove": "हटाएं",
-        "date": "पंजीकरण तिथि",
+        "date": "तारीख",
         "performance_date": "प्रदर्शन तिथि",
         "cancel": "रद्द करें",
         "title_label": "शीर्षक",
@@ -131,9 +131,7 @@ LANG = {
         "file_download": "फ़ाइल डाउनलोड करें",
     }
 }
-
-# 번역 함수
-_ = lambda key: LANG[st.session_state.lang].get(key, key)
+_ = LANG[st.session_state.lang]
 
 # 유틸
 def load_json(filename):
@@ -192,9 +190,9 @@ def render_notice_list(show_delete=False):
             if n.get("image") and os.path.exists(n["image"]):
                 st.image(n["image"], use_container_width=True)
             if n.get("file") and os.path.exists(n["file"]):
-                href = f'<a href="data:file/octet-stream;base64,{base64.b64encode(open(n["file"], "rb").read()).decode()}" download="{os.path.basename(n["file"])}">{_("file_download")}</a>'
+                href = f'<a href="data:file/octet-stream;base64,{base64.b64encode(open(n["file"], "rb").read()).decode()}" download="{os.path.basename(n["file"])}">{_["file_download"]}</a>'
                 st.markdown(href, unsafe_allow_html=True)
-            if show_delete and st.button(_("remove"), key=f"del_{idx}"):
+            if show_delete and st.button(_["remove"], key=f"del_{idx}"):
                 data.pop(idx)
                 save_json(NOTICE_FILE, data)
                 st.session_state.expanded = {}
@@ -203,61 +201,49 @@ def render_notice_list(show_delete=False):
         if st.session_state.expanded.get(key, False) != expanded:
             st.session_state.expanded[key] = expanded
 
-# 지도 + 도시 관리
+# 지도 + 도시 관리 (Folium 복귀)
 def render_map():
-    col_title, col_btn = st.columns([6, 1])
-    with col_title:
-        st.subheader(_("map_title"))
-    with col_btn:
-        if st.session_state.admin:
-            if st.button(_("add_city"), key="btn_add_city"):
-                st.session_state.adding_cities.append(None)
+    st.subheader(_["map_title"])
+    cities_data = load_json(CITY_FILE)
+
+    # 관리자: 추가 버튼
+    if st.session_state.admin:
+        col1, col2 = st.columns([8, 2])
+        with col2:
+            if st.button(_["add"], key="add_main"):
+                st.session_state.mode = "add"
                 st.rerun()
 
-    cities_data = load_json(CITY_FILE)
-    cities_data = sorted(cities_data, key=lambda x: x.get("perf_date", "9999-12-31"))
+    # 새 도시 추가 블록 (항상 표시)
+    if st.session_state.admin:
+        if not os.path.exists(CITY_LIST_FILE):
+            default_cities = ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad"]
+            save_json(CITY_LIST_FILE, default_cities)
+        cities_list = load_json(CITY_LIST_FILE)
+        existing = {c["city"] for c in cities_data}
+        available = [c for c in cities_list if c not in existing]
 
-    if not os.path.exists(CITY_LIST_FILE):
-        default_cities = ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad"]
-        save_json(CITY_LIST_FILE, default_cities)
-    cities_list = load_json(CITY_LIST_FILE)
-    existing = {c["city"] for c in cities_data}
-    available = [c for c in cities_list if c not in existing]
-
-    # --- 동적 추가 폼 ---
-    for i in range(len(st.session_state.adding_cities)):
-        with st.container():
-            col_sel, col_del = st.columns([8, 1])
-            with col_sel:
-                options = [None] + available
-                current = st.session_state.adding_cities[i]
-                idx = options.index(current) if current in options else 0
-                city_name = st.selectbox(
-                    _("select_city"),
-                    options,
-                    index=idx,
-                    key=f"add_select_{i}"
-                )
-                st.session_state.adding_cities[i] = city_name
-            with col_del:
-                if st.button("×", key=f"remove_add_{i}"):
-                    st.session_state.adding_cities.pop(i)
-                    st.rerun()
-
-            if city_name:
-                venue = st.text_input(_("venue"), key=f"add_venue_{i}")
-                seats = st.number_input(_("seats"), min_value=0, step=50, key=f"add_seats_{i}")
-                perf_date = st.date_input(_("performance_date"), key=f"add_perf_date_{i}")
-                venue_type = st.radio("공연형태", [_("indoor"), _("outdoor")], horizontal=True, key=f"add_type_{i}")
-                map_link = st.text_input(_("google_link"), key=f"add_link_{i}")
-                note = st.text_area(_("note"), key=f"add_note_{i}")
+        if available:
+            with st.expander("새 도시 추가", expanded=st.session_state.mode == "add"):
+                city_name = st.selectbox(_["select_city"], available, key="add_select")
+                venue = st.text_input(_["venue"], key="add_venue")
+                seats = st.number_input(_["seats"], min_value=0, step=50, key="add_seats")
+                venue_type = st.radio("공연형태", [_["indoor"], _["outdoor"]], horizontal=True, key="add_type")
+                map_link = st.text_input(_["google_link"], key="add_link")
+                note = st.text_area(_["note"], key="add_note")
 
                 c1, c2 = st.columns(2)
                 with c1:
-                    if st.button(_("register"), key=f"reg_{i}"):
-                        lat, lon = extract_latlon_from_shortlink(map_link) if map_link.strip() else (None, None)
+                    if st.button(_["register"], key=f"reg_{city_name}"):
+                        lat, lon = None, None
+                        if map_link.strip():
+                            lat, lon = extract_latlon_from_shortlink(map_link)
                         if not lat or not lon:
-                            coords = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882), "Nashik": (19.9975, 73.7898), "Aurangabad": (19.8762, 75.3433) }
+                            coords = {
+                                "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567),
+                                "Nagpur": (21.1458, 79.0882), "Nashik": (19.9975, 73.7898),
+                                "Aurangabad": (19.8762, 75.3433)
+                            }
                             lat, lon = coords.get(city_name, (19.0, 73.0))
 
                         new_city = {
@@ -265,8 +251,6 @@ def render_map():
                             "venue": venue or "미정",
                             "seats": seats,
                             "type": venue_type,
-                            "perf_date": perf_date.strftime("%Y-%m-%d"),
-                            "map_link": map_link,
                             "note": note or "없음",
                             "lat": lat,
                             "lon": lon,
@@ -274,35 +258,34 @@ def render_map():
                         }
                         cities_data.append(new_city)
                         save_json(CITY_FILE, cities_data)
-                        st.session_state.adding_cities.pop(i)
-                        st.success(f"[{city_name}] 등록 완료!")
+                        st.session_state.mode = None
+                        st.session_state.expanded = {}
+                        st.success(f"{city_name} 등록 완료!")
                         st.rerun()
+
                 with c2:
-                    if st.button(_("cancel"), key=f"cancel_{i}"):
-                        st.session_state.adding_cities.pop(i)
+                    if st.button(_["cancel"], key="cancel_add"):
+                        st.session_state.mode = None
                         st.rerun()
 
-            st.markdown("---")
-
-    # --- 기존 도시 목록 ---
+    # 도시 목록
     for idx, city in enumerate(cities_data):
         key = f"city_{idx}"
         expanded = st.session_state.expanded.get(key, False)
-        with st.expander(f"{city['city']} | {city.get('perf_date', '')}", expanded=expanded):
-            st.write(f"**{_('date')}:** {city.get('date', '')}")
-            st.write(f"**{_('performance_date')}:** {city.get('perf_date', '')}")
-            st.write(f"**{_('venue')}:** {city.get('venue', '')}")
-            st.write(f"**{_('seats')}:** {city.get('seats', '')}")
-            st.write(f"**{_('note')}:** {city.get('note', '')}")
-
+        with st.expander(f"{city['city']}", expanded=expanded):
+            st.write(f"**{_['date']}:** {city.get('date', '')}")
+            st.write(f"**{_['venue']}:** {city.get('venue', '')}")
+            st.write(f"**{_['seats']}:** {city.get('seats', '')}")
+            st.write(f"**{_['note']}:** {city.get('note', '')}")
             if st.session_state.admin:
                 c1, c2 = st.columns(2)
                 with c1:
-                    if st.button(_("edit"), key=f"edit_{idx}"):
+                    if st.button(_["edit"], key=f"edit_{idx}"):
+                        st.session_state.mode = "edit"
                         st.session_state.edit_city = city["city"]
                         st.rerun()
                 with c2:
-                    if st.button(_("remove"), key=f"del_{idx}"):
+                    if st.button(_["remove"], key=f"del_{idx}"):
                         cities_data.pop(idx)
                         save_json(CITY_FILE, cities_data)
                         st.session_state.expanded = {}
@@ -311,61 +294,47 @@ def render_map():
         if st.session_state.expanded.get(key, False) != expanded:
             st.session_state.expanded[key] = expanded
 
-    # --- 수정 모드 ---
-    if st.session_state.edit_city:
-        edit_city_obj = next((c for c in cities_data if c["city"] == st.session_state.edit_city), None)
-        if not edit_city_obj:
-            st.session_state.edit_city = None
-            st.rerun()
-
-        idx = next(i for i, c in enumerate(cities_data) if c["city"] == st.session_state.edit_city)
-
-        st.markdown("### 도시 수정")
-        venue = st.text_input(_("venue"), value=edit_city_obj.get("venue", ""), key="edit_venue")
-        seats = st.number_input(_("seats"), min_value=0, step=50, value=edit_city_obj.get("seats", 0), key="edit_seats")
-        perf_date = st.date_input(_("performance_date"), value=datetime.strptime(edit_city_obj.get("perf_date", "2025-01-01"), "%Y-%m-%d").date(), key="edit_perf_date")
-        venue_type = st.radio("공연형태", [_("indoor"), _("outdoor")], index=0 if edit_city_obj.get("type") == _("indoor") else 1, horizontal=True, key="edit_type")
-        map_link = st.text_input(_("google_link"), value=edit_city_obj.get("map_link", ""), key="edit_link")
-        note = st.text_area(_("note"), value=edit_city_obj.get("note", ""), key="edit_note")
-
-        c1, c2 = st.columns(2)
-        with c1:
-            if st.button("수정 완료", key="edit_submit"):
-                lat, lon = extract_latlon_from_shortlink(map_link) if map_link.strip() else (None, None)
-                if not lat or not lon:
-                    coords = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882), "Nashik": (19.9975, 73.7898), "Aurangabad": (19.8762, 75.3433) }
-                    lat, lon = coords.get(edit_city_obj["city"], (19.0, 73.0))
-
-                cities_data[idx].update({
-                    "venue": venue or "미정",
-                    "seats": seats,
-                    "type": venue_type,
-                    "perf_date": perf_date.strftime("%Y-%m-%d"),
-                    "map_link": map_link,
-                    "note": note or "없음",
-                    "lat": lat,
-                    "lon": lon,
-                    "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
-                })
-                save_json(CITY_FILE, cities_data)
-                st.session_state.edit_city = None
-                st.success(f"[{edit_city_obj['city']}] 수정 완료!")
-                st.rerun()
-        with c2:
-            if st.button(_("cancel"), key="edit_cancel"):
-                st.session_state.edit_city = None
-                st.rerun()
-
-    # --- 지도 ---
+    # Folium 지도 (100% 표시)
     st.markdown("---")
     m = folium.Map(location=[19.0, 73.0], zoom_start=6)
     coords = []
+    today = datetime.now().date()
     for c in cities_data:
-        popup_html = f"<b>{c['city']}</b><br>날짜: {c.get('perf_date','')}<br>장소: {c.get('venue','')}<br>인원: {c.get('seats','')}<br>형태: {c.get('type','')}<br><a href='{c.get('map_link','#')}' target='_blank'>길안내</a><br>특이사항: {c.get('note','')}"
-        folium.Marker([c["lat"], c["lon"]], popup=popup_html, tooltip=f"{c['city']} ({c.get('perf_date','')})", icon=folium.Icon(color="red", icon="music")).add_to(m)
+        perf_date_str = c.get('perf_date')
+        if perf_date_str:
+            perf_date = datetime.strptime(perf_date_str, "%Y-%m-%d").date()
+        else:
+            perf_date = None
+
+        popup_html = f"""
+        <b>{c['city']}</b><br>
+        장소: {c.get('venue','')}<br>
+        인원: {c.get('seats','')}<br>
+        형태: {c.get('type','')}<br>
+        <a href="{c.get('nav_url','#')}" target="_blank">길안내</a><br>
+        특이사항: {c.get('note','')}
+        """
+        icon = folium.Icon(color="red", icon="music")
+        opacity = 1.0
+        animation = None
+
+        if perf_date:
+            if perf_date < today:
+                opacity = 0.5  # 지난 날짜 투명
+            elif perf_date == today:
+                # 당일 위아래 움직임 (bounce animation)
+                animation = folium.plugins.MarkerCluster(animation=True)
+                m.add_child(animation)
+                folium.Marker([c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
+                              icon=icon, opacity=opacity).add_to(animation)
+                continue  # animation 그룹에 추가했으니 continue
+            # 나머지 (미래): 기본
+
+        folium.Marker([c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
+                      icon=icon, opacity=opacity).add_to(m)
         coords.append((c["lat"], c["lon"]))
     if coords:
-        AntPath(coords, color="#ff1744", weight=5, delay=800, dash_array=[10, 20]).add_to(m)
+        AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
     st_folium(m, width=900, height=550)
 
 # 사이드바
@@ -380,42 +349,41 @@ with st.sidebar:
         st.rerun()
 
     st.markdown("---")
+
     if not st.session_state.admin:
         st.markdown("### 관리자 로그인")
-        pw = st.text_input(_("password"), type="password")
-        if st.button(_("login")):
+        pw = st.text_input(_["password"], type="password")
+        if st.button(_["login"]):
             if pw == "0000":
                 st.session_state.admin = True
                 st.success("관리자 모드 ON")
                 st.rerun()
             else:
-                st.error(_("wrong_pw"))
+                st.error(_["wrong_pw"])
     else:
         st.success("관리자 모드")
-        if st.button(_("logout")):
+        if st.button(_["logout"]):
             st.session_state.admin = False
             st.rerun()
 
-# 메인 제목
-st.markdown(f"# {_('title')} ")
-st.caption(_("caption"))
+# 메인
+st.markdown(f"# {_['title']} ")
+st.caption(_["caption"])
 
-# 탭 정의 (여기서!)
-tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
+tab1, tab2 = st.tabs([_["tab_notice"], _["tab_map"]])
 
-# 탭 내용
 with tab1:
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
-            t = st.text_input(_("title_label"))
-            c = st.text_area(_("content_label"))
-            img = st.file_uploader(_("upload_image"), type=["png", "jpg", "jpeg"])
-            f = st.file_uploader(_("upload_file"))
-            if st.form_submit_button(_("submit")):
+            t = st.text_input(_["title_label"])
+            c = st.text_area(_["content_label"])
+            img = st.file_uploader(_["upload_image"], type=["png", "jpg", "jpeg"])
+            f = st.file_uploader(_["upload_file"])
+            if st.form_submit_button(_["submit"]):
                 if t.strip() and c.strip():
                     add_notice(t, c, img, f)
                 else:
-                    st.warning(_("warning"))
+                    st.warning(_["warning"])
         render_notice_list(show_delete=True)
     else:
         render_notice_list(show_delete=False)
