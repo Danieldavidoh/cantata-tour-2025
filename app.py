@@ -64,7 +64,7 @@ def save_json(filename, data):
 
 def extract_latlon_from_shortlink(short_url):
     try:
-        r = requests.get(short_url, allow_redirects=True, timeout=5)
+        r = requests.get(short_url, allow_redirects=True, timeout=5)  # ← 여기 수정!
         final_url = r.url
         match = re.search(r'@([0-9\.\-]+),([0-9\.\-]+)', final_url)
         if match:
@@ -303,25 +303,16 @@ def render_map():
     coords = []
     today = datetime.now().date()
 
-    # 당일 pulse + 폭죽 애니메이션
-    pulse_and_fireworks = """
+    # 폭죽 애니메이션
+    fireworks_js = """
+    <div id="fireworks-container" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden;"></div>
     <style>
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.3); }
-        100% { transform: scale(1); }
-    }
-    .today-marker {
-        animation: pulse 1.5s infinite;
-        cursor: pointer;
-    }
     @keyframes firework {
         0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
         100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
     }
     .firework { position: absolute; width: 6px; height: 6px; border-radius: 50%; animation: firework 1s ease-out forwards; }
     </style>
-    <div id="fireworks-container" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden;"></div>
     <script>
     function createFirework(x, y) {
         const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b'];
@@ -346,7 +337,7 @@ def render_map():
     });
     </script>
     """
-    m.get_root().html.add_child(folium.Element(pulse_and_fireworks))
+    m.get_root().html.add_child(folium.Element(fireworks_js))
 
     for c in cities_data:
         perf_date_str = c.get('perf_date')
@@ -364,13 +355,9 @@ def render_map():
         icon = folium.Icon(color="red", icon="music")
         opacity = 1.0 if not perf_date or perf_date >= today else 0.4
 
-        # 당일 마커에 pulse 클래스 추가
-        extra_classes = "today-marker" if perf_date == today else ""
-
         folium.Marker(
             [c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
-            icon=icon, opacity=opacity,
-            extra_classes=extra_classes
+            icon=icon, opacity=opacity
         ).add_to(m)
         coords.append((c["lat"], c["lon"]))
 
@@ -411,10 +398,9 @@ with st.sidebar:
 st.markdown(f"# {_('title')} ")
 st.caption(_("caption"))
 
-# 탭 정의 (여기서!)
+# 탭 정의
 tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
 
-# 탭 내용
 with tab1:
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
