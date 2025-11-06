@@ -143,7 +143,7 @@ LANG = {
     }
 }
 
-# 번역 함수
+# 번역 함수 (에러 해결 핵심!)
 _ = lambda key: LANG[st.session_state.lang].get(key, key)
 
 # 유틸
@@ -295,7 +295,7 @@ def render_map():
 
             st.markdown("---")
 
-    # --- 기존 도시 목록 ---
+    # --- 기존 도시 목록 + 거리/시간 ---
     total_dist = 0
     total_time = 0
     average_speed = 65  # km/h 가정
@@ -326,19 +326,19 @@ def render_map():
         if st.session_state.expanded.get(key, False) != expanded:
             st.session_state.expanded[key] = expanded
 
-        # 도시 사이 거리/시간 표시 (마지막 제외)
+        # 도시 사이 거리/시간 표시
         if idx < len(cities_data) - 1:
             next_city = cities_data[idx + 1]
             dist = haversine(city['lat'], city['lon'], next_city['lat'], next_city['lon'])
             time_h = dist / average_speed
-            st.write(f"{city['city']} → {next_city['city']}: {dist:.0f}km / {time_h:.1f}h")
+            st.write(f"**{city['city']} → {next_city['city']}:** {dist:.0f}km / {time_h:.1f}h")
             total_dist += dist
             total_time += time_h
 
-    # 마지막 아래 총합
+    # 총합
     if len(cities_data) > 1:
-        st.write("---")
-        st.write(f"총 거리 (첫 도시 기준): {total_dist:.0f}km / {total_time:.1f}h")
+        st.markdown("---")
+        st.markdown(f"**총 거리 (첫 도시 기준):** {total_dist:.0f}km / {total_time:.1f}h")
 
     # --- 수정 모드 ---
     if st.session_state.edit_city:
@@ -391,6 +391,28 @@ def render_map():
     coords = []
     today = datetime.now().date()
 
+    # 당일 마커용 JS 애니메이션
+    bounce_js = """
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        setTimeout(function() {
+            const markers = document.querySelectorAll('.leaflet-marker-icon');
+            markers.forEach(marker => {
+                if (marker.closest('.leaflet-cluster')) return;
+                let pos = 0;
+                let up = true;
+                setInterval(() => {
+                    pos = up ? pos + 2 : pos - 2;
+                    marker.style.transform = `translateY(${pos}px)`;
+                    if (pos >= 10 || pos <= -10) up = !up;
+                }, 50);
+            });
+        }, 1000);
+    });
+    </script>
+    """
+    m.get_root().html.add_child(folium.Element(bounce_js))
+
     for c in cities_data:
         perf_date_str = c.get('perf_date')
         perf_date = datetime.strptime(perf_date_str, "%Y-%m-%d").date() if perf_date_str else None
@@ -409,24 +431,9 @@ def render_map():
 
         if perf_date:
             if perf_date < today:
-                opacity = 0.5  # 지난 날짜 투명
-            elif perf_date == today:
-                # 당일 애니메이션 (JS로 위아래 움직임)
-                bounce_js = """
-                <script>
-                function bounceMarker(marker) {
-                    let pos = 0;
-                    let up = true;
-                    setInterval(() => {
-                        pos = up ? pos + 2 : pos - 2;
-                        marker.setStyle({transform: `translateY(${pos}px)`});
-                        if (pos >= 10 || pos <= -10) up = !up;
-                    }, 50);
-                }
-                </script>
-                """
-                m.get_root().html.add_child(folium.Element(bounce_js))
-            # 나머지 기본
+                opacity = 0.4  # 지난 날짜
+            # 당일: 애니메이션 적용 (기본 마커)
+            # 미래: 정상
 
         folium.Marker(
             [c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
@@ -450,41 +457,41 @@ with st.sidebar:
         st.rerun()
 
     st.markdown("---")
-
     if not st.session_state.admin:
         st.markdown("### 관리자 로그인")
-        pw = st.text_input(_["password"], type="password")
-        if st.button(_["login"]):
+        pw = st.text_input(_("password"), type="password")
+        if st.button(_("login")):
             if pw == "0000":
                 st.session_state.admin = True
                 st.success("관리자 모드 ON")
                 st.rerun()
             else:
-                st.error(_["wrong_pw"])
+                st.error(_("wrong_pw"))
     else:
         st.success("관리자 모드")
-        if st.button(_["logout"]):
+        if st.button(_("logout")):  # ← 여기 고침!
             st.session_state.admin = False
             st.rerun()
 
-# 메인
-st.markdown(f"# {_['title']} ")
-st.caption(_["caption"])
+# 메인 제목
+st.markdown(f"# {_('title')} ")
+st.caption(_("caption"))
 
-tab1, tab2 = st.tabs([_["tab_notice"], _["tab_map"]])
+# 탭 정의
+tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
 
 with tab1:
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
-            t = st.text_input(_["title_label"])
-            c = st.text_area(_["content_label"])
-            img = st.file_uploader(_["upload_image"], type=["png", "jpg", "jpeg"])
-            f = st.file_uploader(_["upload_file"])
-            if st.form_submit_button(_["submit"]):
+            t = st.text_input(_("title_label"))
+            c = st.text_area(_("content_label"))
+            img = st.file_uploader(_("upload_image"), type=["png", "jpg", "jpeg"])
+            f = st.file_uploader(_("upload_file"))
+            if st.form_submit_button(_("submit")):
                 if t.strip() and c.strip():
                     add_notice(t, c, img, f)
                 else:
-                    st.warning(_["warning"])
+                    st.warning(_("warning"))
         render_notice_list(show_delete=True)
     else:
         render_notice_list(show_delete=False)
