@@ -1,5 +1,5 @@
-# app.py - 칸타타 투어 2025 (최종 완전판 + 라인 평행 말풍선) 🎄
-# 거리/시간 라벨 → AntPath 라인과 평행 회전 + 말풍선 + 반응형
+# app.py - 칸타타 투어 2025 (실제 교통 시간 + 라인 위 평행 텍스트) 🔥
+# 말풍선 제거 + 라인 위쪽 평행 배치 + 뒤집힘 방지 + 실제 Google Maps 시간
 
 import streamlit as st
 from datetime import datetime, date
@@ -10,6 +10,7 @@ import json, os, uuid, base64
 from pytz import timezone
 from streamlit_autorefresh import st_autorefresh
 from math import radians, sin, cos, sqrt, asin, atan2, degrees
+import requests
 
 # --- 1. 하버신 거리 계산 ---
 def haversine(lat1, lon1, lat2, lon2):
@@ -18,19 +19,47 @@ def haversine(lat1, lon1, lat2, lon2):
     a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
     return 6371 * 2 * asin(sqrt(a))
 
-# --- 2. 자동 리프레시 (사용자 전용) ---
+# --- 2. 실제 교통 시간 (Google Maps API + 캐시) ---
+@st.cache_data(ttl=3600)
+def get_real_travel_time(lat1, lon1, lat2, lon2):
+    api_key = st.secrets.get("GOOGLE_MAPS_API_KEY", None)
+    if not api_key:
+        # API 키 없으면 평균 속도 55km/h
+        dist = haversine(lat1, lon1, lat2, lon2)
+        mins = int(dist * 60 / 55)
+        return dist, mins
+
+    origin = f"{lat1},{lon1}"
+    dest = f"{lat2},{lon2}"
+    url = f"https://maps.googleapis.com/maps/api/directions/json?origin={origin}&destination={dest}&mode=driving&key={api_key}"
+    try:
+        response = requests.get(url, timeout=10)
+        data = response.json()
+        if data["status"] == "OK":
+            leg = data["routes"][0]["legs"][0]
+            dist = leg["distance"]["value"] / 1000  # km
+            mins = leg["duration"]["value"] // 60
+            return dist, mins
+    except:
+        pass
+    # 실패 시 fallback
+    dist = haversine(lat1, lon1, lat2, lon2)
+    mins = int(dist * 60 / 55)
+    return dist, mins
+
+# --- 3. 자동 리프레시 ---
 if not st.session_state.get("admin", False):
     st_autorefresh(interval=3000, key="auto_refresh_user")
 
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
-# --- 3. 파일/디렉토리 ---
+# --- 4. 파일/디렉토리 ---
 NOTICE_FILE = "notice.json"
 UPLOAD_DIR = "uploads"
 CITY_FILE = "cities.json"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# --- 4. 세션 상태 초기화 ---
+# --- 5. 세션 상태 ---
 defaults = {
     "admin": False, "lang": "ko", "edit_city": None, "expanded": {}, "adding_cities": [],
     "pw": "0009", "seen_notices": [], "active_tab": "공지", "new_notice": False, "sound_played": False
@@ -39,7 +68,7 @@ for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-# --- 5. 다국어 사전 ---
+# --- 6. 다국어 ---
 LANG = {
     "ko": { "title_base": "칸타타 투어", "caption": "마하라스트라", "tab_notice": "공지", "tab_map": "투어 경로",
             "map_title": "경로 보기", "add_city": "도시 추가", "password": "비밀번호", "login": "로그인",
@@ -49,7 +78,7 @@ LANG = {
             "date": "등록일", "performance_date": "공연 날짜", "cancel": "취소", "title_label": "제목",
             "content_label": "내용", "upload_image": "이미지 업로드", "upload_file": "파일 업로드",
             "submit": "등록", "warning": "제목과 내용을 모두 입력해주세요.", "file_download": "파일 다운로드",
-            "pending": "미정", "est_time": "{hours}시간 {mins}분" },
+            "pending": "미정", "est_time": "{hours}h {mins}m" },
     "en": { "title_base": "Cantata Tour", "caption": "Maharashtra", "tab_notice": "Notice", "tab_map": "Tour Route",
             "map_title": "View Route", "add_city": "Add City", "password": "Password", "login": "Login",
             "logout": "Logout", "wrong_pw": "Wrong password.", "select_city": "Select City", "venue": "Venue",
@@ -70,11 +99,10 @@ LANG = {
             "file_download": "फ़ाइल डाउन로드 करें", "pending": "निर्धारित नहीं", "est_time": "{hours}घं {mins}मि" }
 }
 
-# --- 6. 번역 함수 ---
 _ = lambda key: LANG[st.session_state.lang].get(key, key)
 
-# --- 7. 크리스마스 테마 + 캐롤 알람음 ---
-MERRY_CHRISTMAS_WAV = "UklGRu4FAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA..."  # 실제 base64로 교체
+# --- 7. 테마 ---
+MERRY_CHRISTMAS_WAV = "UklGRu4FAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA..."
 
 st.markdown(f"""
 <style>
@@ -107,7 +135,7 @@ function playMerryChristmas() {{
 </script>
 """, unsafe_allow_html=True)
 
-# --- 8. 메인 타이틀 ---
+# --- 8. 타이틀 ---
 st.markdown(f"""
 <div class="christmas-title">
 <div class="cantata">{_('title_base')}</div>
@@ -157,68 +185,26 @@ def save_json(f, d):
     with open(f, "w", encoding="utf-8") as file:
         json.dump(d, file, ensure_ascii=False, indent=2)
 
-# --- 11. 초기 도시 데이터 ---
+# --- 11. 초기 도시 ---
 DEFAULT_CITIES = [
-    {
-        "city": "Mumbai",
-        "venue": "Gateway of India",
-        "seats": "5000",
-        "note": "인도 영화 수도",
-        "google_link": "https://goo.gl/maps/abc123",
-        "indoor": False,
-        "lat": 19.0760,
-        "lon": 72.8777,
-        "perf_date": None,
-        "date": "11/07 02:01"
-    },
-    {
-        "city": "Pune",
-        "venue": "Shaniwar Wada",
-        "seats": "3000",
-        "note": "IT 허브",
-        "google_link": "https://goo.gl/maps/def456",
-        "indoor": True,
-        "lat": 18.5204,
-        "lon": 73.8567,
-        "perf_date": None,
-        "date": "11/07 02:01"
-    },
-    {
-        "city": "Nagpur",
-        "venue": "Deekshabhoomi",
-        "seats": "2000",
-        "note": "오렌지 도시",
-        "google_link": "https://goo.gl/maps/ghi789",
-        "indoor": False,
-        "lat": 21.1458,
-        "lon": 79.0882,
-        "perf_date": None,
-        "date": "11/07 02:01"
-    }
+    {"city": "Mumbai", "venue": "Gateway of India", "seats": "5000", "note": "인도 영화 수도", "google_link": "https://goo.gl/maps/abc123", "indoor": False, "lat": 19.0760, "lon": 72.8777, "perf_date": None, "date": "11/07 02:01"},
+    {"city": "Pune", "venue": "Shaniwar Wada", "seats": "3000", "note": "IT 허브", "google_link": "https://goo.gl/maps/def456", "indoor": True, "lat": 18.5204, "lon": 73.8567, "perf_date": None, "date": "11/07 02:01"},
+    {"city": "Nagpur", "venue": "Deekshabhoomi", "seats": "2000", "note": "오렌지 도시", "google_link": "https://goo.gl/maps/ghi789", "indoor": False, "lat": 21.1458, "lon": 79.0882, "perf_date": None, "date": "11/07 02:01"}
 ]
 
 if not os.path.exists(CITY_FILE):
     save_json(CITY_FILE, DEFAULT_CITIES)
 
-# --- 12. 도시 좌표 매핑 ---
-CITY_COORDS = {
-    "Mumbai": (19.0760, 72.8777),
-    "Pune": (18.5204, 73.8567),
-    "Nagpur": (21.1458, 79.0882)
-}
+CITY_COORDS = {c["city"]: (c["lat"], c["lon"]) for c in DEFAULT_CITIES}
 
-# --- 13. 공지 기능 ---
+# --- 12. 공지 기능 ---
 def add_notice(title, content, img=None, file=None):
     img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{img.name}") if img else None
     file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.name}") if file else None
     if img: open(img_path, "wb").write(img.read())
     if file: open(file_path, "wb").write(file.read())
 
-    notice = {
-        "id": str(uuid.uuid4()), "title": title, "content": content,
-        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
-        "image": img_path, "file": file_path
-    }
+    notice = {"id": str(uuid.uuid4()), "title": title, "content": content, "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"), "image": img_path, "file": file_path}
     data = load_json(NOTICE_FILE)
     data.insert(0, notice)
     save_json(NOTICE_FILE, data)
@@ -239,8 +225,7 @@ def render_notices():
 
         with st.expander(title, expanded=False):
             st.markdown(n["content"])
-            if n.get("image") and os.path.exists(n["image"]): 
-                st.image(n["image"], use_container_width=True)
+            if n.get("image") and os.path.exists(n["image"]): st.image(n["image"], use_container_width=True)
             if n.get("file") and os.path.exists(n["file"]):
                 with open(n["file"], "rb") as f:
                     b64 = base64.b64encode(f.read()).decode()
@@ -256,10 +241,9 @@ def render_notices():
     elif not has_new:
         st.session_state.sound_played = False
 
-# --- 14. 투어 경로 (라인 평행 말풍선 + 반응형) ---
+# --- 13. 지도 (실제 시간 + 라인 위 평행 텍스트) ---
 def render_map():
     st.subheader(_('map_title'))
-
     PUNE_LAT, PUNE_LON = 18.5204, 73.8567
     today = date.today()
 
@@ -279,7 +263,7 @@ def render_map():
 
     cities = sorted(cities, key=lambda x: x.get("perf_date", "9999-12-31") or "9999-12-31")
 
-    # --- 수정 모드 ---
+    # 수정 모드
     if st.session_state.get("edit_city"):
         edit_city_name = st.session_state.edit_city
         edit_city = next((c for c in cities if c["city"] == edit_city_name), None)
@@ -288,7 +272,7 @@ def render_map():
                 with st.form("edit_city_form", clear_on_submit=True):
                     col1, col2 = st.columns(2)
                     with col1:
-                        st.markdown(f"**도시:** {edit_city_name} (고정)")
+                        st.markdown(f"**도시:** {edit_city_name}")
                         venue = st.text_input(_("venue"), value=edit_city["venue"] or "")
                         try:
                             perf_date_val = datetime.strptime(edit_city["perf_date"], "%Y-%m-%d").date() if edit_city["perf_date"] else None
@@ -296,28 +280,16 @@ def render_map():
                             perf_date_val = None
                         perf_date_input = st.date_input(_("performance_date"), value=perf_date_val)
                     with col2:
-                        seats_val = int(edit_city["seats"]) if edit_city["seats"].isdigit() else 0
+                        seats_val = int(edit_city["seats"]) if str(edit_city["seats"]).isdigit() else 0
                         seats = st.number_input(_("seats"), min_value=0, step=50, value=seats_val)
                         note = st.text_area(_("note"), value=edit_city["note"] or "", height=80)
                         gmap = st.text_input(_("google_link"), value=edit_city["google_link"] or "")
-
                     indoor = st.checkbox(_("indoor"), value=edit_city.get("indoor", True))
 
                     col_btn = st.columns([1, 1, 3])
                     with col_btn[0]:
                         if st.form_submit_button("저장", use_container_width=True):
-                            updated_city = {
-                                "city": edit_city_name,
-                                "venue": venue.strip(),
-                                "seats": str(seats),
-                                "note": note.strip(),
-                                "google_link": gmap.strip(),
-                                "indoor": indoor,
-                                "lat": edit_city["lat"],
-                                "lon": edit_city["lon"],
-                                "perf_date": str(perf_date_input) if perf_date_input else None,
-                                "date": edit_city["date"]
-                            }
+                            updated_city = {**edit_city, "venue": venue.strip(), "seats": str(seats), "note": note.strip(), "google_link": gmap.strip(), "indoor": indoor, "perf_date": str(perf_date_input) if perf_date_input else None}
                             data = load_json(CITY_FILE)
                             for i, c in enumerate(data):
                                 if c["city"] == edit_city_name:
@@ -325,14 +297,14 @@ def render_map():
                                     break
                             save_json(CITY_FILE, data)
                             st.session_state.edit_city = None
-                            st.success(f"{edit_city_name} 수정 완료!")
+                            st.success("수정 완료!")
                             st.rerun()
                     with col_btn[1]:
                         if st.form_submit_button("취소", use_container_width=True):
                             st.session_state.edit_city = None
                             st.rerun()
 
-    # --- 관리자: 도시 추가 폼 ---
+    # 추가 폼
     if st.session_state.admin and not st.session_state.get("edit_city"):
         with st.expander("도시 추가", expanded=True):
             with st.form("add_city_form", clear_on_submit=True):
@@ -346,49 +318,32 @@ def render_map():
                     seats = st.number_input(_("seats"), min_value=0, step=50, value=500)
                     note = st.text_area(_("note"), height=80)
                     gmap = st.text_input(_("google_link"))
-
                 indoor = st.checkbox(_("indoor"), value=True)
 
                 if st.form_submit_button(_("register"), use_container_width=True):
                     if not selected_city or not venue.strip():
-                        st.error("도시 선택과 장소는 필수입니다!")
+                        st.error("필수 입력!")
                     else:
                         lat, lon = CITY_COORDS.get(selected_city, (PUNE_LAT, PUNE_LON))
-                        new_city = {
-                            "city": selected_city,
-                            "venue": venue.strip(),
-                            "seats": str(seats),
-                            "note": note.strip(),
-                            "google_link": gmap.strip(),
-                            "indoor": indoor,
-                            "lat": lat,
-                            "lon": lon,
-                            "perf_date": str(perf_date_input) if perf_date_input else None,
-                            "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
-                        }
+                        new_city = {"city": selected_city, "venue": venue.strip(), "seats": str(seats), "note": note.strip(), "google_link": gmap.strip(), "indoor": indoor, "lat": lat, "lon": lon, "perf_date": str(perf_date_input) if perf_date_input else None, "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")}
                         data = load_json(CITY_FILE)
                         data.append(new_city)
                         save_json(CITY_FILE, data)
-                        st.success(f"{selected_city} 등록 완료!")
+                        st.success("등록 완료!")
                         st.rerun()
 
-    # --- 도시 없음 처리 ---
     if not cities:
-        st.warning("아직 등록된 도시가 없습니다.")
-        if not st.session_state.admin:
-            st.info("관리자 로그인 후 도시를 추가해주세요!")
+        st.warning("도시 없음")
         m = folium.Map(location=[PUNE_LAT, PUNE_LON], zoom_start=9, tiles="CartoDB positron")
-        folium.Marker([PUNE_LAT, PUNE_LON], popup="<b>칸타타 투어 2025</b><br>시작을 기다립니다!", 
-                      tooltip="Pune", icon=folium.Icon(color="green", icon="star", prefix="fa")).add_to(m)
+        folium.Marker([PUNE_LAT, PUNE_LON], popup="시작", icon=folium.Icon(color="green", icon="star", prefix="fa")).add_to(m)
         st_folium(m, width=900, height=550, key="empty_map")
         return
 
-    # --- 지도 + 마커 + 애니메이션 라인 + 평행 말풍선 ---
     total_dist = 0
     coords = []
     m = folium.Map(location=[PUNE_LAT, PUNE_LON], zoom_start=9, tiles="CartoDB positron")
 
-    # 구글맵 스타일 아이콘
+    # 구글맵 아이콘
     google_icon_html = '''
     <div style="position: relative; width: 30px; height: 40px; margin-left: -15px; margin-top: -40px;">
         <div style="position: absolute; bottom: 0; left: 0; width: 30px; height: 30px; background: {color}; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 0 6px rgba(0,0,0,0.3);"></div>
@@ -401,7 +356,7 @@ def render_map():
     label_script = """
     <script>
     const map = window.parent.document.getElementsByClassName('folium-map')[0].firstChild;
-    const labels = document.getElementsByClassName('parallel-label');
+    const labels = document.getElementsByClassName('parallel-text');
     function updateLabels() {
         const zoom = map.getZoom();
         for (let i = 0; i < labels.length; i++) {
@@ -415,7 +370,6 @@ def render_map():
 
     for i, c in enumerate(cities):
         display_date = _("pending") if not c.get("perf_date") else c["perf_date"]
-
         try:
             perf_date_obj = datetime.strptime(c['perf_date'], "%Y-%m-%d").date() if c.get('perf_date') else None
         except:
@@ -429,15 +383,8 @@ def render_map():
             color = "#ea4335" if c.get("indoor") else "#4285f4"
             inner = "#ffffff"
 
-        icon_html = google_icon_html.format(color=color, inner_color=inner)
-        icon = folium.DivIcon(html=icon_html)
-
-        folium.Marker(
-            [c["lat"], c["lon"]],
-            popup=f"<b style='color:#e74c3c'>{c['city']}</b><br>{display_date}<br>{c.get('venue','—')}",
-            tooltip=c["city"],
-            icon=icon
-        ).add_to(m)
+        icon = folium.DivIcon(html=google_icon_html.format(color=color, inner_color=inner))
+        folium.Marker([c["lat"], c["lon"]], popup=f"<b>{c['city']}</b><br>{display_date}<br>{c.get('venue','—')}", tooltip=c["city"], icon=icon).add_to(m)
 
         with st.expander(f"{c['city']} | {display_date}"):
             st.write(f"등록일: {c.get('date', '—')}")
@@ -461,40 +408,36 @@ def render_map():
                         st.rerun()
 
         if i < len(cities)-1:
-            try:
-                d = haversine(c['lat'], c['lon'], cities[i+1]['lat'], cities[i+1]['lon'])
-                total_dist += d
-                hours = int(d / 80)
-                mins = int((d % 80) / 80 * 60)
-                time_str = _(f"est_time").format(hours=hours, mins=mins) if hours or mins else ""
-                label_text = f"<b>{d:.0f}km</b><br><small>{time_str}</small>"
+            next_c = cities[i+1]
+            dist_km, mins = get_real_travel_time(c['lat'], c['lon'], next_c['lat'], next_c['lon'])
+            total_dist += dist_km
+            hours = mins // 60
+            mins_remain = mins % 60
+            time_str = _(f"est_time").format(hours=hours, mins=mins_remain) if hours or mins_remain else ""
+            label_text = f"{dist_km:.0f}km {time_str}".strip()
 
-                mid_lat = (c['lat'] + cities[i+1]['lat']) / 2
-                mid_lon = (c['lon'] + cities[i+1]['lon']) / 2
+            mid_lat = (c['lat'] + next_c['lat']) / 2
+            mid_lon = (c['lon'] + next_c['lon']) / 2
 
-                # 라인 각도 계산
-                bearing = degrees(atan2(cities[i+1]['lon'] - c['lon'], cities[i+1]['lat'] - c['lat']))
-                rotate_angle = bearing - 90  # 수직 조정
+            # 라인 각도 계산 (위쪽 평행)
+            bearing = degrees(atan2(next_c['lon'] - c['lon'], next_c['lat'] - c['lat']))
+            rotate = bearing
 
-                # 평행 말풍선
-                folium.Marker(
-                    [mid_lat, mid_lon],
-                    icon=folium.DivIcon(html=f'''
-                        <div class="parallel-label" style="
-                            background: white; color: #e74c3c; padding: 6px 12px; 
-                            border-radius: 16px; font-weight: bold; font-size: 11px; 
-                            white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                            border: 2px solid #e74c3c; text-align:.center;
-                            transform: translate(-50%, -50%) rotate({rotate_angle}deg);
-                            transform-origin: center;
-                        ">
-                            {label_text}
-                        </div>
-                    ''')
-                ).add_to(m)
+            # 평행 텍스트 (말풍선 없이, 라인 위쪽)
+            folium.Marker(
+                [mid_lat, mid_lon],
+                icon=folium.DivIcon(html=f'''
+                    <div class="parallel-text" style="
+                        color: #e74c3c; font-weight: bold; font-size: 12px; 
+                        white-space: nowrap; text-shadow: 0 0 4px white;
+                        transform: translate(-50%, -50%) rotate({rotate}deg);
+                        transform-origin: center; pointer-events: none;
+                    ">
+                        {label_text}
+                    </div>
+                ''')
+            ).add_to(m)
 
-            except:
-                pass
         coords.append((c['lat'], c['lon']))
 
     if len(coords) > 1:
@@ -507,7 +450,7 @@ def render_map():
     if map_html:
         st.components.v1.html(label_script, height=0)
 
-# --- 15. 탭 ---
+# --- 14. 탭 ---
 tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
 
 if st.session_state.get("new_notice", False):
