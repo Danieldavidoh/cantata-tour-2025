@@ -6,6 +6,17 @@ from folium.plugins import AntPath
 import json, os, uuid, base64, re, requests
 from pytz import timezone
 from streamlit_autorefresh import st_autorefresh
+from math import radians, cos, sin, asin, sqrt
+
+# Haversine 공식으로 거리 계산
+def haversine(lat1, lon1, lat2, lon2):
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+    dlon = lon2 - lon1 
+    dlat = lat2 - lat1 
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a)) 
+    r = 6371  # 지구 반경 km
+    return c * r
 
 # 3초 새로고침 (일반 모드)
 if not st.session_state.get("admin", False):
@@ -40,8 +51,7 @@ LANG = {
         "tab_notice": "공지 관리",
         "tab_map": "투어 경로",
         "map_title": "경로 보기",
-        "add": "추가",  # ← 여기 추가!
-        "add_city": "도시 추가",  # ← 기존 버튼용
+        "add_city": "도시 추가",
         "password": "비밀번호",
         "login": "로그인",
         "logout": "로그아웃",
@@ -73,7 +83,6 @@ LANG = {
         "tab_notice": "Notice",
         "tab_map": "Tour Route",
         "map_title": "View Route",
-        "add": "Add",  # ← 추가
         "add_city": "Add City",
         "password": "Password",
         "login": "Login",
@@ -106,7 +115,6 @@ LANG = {
         "tab_notice": "सूचना",
         "tab_map": "टूर मार्ग",
         "map_title": "मार्ग देखें",
-        "add": "जोड़ें",  # ← 추가
         "add_city": "शहर जोड़ें",
         "password": "पासवर्ड",
         "login": "लॉगिन",
@@ -213,7 +221,7 @@ def render_map():
         st.subheader(_("map_title"))
     with col_btn:
         if st.session_state.admin:
-            if st.button(_("add_city"), key="btn_add_city"):  # ← "도시 추가"
+            if st.button(_("add_city"), key="btn_add_city"):
                 st.session_state.adding_cities.append(None)
                 st.rerun()
 
@@ -288,6 +296,10 @@ def render_map():
             st.markdown("---")
 
     # --- 기존 도시 목록 ---
+    total_dist = 0
+    total_time = 0
+    average_speed = 65  # km/h 가정
+
     for idx, city in enumerate(cities_data):
         key = f"city_{idx}"
         expanded = st.session_state.expanded.get(key, False)
@@ -313,6 +325,20 @@ def render_map():
                         st.rerun()
         if st.session_state.expanded.get(key, False) != expanded:
             st.session_state.expanded[key] = expanded
+
+        # 도시 사이 거리/시간 표시 (마지막 제외)
+        if idx < len(cities_data) - 1:
+            next_city = cities_data[idx + 1]
+            dist = haversine(city['lat'], city['lon'], next_city['lat'], next_city['lon'])
+            time_h = dist / average_speed
+            st.write(f"{city['city']} → {next_city['city']}: {dist:.0f}km / {time_h:.1f}h")
+            total_dist += dist
+            total_time += time_h
+
+    # 마지막 아래 총합
+    if len(cities_data) > 1:
+        st.write("---")
+        st.write(f"총 거리 (첫 도시 기준): {total_dist:.0f}km / {total_time:.1f}h")
 
     # --- 수정 모드 ---
     if st.session_state.edit_city:
@@ -365,9 +391,6 @@ def render_map():
     coords = []
     today = datetime.now().date()
 
-    # 당일 마커용 애니메이션 그룹
-    bounce_group = folium.plugins.MarkerCluster().add_to(m)
-
     for c in cities_data:
         perf_date_str = c.get('perf_date')
         perf_date = datetime.strptime(perf_date_str, "%Y-%m-%d").date() if perf_date_str else None
@@ -381,62 +404,38 @@ def render_map():
         <a href="{c.get('map_link','#')}" target="_blank">길안내</a><br>
         특이사항: {c.get('note','')}
         """
-
-        # 기본 아이콘
         icon = folium.Icon(color="red", icon="music")
+        opacity = 1.0
 
         if perf_date:
             if perf_date < today:
-                # 지난 날짜: 투명
-                folium.Marker(
-                    [c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
-                    icon=icon, opacity=0.4
-                ).add_to(m)
+                opacity = 0.5  # 지난 날짜 투명
             elif perf_date == today:
-                # 당일: 위아래 움직임 (bounce)
-                folium.Marker(
-                    [c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
-                    icon=icon
-                ).add_to(bounce_group)
-            else:
-                # 미래: 정상
-                folium.Marker(
-                    [c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
-                    icon=icon
-                ).add_to(m)
-        else:
-            folium.Marker(
-                [c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
-                icon=icon
-            ).add_to(m)
+                # 당일 애니메이션 (JS로 위아래 움직임)
+                bounce_js = """
+                <script>
+                function bounceMarker(marker) {
+                    let pos = 0;
+                    let up = true;
+                    setInterval(() => {
+                        pos = up ? pos + 2 : pos - 2;
+                        marker.setStyle({transform: `translateY(${pos}px)`});
+                        if (pos >= 10 || pos <= -10) up = !up;
+                    }, 50);
+                }
+                </script>
+                """
+                m.get_root().html.add_child(folium.Element(bounce_js))
+            # 나머지 기본
 
+        folium.Marker(
+            [c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
+            icon=icon, opacity=opacity
+        ).add_to(m)
         coords.append((c["lat"], c["lon"]))
 
     if coords:
-        AntPath(coords, color="#ff1744", weight=5, delay=800, dash_array=[10, 20]).add_to(m)
-
-    # 당일 마커 애니메이션 스크립트 추가
-    bounce_js = """
-    <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        setTimeout(function() {
-            const markers = document.querySelectorAll('.leaflet-marker-icon');
-            markers.forEach(marker => {
-                if (marker.parentNode.parentNode.classList.contains('leaflet-cluster-anim')) return;
-                let up = true;
-                let pos = 0;
-                setInterval(() => {
-                    pos = up ? pos + 2 : pos - 2;
-                    marker.style.transform = `translateY(${pos}px)`;
-                    if (pos >= 10 || pos <= -10) up = !up;
-                }, 50);
-            });
-        }, 1000);
-    });
-    </script>
-    """
-    m.get_root().html.add_child(folium.Element(bounce_js))
-
+        AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
     st_folium(m, width=900, height=550)
 
 # 사이드바
@@ -451,41 +450,41 @@ with st.sidebar:
         st.rerun()
 
     st.markdown("---")
+
     if not st.session_state.admin:
         st.markdown("### 관리자 로그인")
-        pw = st.text_input(_("password"), type="password")
-        if st.button(_("login")):
+        pw = st.text_input(_["password"], type="password")
+        if st.button(_["login"]):
             if pw == "0000":
                 st.session_state.admin = True
                 st.success("관리자 모드 ON")
                 st.rerun()
             else:
-                st.error(_("wrong_pw"))
+                st.error(_["wrong_pw"])
     else:
         st.success("관리자 모드")
-        if st.button(_("logout")):
+        if st.button(_["logout"]):
             st.session_state.admin = False
             st.rerun()
 
-# 메인 제목
-st.markdown(f"# {_('title')} ")
-st.caption(_("caption"))
+# 메인
+st.markdown(f"# {_['title']} ")
+st.caption(_["caption"])
 
-# 탭 정의
-tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
+tab1, tab2 = st.tabs([_["tab_notice"], _["tab_map"]])
 
 with tab1:
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
-            t = st.text_input(_("title_label"))
-            c = st.text_area(_("content_label"))
-            img = st.file_uploader(_("upload_image"), type=["png", "jpg", "jpeg"])
-            f = st.file_uploader(_("upload_file"))
-            if st.form_submit_button(_("submit")):
+            t = st.text_input(_["title_label"])
+            c = st.text_area(_["content_label"])
+            img = st.file_uploader(_["upload_image"], type=["png", "jpg", "jpeg"])
+            f = st.file_uploader(_["upload_file"])
+            if st.form_submit_button(_["submit"]):
                 if t.strip() and c.strip():
                     add_notice(t, c, img, f)
                 else:
-                    st.warning(_("warning"))
+                    st.warning(_["warning"])
         render_notice_list(show_delete=True)
     else:
         render_notice_list(show_delete=False)
