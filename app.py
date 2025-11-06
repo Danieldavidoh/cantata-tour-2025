@@ -37,19 +37,318 @@ defaults = {
     "lang": "ko",
     "edit_city": None,
     "expanded": {},
-    "adding_cities": []
+    "adding_cities": [],
+    "pw": "0009",
+    "seen_notices": []
 }
 for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
-# 다국어
+# 다국어 (오류 수정!)
 LANG = {
-    "ko": { "title": "칸타타 투어 2025", "caption": "마하라스트라 투어 관리 시스템", "tab_notice": "공지", "tab_map": "투어 경로", "map_title": "경로 보기", "add_city": "도시 추가", "password": "비밀번호", "login": "로그인", "logout": "로그아웃", "wrong_pw": "비밀번호가 틀렸습니다.", "select_city": "도시 선택", "venue": "공연장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵 링크", "indoor": "실내", "outdoor": "실외", "register": "등록", "edit": "수정", "remove": "삭제", "date": "등록일", "performance_date": "공연 날짜", "cancel": "취소", "title_label": "제목", "content_label": "내용", "upload_image": "이미지 업로드", "upload_file": "파일 업로드", "submit": "등록", "warning": "제목과 내용을 모두 입력해주세요.", "file_download": "파일 다운로드" },
-    "en": { "title": "Cantata Tour 2025", "caption": "Maharashtra Tour Management System", "tab_notice": "Notice", "tab_map": "Tour Route", "map_title": "View Route", "add_city": "Add City", "password": "Password", "login": "Login", "logout": "Logout", "wrong_pw": "Wrong password.", "select_city": "Select City", "venue": "Venue", "seats": "Expected Attendance", "note": "Notes", "google_link": "Google Maps Link", "indoor": "Indoor", "outdoor": "Outdoor", "register": "Register", "edit": "Edit", "remove": "Remove", "date": "Registered On", "performance_date": "Performance Date", "cancel": "Cancel", "title_label": "Title", "content_label": "Content", "upload_image": "Upload Image", "upload_file": "Upload File", "submit": "Submit", "warning": "Please enter both title and content.", "file_download": "Download File" },
-    "hi": { "title": "कांताता टूर 2025", "caption": "महाराष्ट्र टूर प्रबंधन प्रणाली", "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "map_title": "मार्ग देखें", "add_city": "शहर जोड़ें", "password": "पासवर्ड", "login": "लॉगिन", "logout": "लॉगआउट", "wrong_pw": "गलत पासवर्ड।", "select_city": "शहर चुनें", "venue": "स्थल", "seats": "अपेक्षित उपस्थिति", "note": "नोट्स", "google_link": "गूगल मैप्स लिंक", "indoor": "इनडोर", "outdoor": "आ우टडोर", "register": "रजिस्टर", "edit": "संपादित करें", "remove": "हटाएं", "date": "तारीख", "performance_date": "प्रदर्शन तिथि", "cancel": "रद्द करें", "title_label": "शीर्षक", "content_label": "सामग्री", "upload_image": "छवि अपलोड करें", "upload_file": "फ़ाइल अपलोड करें", "submit": "जमा करें", "warning": "शीर्षक और सामग्री दोनों दर्ज करें।", "file_download": "फ़ाइल डाउनलोड करें" }
+    "ko": { 
+        "title_base": "칸타타 투어", 
+        "caption": "마하라스트라", 
+        "tab_notice": "공지", 
+        "tab_map": "투어 경로", 
+        "map_title": "경로 보기", 
+        "add_city": "도시 추가", 
+        "password": "비밀번호", 
+        "login": "로그인", 
+        "logout": "로그아웃", 
+        "wrong_pw": "비밀번호가 틀렸습니다.", 
+        "select_city": "도시 선택", 
+        "venue": "공연장소", 
+        "seats": "예상 인원", 
+        "note": "특이사항", 
+        "google_link": "구글맵 링크",  # ← 여기 수정!
+        "indoor": "실내", 
+        "outdoor": "실외", 
+        "register": "등록", 
+        "edit": "수정", 
+        "remove": "삭제", 
+        "date": "등록일", 
+        "performance_date": "공연 날짜", 
+        "cancel": "취소", 
+        "title_label": "제목", 
+        "content_label": "내용", 
+        "upload_image": "이미지 업로드", 
+        "upload_file": "파일 업로드", 
+        "submit": "등록", 
+        "warning": "제목과 내용을 모두 입력해주세요.", 
+        "file_download": "파일 다운로드", 
+        "change_pw": "비밀번호 변경", 
+        "new_pw": "새 비밀번호", 
+        "confirm_pw": "비밀번호 확인", 
+        "pw_changed": "비밀번호가 변경되었습니다.", 
+        "pw_mismatch": "비밀번호가 일치하지 않습니다." 
+    },
+    "en": { 
+        "title_base": "Cantata Tour", 
+        "caption": "Maharashtra", 
+        "tab_notice": "Notice", 
+        "tab_map": "Tour Route", 
+        "map_title": "View Route", 
+        "add_city": "Add City", 
+        "password": "Password", 
+        "login": "Login", 
+        "logout": "Logout", 
+        "wrong_pw": "Wrong password.", 
+        "select_city": "Select City", 
+        "venue": "Venue", 
+        "seats": "Expected Attendance", 
+        "note": "Notes", 
+        "google_link": "Google Maps Link", 
+        "indoor": "Indoor", 
+        "outdoor": "Outdoor", 
+        "register": "Register", 
+        "edit": "Edit", 
+        "remove": "Remove", 
+        "date": "Registered On", 
+        "performance_date": "Performance Date", 
+        "cancel": "Cancel", 
+        "title_label": "Title", 
+        "content_label": "Content", 
+        "upload_image": "Upload Image", 
+        "upload_file": "Upload File", 
+        "submit": "Submit", 
+        "warning": "Please enter both title and content.", 
+        "file_download": "Download File", 
+        "change_pw": "Change Password", 
+        "new_pw": "New Password", 
+        "confirm_pw": "Confirm Password", 
+        "pw_changed": "Password changed.", 
+        "pw_mismatch": "Passwords do not match." 
+    },
+    "hi": { 
+        "title_base": "कांताता टूर", 
+        "caption": "महाराष्ट्र", 
+        "tab_notice": "सूचना", 
+        "tab_map": "टूर मार्ग", 
+        "map_title": "मार्ग देखें", 
+        "add_city": "शहर जोड़ें", 
+        "password": "पासवर्ड", 
+        "login": "लॉगिन", 
+        "logout": "लॉगआउट", 
+        "wrong_pw": "गलत पासवर्ड।", 
+        "select_city": "शहर चुनें", 
+        "venue": "स्थल", 
+        "seats": "अपेक्षित उपस्थिति", 
+        "note": "नोट्स", 
+        "google_link": "गूगल मैप्स लिंक", 
+        "indoor": "इनडोर", 
+        "outdoor": "आउटडोर", 
+        "register": "रजिस्टर", 
+        "edit": "संपादित करें", 
+        "remove": "हटाएं", 
+        "date": "तारीख", 
+        "performance_date": "प्रदर्शन तिथि", 
+        "cancel": "रद्द करें", 
+        "title_label": "शीर्षक", 
+        "content_label": "सामग्री", 
+        "upload_image": "छवि अपलोड करें", 
+        "upload_file": "फ़ाइल अपलोड करें", 
+        "submit": "जमा करें", 
+        "warning": "शीर्षक और सामग्री दोनों दर्ज करें।", 
+        "file_download": "फ़ाइल डाउनलोड करें", 
+        "change_pw": "पासवर्ड बदलें", 
+        "new_pw": "नया पासवर्ड", 
+        "confirm_pw": "पासवर्ड की पुष्टि", 
+        "pw_changed": "पासवर्ड बदल दिया गया।", 
+        "pw_mismatch": "पासवर्ड मेल नहीं खाते।" 
+    }
 }
 _ = lambda key: LANG[st.session_state.lang].get(key, key)
+
+# === 크리스마스 밤 테마 + 눈 + 알림음 ===
+christmas_night = """
+<style>
+.stApp { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #f0f0f0; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+.christmas-title { text-align: center; margin: 20px 0; }
+.cantata { font-size: 3em; font-weight: bold; color: #e74c3c; text-shadow: 0 0 10px #ff6b6b; }
+.year { font-size: 2.8em; font-weight: bold; color: #ecf0f1; text-shadow: 0 0 8px #ffffff; }
+.maha { font-size: 1.8em; color: #3498db; font-style: italic; text-shadow: 0 0 6px #74b9ff; }
+.floating-icons { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+.icon { position: absolute; font-size: 2em; animation: float 6s infinite ease-in-out, spin 8s infinite linear; opacity: 0.8; }
+@keyframes float { 0%, 100% { transform: translateY(0) translateX(0); } 50% { transform: translateY(-20px) translateX(10px); } }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.snowflake { color: rgba(255, 255, 255, 0.5); font-size: 1.2em; position: absolute; top: -10px; animation: fall linear forwards; user-select: none; pointer-events: none; }
+@keyframes fall { to { transform: translateY(100vh); opacity: 0; } }
+.stButton>button { background: #c0392b !important; color: white !important; border: 2px solid #e74c3c !important; border-radius: 12px !important; font-weight: bold; }
+.stButton>button:hover { background: #e74c3c !important; }
+.remove-btn button { color: #000 !important; font-weight: bold; }
+.new-badge { background: #e74c3c; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7em; margin-left: 5px; }
+</style>
+
+<div class="floating-icons">
+    <div class="icon" style="top:10%; left:10%; animation-delay:0s;">🎄</div>
+    <div class="icon" style="top:15%; left:80%; animation-delay:1s;">🎁</div>
+    <div class="icon" style="top:70%; left:15%; animation-delay:2s;">🍭</div>
+    <div class="icon" style="top:60%; left:75%; animation-delay:3s;">🧦</div>
+    <div class="icon" style="top:30%; left:60%; animation-delay:4s;">🦌</div>
+    <div class="icon" style="top:40%; left:20%; animation-delay:5s;">🎅</div>
+</div>
+
+<script>
+function createSnowflake() {
+    const snow = document.createElement('div');
+    snow.classList.add('snowflake');
+    snow.innerText = ['❅', '❆', '✻', '✼'][Math.floor(Math.random() * 4)];
+    snow.style.left = Math.random() * 100 + 'vw';
+    snow.style.animationDuration = Math.random() * 10 + 8 + 's';
+    snow.style.opacity = Math.random() * 0.4 + 0.3;
+    snow.style.fontSize = Math.random() * 1.2 + 0.8 + 'em';
+    document.body.appendChild(snow);
+    setTimeout(() => snow.remove(), 18000);
+}
+setInterval(createSnowflake, 400);
+
+// 알림음 재생
+function playNotification() {
+    const audio = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU'+Array(100).fill('A').join(''));
+    audio.play().catch(() => {});
+}
+</script>
+"""
+st.markdown(christmas_night, unsafe_allow_html=True)
+
+# === 제목 ===
+title_base = _( "title_base" )
+caption = _( "caption" )
+st.markdown(
+    f'<div class="christmas-title">'
+    f'<div class="cantata">{title_base}</div>'
+    f'<div class="year">2025</div>'
+    f'<div class="maha">{caption}</div>'
+    f'</div>',
+    unsafe_allow_html=True
+)
+
+# === 비밀번호 동적 변경 + 관리자 비밀번호 변경 ===
+with st.sidebar:
+    lang_options = ["한국어", "English", "हिंदी"]
+    lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
+    current_idx = lang_options.index("한국어" if st.session_state.lang == "ko" else "English" if st.session_state.lang == "en" else "हिंदी")
+    selected_lang = st.selectbox("🌐 언어", lang_options, index=current_idx)
+    new_lang = lang_map[selected_lang]
+    if new_lang != st.session_state.lang:
+        st.session_state.lang = new_lang
+        st.rerun()
+
+    st.markdown("---")
+    if not st.session_state.admin:
+        st.markdown("### 🎅 관리자 로그인")
+        pw_input = st.text_input(_("password"), type="password")
+        if st.button(_("login")):
+            current_pw = st.session_state.pw
+            if pw_input == current_pw:
+                st.session_state.admin = True
+                st.success("관리자 모드 ON")
+                st.rerun()
+            elif pw_input == "0691":
+                st.session_state.pw = "9000"
+                st.warning("비밀번호가 9000으로 변경되었습니다.")
+                st.rerun()
+            elif pw_input == "0692":
+                st.session_state.pw = "0009"
+                st.warning("비밀번호가 0009으로 복구되었습니다.")
+                st.rerun()
+            else:
+                st.error(_("wrong_pw"))
+    else:
+        st.success("🎄 관리자 모드")
+        if st.button(_("logout")):
+            st.session_state.admin = False
+            st.rerun()
+
+        st.markdown("---")
+        st.markdown("### 🔑 비밀번호 변경")
+        change_pw_input = st.text_input("관리자 전용 코드", type="password", key="change_pw_input")
+        if change_pw_input == "0610":
+            with st.form("change_pw_form"):
+                new_pw = st.text_input(_("new_pw"), type="password")
+                confirm_pw = st.text_input(_("confirm_pw"), type="password")
+                if st.form_submit_button(_("change_pw")):
+                    if new_pw == confirm_pw and new_pw.strip():
+                        st.session_state.pw = new_pw
+                        st.success(_("pw_changed"))
+                        st.rerun()
+                    else:
+                        st.error(_("pw_mismatch"))
+        else:
+            st.info("코드 입력 시 비밀번호 변경 가능")
+
+# === 공지 기능 + 읽지 않은 알림 + 알림음 ===
+def add_notice(title, content, image_file=None, upload_file=None):
+    img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{image_file.name}") if image_file else None
+    file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{upload_file.name}") if upload_file else None
+    if image_file:
+        with open(img_path, "wb") as f:
+            f.write(image_file.read())
+    if upload_file:
+        with open(file_path, "wb") as f:
+            f.write(upload_file.read())
+    new_notice = {
+        "id": str(uuid.uuid4()),
+        "title": title,
+        "content": content,
+        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
+        "image": img_path,
+        "file": file_path
+    }
+    data = load_json(NOTICE_FILE)
+    data.insert(0, new_notice)
+    save_json(NOTICE_FILE, data)
+    st.session_state.expanded = {}
+    st.session_state.seen_notices = []  # 새 공지 시 읽음 초기화
+    st.toast("공지가 등록되었습니다.")
+    st.rerun()
+
+def render_notice_list(show_delete=False):
+    data = load_json(NOTICE_FILE)
+    has_new = False
+    for idx, n in enumerate(data):
+        notice_id = n["id"]
+        is_new = notice_id not in st.session_state.seen_notices
+        if is_new and not st.session_state.admin:
+            has_new = True
+
+        key = f"notice_{idx}"
+        expanded = st.session_state.expanded.get(key, False)
+        title_display = f"{n['date']} | {n['title']}"
+        if is_new and not st.session_state.admin:
+            title_display += ' <span class="new-badge">NEW</span>'
+
+        with st.expander(title_display, expanded=expanded):
+            st.markdown(n["content"])
+            if n.get("image") and os.path.exists(n["image"]):
+                st.image(n["image"], use_container_width=True)
+            if n.get("file") and os.path.exists(n["file"]):
+                href = f'<a href="data:file/octet-stream;base64,{base64.b64encode(open(n["file"], "rb").read()).decode()}" download="{os.path.basename(n["file"])}">🎁 {_("file_download")}</a>'
+                st.markdown(href, unsafe_allow_html=True)
+            if show_delete and st.button(_("remove"), key=f"del_{idx}"):
+                data.pop(idx)
+                save_json(NOTICE_FILE, data)
+                st.session_state.expanded = {}
+                st.toast("공지가 삭제되었습니다.")
+                st.rerun()
+            # 읽음 처리
+            if not st.session_state.admin and is_new and expanded:
+                if notice_id not in st.session_state.seen_notices:
+                    st.session_state.seen_notices.append(notice_id)
+        if st.session_state.expanded.get(key, False) != expanded:
+            st.session_state.expanded[key] = expanded
+
+    # 알림음 재생
+    if has_new and not st.session_state.get("sound_played", False):
+        st.markdown('<script>playNotification();</script>', unsafe_allow_html=True)
+        st.session_state.sound_played = True
+    elif not has_new:
+        st.session_state.sound_played = False
+
+# === 나머지 기능 (지도 등) ===
+# (기존 코드 유지 - 생략하지 않고 전체 포함)
 
 # 유틸
 def load_json(filename):
@@ -73,60 +372,14 @@ def extract_latlon_from_shortlink(short_url):
         pass
     return None, None
 
-# 공지 기능
-def add_notice(title, content, image_file=None, upload_file=None):
-    img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{image_file.name}") if image_file else None
-    file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{upload_file.name}") if upload_file else None
-    if image_file:
-        with open(img_path, "wb") as f:
-            f.write(image_file.read())
-    if upload_file:
-        with open(file_path, "wb") as f:
-            f.write(upload_file.read())
-    new_notice = {
-        "id": str(uuid.uuid4()),
-        "title": title,
-        "content": content,
-        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
-        "image": img_path,
-        "file": file_path
-    }
-    data = load_json(NOTICE_FILE)
-    data.insert(0, new_notice)
-    save_json(NOTICE_FILE, data)
-    st.session_state.expanded = {}
-    st.toast("공지가 등록되었습니다.")
-    st.rerun()
-
-def render_notice_list(show_delete=False):
-    data = load_json(NOTICE_FILE)
-    for idx, n in enumerate(data):
-        key = f"notice_{idx}"
-        expanded = st.session_state.expanded.get(key, False)
-        with st.expander(f"{n['date']} | {n['title']}", expanded=expanded):
-            st.markdown(n["content"])
-            if n.get("image") and os.path.exists(n["image"]):
-                st.image(n["image"], use_container_width=True)
-            if n.get("file") and os.path.exists(n["file"]):
-                href = f'<a href="data:file/octet-stream;base64,{base64.b64encode(open(n["file"], "rb").read()).decode()}" download="{os.path.basename(n["file"])}">{_("file_download")}</a>'
-                st.markdown(href, unsafe_allow_html=True)
-            if show_delete and st.button(_("remove"), key=f"del_{idx}"):
-                data.pop(idx)
-                save_json(NOTICE_FILE, data)
-                st.session_state.expanded = {}
-                st.toast("공지가 삭제되었습니다.")
-                st.rerun()
-        if st.session_state.expanded.get(key, False) != expanded:
-            st.session_state.expanded[key] = expanded
-
 # 지도 + 도시 관리
 def render_map():
     col_title, col_add = st.columns([5, 2])
     with col_title:
-        st.subheader(_("map_title"))
+        st.subheader(f"🎅 {_('map_title')}")
     with col_add:
         if st.session_state.admin:
-            if st.button(_("add_city"), use_container_width=True, key="btn_add_city"):
+            if st.button(f"🎁 {_('add_city')}", use_container_width=True, key="btn_add_city"):
                 st.session_state.adding_cities.append(None)
                 st.rerun()
 
@@ -150,7 +403,7 @@ def render_map():
                 current = st.session_state.adding_cities[i]
                 idx = options.index(current) if current in options else 0
                 city_name = st.selectbox(
-                    _("select_city"),
+                    f"🌟 {_('select_city')}",
                     options,
                     index=idx,
                     key=f"add_select_{i}"
@@ -158,9 +411,11 @@ def render_map():
                 if city_name != current:
                     st.session_state.adding_cities[i] = city_name
             with col_del:
+                st.markdown('<div class="remove-btn">', unsafe_allow_html=True)
                 if st.button("×", key=f"remove_add_{i}"):
                     st.session_state.adding_cities.pop(i)
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
             if city_name:
                 venue = st.text_input(_("venue"), key=f"add_venue_{i}")
@@ -172,7 +427,7 @@ def render_map():
 
                 c1, c2 = st.columns(2)
                 with c1:
-                    if st.button(_("register"), key=f"reg_{i}", use_container_width=True):
+                    if st.button(f"🎄 {_('register')}", key=f"reg_{i}", use_container_width=True):
                         lat, lon = extract_latlon_from_shortlink(map_link) if map_link.strip() else (None, None)
                         if not lat or not lon:
                             coords = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882), "Nashik": (19.9975, 73.7898), "Aurangabad": (19.8762, 75.3433) }
@@ -196,7 +451,7 @@ def render_map():
                         st.success(f"[{city_name}] 등록 완료!")
                         st.rerun()
                 with c2:
-                    if st.button(_("cancel"), key=f"cancel_{i}", use_container_width=True):
+                    if st.button(f"🧹 {_('cancel')}", key=f"cancel_{i}", use_container_width=True):
                         st.session_state.adding_cities.pop(i)
                         st.rerun()
 
@@ -208,21 +463,21 @@ def render_map():
     for idx, city in enumerate(cities_data):
         key = f"city_expander_{idx}"
         expanded = st.session_state.expanded.get(key, False)
-        with st.expander(f"{city['city']} | {city.get('perf_date', '')}", expanded=expanded):
-            st.write(f"**{_('date')}:** {city.get('date', '')}")
-            st.write(f"**{_('performance_date')}:** {city.get('perf_date', '')}")
-            st.write(f"**{_('venue')}:** {city.get('venue', '')}")
-            st.write(f"**{_('seats')}:** {city.get('seats', '')}")
-            st.write(f"**{_('note')}:** {city.get('note', '')}")
+        with st.expander(f"🎁 {city['city']} | {city.get('perf_date', '')}", expanded=expanded):
+            st.write(f"**📅 {_('date')}:** {city.get('date', '')}")
+            st.write(f"**🎤 {_('performance_date')}:** {city.get('perf_date', '')}")
+            st.write(f"**🏛️ {_('venue')}:** {city.get('venue', '')}")
+            st.write(f"**👥 {_('seats')}:** {city.get('seats', '')}")
+            st.write(f"**📝 {_('note')}:** {city.get('note', '')}")
 
             if st.session_state.admin:
-                c1, c2 = st.columns(2)
-                with c1:
-                    if st.button(_("edit"), key=f"edit_{idx}_{city['city']}"):
+                btn_col1, btn_col2 = st.columns([1, 1])
+                with btn_col1:
+                    if st.button(f"✏️ {_('edit')}", key=f"edit_{idx}_{city['city']}", use_container_width=True):
                         st.session_state.edit_city = city["city"]
                         st.rerun()
-                with c2:
-                    if st.button(_("remove"), key=f"del_{idx}_{city['city']}"):
+                with btn_col2:
+                    if st.button(f"🗑️ {_('remove')}", key=f"remove_{idx}_{city['city']}", use_container_width=True):
                         cities_data.pop(idx)
                         save_json(CITY_FILE, cities_data)
                         st.session_state.expanded = {}
@@ -238,7 +493,7 @@ def render_map():
             time_h = dist / average_speed
             dist_text = f"**{dist:.0f}km / {time_h:.1f}h**"
             st.markdown(
-                f'<div style="text-align:center; margin:15px 0; font-weight:bold;">{dist_text}</div>',
+                f'<div style="text-align:center; margin:15px 0; font-weight:bold; color:#2ecc71;">{dist_text}</div>',
                 unsafe_allow_html=True
             )
             total_dist += dist
@@ -248,7 +503,7 @@ def render_map():
     if len(cities_data) > 1:
         total_text = f"**총 거리 (첫 도시 기준): {total_dist:.0f}km / {total_time:.1f}h**"
         st.markdown(
-            f'<div style="text-align:center; margin:20px 0; font-size:1.2em; font-weight:bold; color:#d32f2f;">{total_text}</div>',
+            f'<div style="text-align:center; margin:20px 0; font-size:1.2em; font-weight:bold; color:#e74c3c;">{total_text}</div>',
             unsafe_allow_html=True
         )
 
@@ -261,7 +516,7 @@ def render_map():
 
         idx = next(i for i, c in enumerate(cities_data) if c["city"] == st.session_state.edit_city)
 
-        st.markdown("### 도시 수정")
+        st.markdown("### 🎄 도시 수정")
         venue = st.text_input(_("venue"), value=edit_city_obj.get("venue", ""), key="edit_venue")
         seats = st.number_input(_("seats"), min_value=0, step=50, value=edit_city_obj.get("seats", 0), key="edit_seats")
         perf_date = st.date_input(_("performance_date"), value=datetime.strptime(edit_city_obj.get("perf_date", "2025-01-01"), "%Y-%m-%d").date(), key="edit_perf_date")
@@ -271,7 +526,7 @@ def render_map():
 
         c1, c2 = st.columns(2)
         with c1:
-            if st.button("수정 완료", key="edit_submit_final"):
+            if st.button("수정 완료", key="edit_submit_final", use_container_width=True):
                 lat, lon = extract_latlon_from_shortlink(map_link) if map_link.strip() else (None, None)
                 if not lat or not lon:
                     coords = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882), "Nashik": (19.9975, 73.7898), "Aurangabad": (19.8762, 75.3433) }
@@ -293,7 +548,7 @@ def render_map():
                 st.success(f"[{edit_city_obj['city']}] 수정 완료!")
                 st.rerun()
         with c2:
-            if st.button(_("cancel"), key="edit_cancel_final"):
+            if st.button("취소", key="edit_cancel_final", use_container_width=True):
                 st.session_state.edit_city = None
                 st.rerun()
 
@@ -374,12 +629,12 @@ def render_map():
         coords.append((c["lat"], c["lon"]))
 
     if coords:
-        AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
+        AntPath(coords, color="#e74c3c", weight=5, delay=800).add_to(m)
 
     st_folium(m, width=900, height=550)
 
 # 탭 정의
-tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
+tab1, tab2 = st.tabs([f"🎁 {_('tab_notice')}", f"🗺️ {_('tab_map')}"])
 
 with tab1:
     if st.session_state.admin:
@@ -396,6 +651,9 @@ with tab1:
         render_notice_list(show_delete=True)
     else:
         render_notice_list(show_delete=False)
+        if st.button("닫기"):
+            st.session_state.expanded = {}
+            st.rerun()
 
 with tab2:
     render_map()
