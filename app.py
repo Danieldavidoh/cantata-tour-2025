@@ -7,8 +7,6 @@ import json, os, uuid, base64, re, requests
 from pytz import timezone
 from streamlit_autorefresh import st_autorefresh
 from math import radians, cos, sin, asin, sqrt
-from streamlit_lottie import st_lottie
-import urllib.request
 
 # Haversine 거리 계산
 def haversine(lat1, lon1, lat2, lon2):
@@ -161,13 +159,49 @@ def render_map():
     coords = []
     today = datetime.now().date()
 
-    # 폭죽 애니메이션 (Lottie)
-    fireworks_url = "https://assets3.lottiefiles.com/packages/lf20_fqvzbnvy.json"
-    try:
-        with urllib.request.urlopen(fireworks_url) as response:
-            fireworks_anim = json.loads(response.read())
-    except:
-        fireworks_anim = None
+    # 폭죽 애니메이션 HTML/CSS/JS (설치 없이 가능)
+    fireworks_html = """
+    <div id="fireworks-container" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9999; overflow:hidden;">
+        <style>
+        @keyframes firework {
+            0% { transform: translateY(0) scale(0); opacity: 1; }
+            100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+        }
+        .firework {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            animation: firework 1s ease-out forwards;
+        }
+        </style>
+        <script>
+        function createFirework(x, y) {
+            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b'];
+            for (let i = 0; i < 30; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'firework';
+                const angle = (Math.PI * 2 * i) / 30;
+                const velocity = 3 + Math.random() * 3;
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                particle.style.transform = `translate(${velocity * Math.cos(angle)}px, ${velocity * Math.sin(angle)}px)`;
+                document.getElementById('fireworks-container').appendChild(particle);
+                setTimeout(() => particle.remove(), 1000);
+            }
+        }
+        // 마커 클릭 시 폭죽
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.leaflet-marker-icon')) {
+                const rect = e.target.getBoundingClientRect();
+                createFirework(rect.left + rect.width/2, rect.top + rect.height/2);
+            }
+        });
+        </script>
+    </div>
+    """
+    m.get_root().html.add_child(folium.Element(fireworks_html))
 
     for c in cities_data:
         perf_date_str = c.get('perf_date')
@@ -185,21 +219,8 @@ def render_map():
         icon = folium.Icon(color="red", icon="music")
         opacity = 1.0
 
-        if perf_date:
-            if perf_date < today:
-                opacity = 0.4  # 지난 날짜 투명
-            elif perf_date == today and fireworks_anim:
-                # 당일: 폭죽 애니메이션
-                popup_html = f"""
-                <div style="width:200px;height:200px;position:relative;">
-                    {popup_html}
-                    <div style="position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:100px;height:100px;">
-                """
-                m.get_root().html.add_child(folium.Element(f"""
-                <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
-                """))
-                # Lottie는 st_lottie로 별도 처리
-                pass
+        if perf_date and perf_date < today:
+            opacity = 0.4  # 지난 날짜
 
         folium.Marker(
             [c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
@@ -209,15 +230,6 @@ def render_map():
 
     if coords:
         AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
-
-    # 당일 폭죽 애니메이션 (별도 컨테이너)
-    today_city = next((c for c in cities_data if c.get('perf_date') and datetime.strptime(c['perf_date'], "%Y-%m-%d").date() == today), None)
-    if today_city and fireworks_anim:
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            st.markdown(f"### {today_city['city']} - 오늘 공연!")
-        with col2:
-            st_lottie(fireworks_anim, height=100, key="fireworks")
 
     st_folium(m, width=900, height=550)
 
