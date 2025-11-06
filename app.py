@@ -55,6 +55,7 @@ LANG = {
         "edit": "수정",
         "remove": "삭제",
         "date": "날짜",
+        "performance_date": "공연 날짜",
         "add": "추가",
         "cancel": "취소",
         "title_label": "제목",
@@ -86,6 +87,7 @@ LANG = {
         "edit": "Edit",
         "remove": "Remove",
         "date": "Date",
+        "performance_date": "Performance Date",
         "add": "Add",
         "cancel": "Cancel",
         "title_label": "Title",
@@ -117,6 +119,7 @@ LANG = {
         "edit": "संपादित करें",
         "remove": "हटाएं",
         "date": "तारीख",
+        "performance_date": "प्रदर्शन तिथि",
         "add": "जोड़ें",
         "cancel": "रद्द करें",
         "title_label": "शीर्षक",
@@ -198,21 +201,14 @@ def render_notice_list(show_delete=False):
         if st.session_state.expanded.get(key, False) != expanded:
             st.session_state.expanded[key] = expanded
 
-# 지도 + 도시 관리 (Folium 복귀)
+# 지도 + 도시 관리
 def render_map():
     st.subheader(_["map_title"])
     cities_data = load_json(CITY_FILE)
 
-    # 관리자: 추가 버튼
+    # ------------------- 도시 추가/수정 폼 -------------------
     if st.session_state.admin:
-        col1, col2 = st.columns([8, 2])
-        with col2:
-            if st.button(_["add"], key="add_main"):
-                st.session_state.mode = "add"
-                st.rerun()
-
-    # 새 도시 추가 블록 (항상 표시)
-    if st.session_state.admin:
+        # 기본 도시 리스트
         if not os.path.exists(CITY_LIST_FILE):
             default_cities = ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad"]
             save_json(CITY_LIST_FILE, default_cities)
@@ -220,65 +216,96 @@ def render_map():
         existing = {c["city"] for c in cities_data}
         available = [c for c in cities_list if c not in existing]
 
-        if available:
-            with st.expander("새 도시 추가", expanded=st.session_state.mode == "add"):
+        # 수정 모드인지 확인
+        edit_mode = st.session_state.edit_city is not None
+        edit_city_obj = next((c for c in cities_data if c["city"] == st.session_state.edit_city), None)
+
+        with st.expander(
+            "도시 수정" if edit_mode else "새 도시 추가",
+            expanded=edit_mode or st.session_state.mode == "add"
+        ):
+            if edit_mode:
+                # 수정 모드 → 기존 데이터 로드
+                city_name = edit_city_obj["city"]
+                venue = st.text_input(_["venue"], value=edit_city_obj.get("venue", ""), key="edit_venue")
+                seats = st.number_input(_["seats"], min_value=0, step=50, value=edit_city_obj.get("seats", 0), key="edit_seats")
+                perf_date = st.date_input(_["performance_date"], value=datetime.strptime(edit_city_obj.get("perf_date", "2025-01-01"), "%Y-%m-%d").date(), key="edit_perf_date")
+                venue_type = st.radio("공연형태", [_["indoor"], _["outdoor"]], index=0 if edit_city_obj.get("type") == _["indoor"] else 1, horizontal=True, key="edit_type")
+                map_link = st.text_input(_["google_link"], value=edit_city_obj.get("map_link", ""), key="edit_link")
+                note = st.text_area(_["note"], value=edit_city_obj.get("note", ""), key="edit_note")
+            else:
+                # 추가 모드
                 city_name = st.selectbox(_["select_city"], available, key="add_select")
                 venue = st.text_input(_["venue"], key="add_venue")
                 seats = st.number_input(_["seats"], min_value=0, step=50, key="add_seats")
+                perf_date = st.date_input(_["performance_date"], key="add_perf_date")
                 venue_type = st.radio("공연형태", [_["indoor"], _["outdoor"]], horizontal=True, key="add_type")
                 map_link = st.text_input(_["google_link"], key="add_link")
                 note = st.text_area(_["note"], key="add_note")
 
-                c1, c2 = st.columns(2)
-                with c1:
-                    if st.button(_["register"], key=f"reg_{city_name}"):
-                        lat, lon = None, None
-                        if map_link.strip():
-                            lat, lon = extract_latlon_from_shortlink(map_link)
-                        if not lat or not lon:
-                            coords = {
-                                "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567),
-                                "Nagpur": (21.1458, 79.0882), "Nashik": (19.9975, 73.7898),
-                                "Aurangabad": (19.8762, 75.3433)
-                            }
-                            lat, lon = coords.get(city_name, (19.0, 73.0))
-
-                        new_city = {
-                            "city": city_name,
-                            "venue": venue or "미정",
-                            "seats": seats,
-                            "type": venue_type,
-                            "note": note or "없음",
-                            "lat": lat,
-                            "lon": lon,
-                            "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button(_["register"] if not edit_mode else "수정 완료", key="submit_city"):
+                    lat, lon = None, None
+                    if map_link.strip():
+                        lat, lon = extract_latlon_from_shortlink(map_link)
+                    if not lat or not lon:
+                        coords = {
+                            "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567),
+                            "Nagpur": (21.1458, 79.0882), "Nashik": (19.9975, 73.7898),
+                            "Aurangabad": (19.8762, 75.3433)
                         }
-                        cities_data.append(new_city)
-                        save_json(CITY_FILE, cities_data)
-                        st.session_state.mode = None
-                        st.session_state.expanded = {}
+                        lat, lon = coords.get(city_name, (19.0, 73.0))
+
+                    city_info = {
+                        "city": city_name,
+                        "venue": venue or "미정",
+                        "seats": seats,
+                        "type": venue_type,
+                        "perf_date": perf_date.strftime("%Y-%m-%d"),
+                        "map_link": map_link,
+                        "note": note or "없음",
+                        "lat": lat,
+                        "lon": lon,
+                        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
+                    }
+
+                    if edit_mode:
+                        # 기존 도시 교체
+                        idx = next(i for i, c in enumerate(cities_data) if c["city"] == city_name)
+                        cities_data[idx] = city_info
+                        st.success(f"{city_name} 수정 완료!")
+                    else:
+                        cities_data.append(city_info)
                         st.success(f"{city_name} 등록 완료!")
-                        st.rerun()
 
-                with c2:
-                    if st.button(_["cancel"], key="cancel_add"):
-                        st.session_state.mode = None
-                        st.rerun()
+                    save_json(CITY_FILE, cities_data)
+                    st.session_state.edit_city = None
+                    st.session_state.mode = None
+                    st.session_state.expanded = {}
+                    st.rerun()
 
-    # 도시 목록
+            with c2:
+                if st.button(_["cancel"], key="cancel_city"):
+                    st.session_state.edit_city = None
+                    st.session_state.mode = None
+                    st.rerun()
+
+    # ------------------- 도시 목록 -------------------
     for idx, city in enumerate(cities_data):
         key = f"city_{idx}"
         expanded = st.session_state.expanded.get(key, False)
-        with st.expander(f"{city['city']}", expanded=expanded):
+        with st.expander(f"{city['city']} ({city.get('perf_date','')})", expanded=expanded):
             st.write(f"**{_['date']}:** {city.get('date', '')}")
+            st.write(f"**{_['performance_date']}:** {city.get('perf_date', '')}")
             st.write(f"**{_['venue']}:** {city.get('venue', '')}")
             st.write(f"**{_['seats']}:** {city.get('seats', '')}")
             st.write(f"**{_['note']}:** {city.get('note', '')}")
+
             if st.session_state.admin:
                 c1, c2 = st.columns(2)
                 with c1:
                     if st.button(_["edit"], key=f"edit_{idx}"):
-                        st.session_state.mode = "edit"
                         st.session_state.edit_city = city["city"]
                         st.rerun()
                 with c2:
@@ -291,21 +318,24 @@ def render_map():
         if st.session_state.expanded.get(key, False) != expanded:
             st.session_state.expanded[key] = expanded
 
-    # Folium 지도 (100% 표시)
+    # ------------------- Folium 지도 -------------------
     st.markdown("---")
     m = folium.Map(location=[19.0, 73.0], zoom_start=6)
     coords = []
     for c in cities_data:
         popup_html = f"""
         <b>{c['city']}</b><br>
+        날짜: {c.get('perf_date','')}<br>
         장소: {c.get('venue','')}<br>
         인원: {c.get('seats','')}<br>
         형태: {c.get('type','')}<br>
-        <a href="{c.get('nav_url','#')}" target="_blank">길안내</a><br>
+        <a href="{c.get('map_link','#')}" target="_blank">길안내</a><br>
         특이사항: {c.get('note','')}
         """
-        folium.Marker([c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
-                      icon=folium.Icon(color="red", icon="music")).add_to(m)
+        folium.Marker(
+            [c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
+            icon=folium.Icon(color="red", icon="music")
+        ).add_to(m)
         coords.append((c["lat"], c["lon"]))
     if coords:
         AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
@@ -315,7 +345,10 @@ def render_map():
 with st.sidebar:
     lang_options = ["한국어", "English", "हिंदी"]
     lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
-    current_idx = lang_options.index("한국어" if st.session_state.lang == "ko" else "English" if st.session_state.lang == "en" else "हिंदी")
+    current_idx = lang_options.index(
+        "한국어" if st.session_state.lang == "ko" else
+        "English" if st.session_state.lang == "en" else "हिंदी"
+    )
     selected_lang = st.selectbox("언어", lang_options, index=current_idx)
     new_lang = lang_map[selected_lang]
     if new_lang != st.session_state.lang:
