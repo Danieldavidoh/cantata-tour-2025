@@ -37,114 +37,141 @@ defaults = {
     "lang": "ko",
     "edit_city": None,
     "expanded": {},
-    "adding_cities": []
+    "adding_cities": [],
+    "pw": "0009"  # 기본 비밀번호
 }
 for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
-# 다국어
+# 다국어 (숫자 제외한 제목만 번역)
 LANG = {
-    "ko": { "title": "칸타타 투어 2025", "caption": "마하라스트라 투어 관리 시스템", "tab_notice": "공지 관리", "tab_map": "투어 경로", "map_title": "경로 보기", "add_city": "도시 추가", "password": "비밀번호", "login": "로그인", "logout": "로그아웃", "wrong_pw": "비밀번호가 틀렸습니다.", "select_city": "도시 선택", "venue": "공연장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵 링크", "indoor": "실내", "outdoor": "실외", "register": "등록", "edit": "수정", "remove": "삭제", "date": "등록일", "performance_date": "공연 날짜", "cancel": "취소", "title_label": "제목", "content_label": "내용", "upload_image": "이미지 업로드", "upload_file": "파일 업로드", "submit": "등록", "warning": "제목과 내용을 모두 입력해주세요.", "file_download": "파일 다운로드" },
-    "en": { "title": "Cantata Tour 2025", "caption": "Maharashtra Tour Management System", "tab_notice": "Notice", "tab_map": "Tour Route", "map_title": "View Route", "add_city": "Add City", "password": "Password", "login": "Login", "logout": "Logout", "wrong_pw": "Wrong password.", "select_city": "Select City", "venue": "Venue", "seats": "Expected Attendance", "note": "Notes", "google_link": "Google Maps Link", "indoor": "Indoor", "outdoor": "Outdoor", "register": "Register", "edit": "Edit", "remove": "Remove", "date": "Registered On", "performance_date": "Performance Date", "cancel": "Cancel", "title_label": "Title", "content_label": "Content", "upload_image": "Upload Image", "upload_file": "Upload File", "submit": "Submit", "warning": "Please enter both title and content.", "file_download": "Download File" },
-    "hi": { "title": "कांताता टूर 2025", "caption": "महाराष्ट्र टूर प्रबंधन प्रणाली", "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "map_title": "मार्ग देखें", "add_city": "शहर जोड़ें", "password": "पासवर्ड", "login": "लॉगिन", "logout": "लॉगआउट", "wrong_pw": "गलत पासवर्ड।", "select_city": "शहर चुनें", "venue": "स्थल", "seats": "अपेक्षित उपस्थिति", "note": "नोट्स", "google_link": "गूगल मैप्स लिंक", "indoor": "इनडोर", "outdoor": "आउटडोर", "register": "रजिस्टर", "edit": "संपादित करें", "remove": "हटाएं", "date": "तारीख", "performance_date": "प्रदर्शन तिथि", "cancel": "रद्द करें", "title_label": "शीर्षक", "content_label": "सामग्री", "upload_image": "छवि अपलोड करें", "upload_file": "फ़ाइल अपलोड करें", "submit": "जमा करें", "warning": "शीर्षक और सामग्री दोनों दर्ज करें।", "file_download": "फ़ाइल डाउनलोड करें" }
+    "ko": { 
+        "title_base": "칸타타 투어", 
+        "caption": "마하라스트라", 
+        "tab_notice": "공지 관리", 
+        "tab_map": "투어 경로", 
+        "map_title": "경로 보기", 
+        "add_city": "도시 추가", 
+        "password": "비밀번호", 
+        "login": "로그인", 
+        "logout": "로그아웃", 
+        "wrong_pw": "비밀번호가 틀렸습니다.", 
+        "select_city": "도시 선택", 
+        "venue": "공연장소", 
+        "seats": "예상 인원", 
+        "note": "특이사항", 
+        "google_link": "구글맵 링크", 
+        "indoor": "실내", 
+        "outdoor": "실외", 
+        "register": "등록", 
+        "edit": "수정", 
+        "remove": "삭제", 
+        "date": "등록일", 
+        "performance_date": "공연 날짜", 
+        "cancel": "취소", 
+        "title_label": "제목", 
+        "content_label": "내용", 
+        "upload_image": "이미지 업로드", 
+        "upload_file": "파일 업로드", 
+        "submit": "등록", 
+        "warning": "제목과 내용을 모두 입력해주세요.", 
+        "file_download": "파일 다운로드" 
+    },
+    "en": { 
+        "title_base": "Cantata Tour", 
+        "caption": "Maharashtra", 
+        "tab_notice": "Notice", 
+        "tab_map": "Tour Route", 
+        "map_title": "View Route", 
+        "add_city": "Add City", 
+        "password": "Password", 
+        "login": "Login", 
+        "logout": "Logout", 
+        "wrong_pw": "Wrong password.", 
+        "select_city": "Select City", 
+        "venue": "Venue", 
+        "seats": "Expected Attendance", 
+        "note": "Notes", 
+        "google_link": "Google Maps Link", 
+        "indoor": "Indoor", 
+        "outdoor": "Outdoor", 
+        "register": "Register", 
+        "edit": "Edit", 
+        "remove": "Remove", 
+        "date": "Registered On", 
+        "performance_date": "Performance Date", 
+        "cancel": "Cancel", 
+        "title_label": "Title", 
+        "content_label": "Content", 
+        "upload_image": "Upload Image", 
+        "upload_file": "Upload File", 
+        "submit": "Submit", 
+        "warning": "Please enter both title and content.", 
+        "file_download": "Download File" 
+    },
+    "hi": { 
+        "title_base": "कांताता टूर", 
+        "caption": "महाराष्ट्र", 
+        "tab_notice": "सूचना", 
+        "tab_map": "टूर मार्ग", 
+        "map_title": "मार्ग देखें", 
+        "add_city": "शहर जोड़ें", 
+        "password": "पासवर्ड", 
+        "login": "लॉगिन", 
+        "logout": "लॉगआउट", 
+        "wrong_pw": "गलत पासवर्ड।", 
+        "select_city": "शहर चुनें", 
+        "venue": "स्थल", 
+        "seats": "अपेक्षित उपस्थिति", 
+        "note": "नोट्स", 
+        "google_link": "गूगल मैप्स लिंक", 
+        "indoor": "इनडोर", 
+        "outdoor": "आउटडोर", 
+        "register": "रजिस्टर", 
+        "edit": "संपादित करें", 
+        "remove": "हटाएं", 
+        "date": "तारीख", 
+        "performance_date": "प्रदर्शन तिथि", 
+        "cancel": "रद्द करें", 
+        "title_label": "शीर्षक", 
+        "content_label": "सामग्री", 
+        "upload_image": "छवि अपलोड करें", 
+        "upload_file": "फ़ाइल अपलोड करें", 
+        "submit": "जमा करें", 
+        "warning": "शीर्षक और सामग्री दोनों दर्ज करें।", 
+        "file_download": "फ़ाइल डाउनलोड करें" 
+    }
 }
 _ = lambda key: LANG[st.session_state.lang].get(key, key)
 
-# === 크리스마스 밤 테마 + 움직이는 아이콘 + 눈 ===
+# === 크리스마스 밤 테마 + 눈 + 움직이는 아이콘 (맨 위에 배치!) ===
 christmas_night = """
 <style>
-/* 배경 */
 .stApp {
     background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
     color: #f0f0f0;
     font-family: 'Segoe UI', sans-serif;
     overflow: hidden;
 }
-
-/* 제목 */
 .christmas-title {
     text-align: center;
     margin: 20px 0;
 }
-.cantata { 
-    font-size: 3em; 
-    font-weight: bold; 
-    color: #e74c3c; 
-    text-shadow: 0 0 10px #ff6b6b;
-}
-.year { 
-    font-size: 2.8em; 
-    font-weight: bold; 
-    color: #ecf0f1; 
-    text-shadow: 0 0 8px #ffffff;
-}
-.maha { 
-    font-size: 1.8em; 
-    color: #3498db; 
-    font-style: italic;
-    text-shadow: 0 0 6px #74b9ff;
-}
-
-/* 움직이는 아이콘 */
-.floating-icons {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 1;
-}
-.icon {
-    position: absolute;
-    font-size: 2em;
-    animation: float 6s infinite ease-in-out, spin 8s infinite linear;
-    opacity: 0.8;
-}
-@keyframes float {
-    0%, 100% { transform: translateY(0) translateX(0); }
-    50% { transform: translateY(-20px) translateX(10px); }
-}
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* 눈 */
-.snowflake {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 1.2em;
-    position: absolute;
-    top: -10px;
-    animation: fall linear forwards;
-    user-select: none;
-    pointer-events: none;
-}
-@keyframes fall {
-    to { transform: translateY(100vh); opacity: 0; }
-}
-
-/* 버튼 */
-.stButton>button {
-    background: #c0392b !important;
-    color: white !important;
-    border: 2px solid #e74c3c !important;
-    border-radius: 12px !important;
-    font-weight: bold;
-}
-.stButton>button:hover {
-    background: #e74c3c !important;
-}
-
-/* 취소 버튼 X 검은색 */
-.remove-btn button {
-    color: #000 !important;
-    font-weight: bold;
-}
+.cantata { font-size: 3em; font-weight: bold; color: #e74c3c; text-shadow: 0 0 10px #ff6b6b; }
+.year { font-size: 2.8em; font-weight: bold; color: #ecf0f1; text-shadow: 0 0 8px #ffffff; }
+.maha { font-size: 1.8em; color: #3498db; font-style: italic; text-shadow: 0 0 6px #74b9ff; }
+.floating-icons { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+.icon { position: absolute; font-size: 2em; animation: float 6s infinite ease-in-out, spin 8s infinite linear; opacity: 0.8; }
+@keyframes float { 0%, 100% { transform: translateY(0) translateX(0); } 50% { transform: translateY(-20px) translateX(10px); } }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.snowflake { color: rgba(255, 255, 255, 0.5); font-size: 1.2em; position: absolute; top: -10px; animation: fall linear forwards; user-select: none; pointer-events: none; }
+@keyframes fall { to { transform: translateY(100vh); opacity: 0; } }
+.stButton>button { background: #c0392b !important; color: white !important; border: 2px solid #e74c3c !important; border-radius: 12px !important; font-weight: bold; }
+.stButton>button:hover { background: #e74c3c !important; }
+.remove-btn button { color: #000 !important; font-weight: bold; }
 </style>
 
-<!-- 움직이는 아이콘 -->
 <div class="floating-icons">
     <div class="icon" style="top:10%; left:10%; animation-delay:0s;">🎄</div>
     <div class="icon" style="top:15%; left:80%; animation-delay:1s;">🎁</div>
@@ -154,7 +181,6 @@ christmas_night = """
     <div class="icon" style="top:40%; left:20%; animation-delay:5s;">🎅</div>
 </div>
 
-<!-- 눈 내리는 JS -->
 <script>
 function createSnowflake() {
     const snow = document.createElement('div');
@@ -172,18 +198,57 @@ setInterval(createSnowflake, 400);
 """
 st.markdown(christmas_night, unsafe_allow_html=True)
 
-# === 제목 (크리스마스 스타일) ===
+# === 제목 (언어에 따라 숫자 제외하고 번역) ===
+title_base = _( "title_base" )
+caption = _( "caption" )
 st.markdown(
-    '<div class="christmas-title">'
-    '<div class="cantata">칸타타 투어</div>'
-    '<div class="year">2025</div>'
-    '<div class="maha">마하라스트라</div>'
-    '</div>',
+    f'<div class="christmas-title">'
+    f'<div class="cantata">{title_base}</div>'
+    f'<div class="year">2025</div>'
+    f'<div class="maha">{caption}</div>'
+    f'</div>',
     unsafe_allow_html=True
 )
 
-# === 나머지 기능 ===
-# (이전 코드와 동일 - 생략하지 않고 전체 포함)
+# === 비밀번호 동적 변경 로직 ===
+with st.sidebar:
+    lang_options = ["한국어", "English", "हिंदी"]
+    lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
+    current_idx = lang_options.index("한국어" if st.session_state.lang == "ko" else "English" if st.session_state.lang == "en" else "हिंदी")
+    selected_lang = st.selectbox("🌐 언어", lang_options, index=current_idx)
+    new_lang = lang_map[selected_lang]
+    if new_lang != st.session_state.lang:
+        st.session_state.lang = new_lang
+        st.rerun()
+
+    st.markdown("---")
+    if not st.session_state.admin:
+        st.markdown("### 🎅 관리자 로그인")
+        pw_input = st.text_input(_("password"), type="password")
+        if st.button(_("login")):
+            current_pw = st.session_state.pw
+            if pw_input == current_pw:
+                st.session_state.admin = True
+                st.success("관리자 모드 ON")
+                st.rerun()
+            elif pw_input == "0691":
+                st.session_state.pw = "9000"
+                st.warning("비밀번호가 9000으로 변경되었습니다.")
+                st.rerun()
+            elif pw_input == "0692":
+                st.session_state.pw = "0009"
+                st.warning("비밀번호가 0009으로 복구되었습니다.")
+                st.rerun()
+            else:
+                st.error(_("wrong_pw"))
+    else:
+        st.success("🎄 관리자 모드")
+        if st.button(_("logout")):
+            st.session_state.admin = False
+            st.rerun()
+
+# === 나머지 기능 (기존 코드 유지) ===
+# (공지, 지도 등 - 생략하지 않고 전체 포함)
 
 # 유틸
 def load_json(filename):
@@ -292,11 +357,7 @@ def render_map():
                 if city_name != current:
                     st.session_state.adding_cities[i] = city_name
             with col_del:
-                # 검은색 X 버튼
-                st.markdown(
-                    '<div class="remove-btn">',
-                    unsafe_allow_html=True
-                )
+                st.markdown('<div class="remove-btn">', unsafe_allow_html=True)
                 if st.button("×", key=f"remove_add_{i}"):
                     st.session_state.adding_cities.pop(i)
                     st.rerun()
@@ -517,34 +578,6 @@ def render_map():
         AntPath(coords, color="#e74c3c", weight=5, delay=800).add_to(m)
 
     st_folium(m, width=900, height=550)
-
-# 사이드바
-with st.sidebar:
-    lang_options = ["한국어", "English", "हिंदी"]
-    lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
-    current_idx = lang_options.index("한국어" if st.session_state.lang == "ko" else "English" if st.session_state.lang == "en" else "हिंदी")
-    selected_lang = st.selectbox("🌐 언어", lang_options, index=current_idx)
-    new_lang = lang_map[selected_lang]
-    if new_lang != st.session_state.lang:
-        st.session_state.lang = new_lang
-        st.rerun()
-
-    st.markdown("---")
-    if not st.session_state.admin:
-        st.markdown("### 🎅 관리자 로그인")
-        pw = st.text_input(_("password"), type="password")
-        if st.button(_("login")):
-            if pw == "0000":
-                st.session_state.admin = True
-                st.success("관리자 모드 ON")
-                st.rerun()
-            else:
-                st.error(_("wrong_pw"))
-    else:
-        st.success("🎄 관리자 모드")
-        if st.button(_("logout")):
-            st.session_state.admin = False
-            st.rerun()
 
 # 탭 정의
 tab1, tab2 = st.tabs([f"🎁 {_('tab_notice')}", f"🗺️ {_('tab_map')}"])
