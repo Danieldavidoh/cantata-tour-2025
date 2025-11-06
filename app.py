@@ -37,7 +37,7 @@ defaults = {
     "lang": "ko",
     "edit_city": None,
     "expanded": {},
-    "adding_cities": []  # 추가 중인 도시 폼
+    "adding_cities": []
 }
 for key, val in defaults.items():
     if key not in st.session_state:
@@ -64,7 +64,7 @@ def save_json(filename, data):
 
 def extract_latlon_from_shortlink(short_url):
     try:
-        r = requests.get(short_url, allow_redirects=True, timeout=5)
+       edirects=True, timeout=5)
         final_url = r.url
         match = re.search(r'@([0-9\.\-]+),([0-9\.\-]+)', final_url)
         if match:
@@ -73,14 +73,51 @@ def extract_latlon_from_shortlink(short_url):
         pass
     return None, None
 
-# 공지 기능 (동일)
+# 공지 기능
 def add_notice(title, content, image_file=None, upload_file=None):
-    # ... (동일)
-    pass
+    img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{image_file.name}") if image_file else None
+    file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{upload_file.name}") if upload_file else None
+    if image_file:
+        with open(img_path, "wb") as f:
+            f.write(image_file.read())
+    if upload_file:
+        with open(file_path, "wb") as f:
+            f.write(upload_file.read())
+    new_notice = {
+        "id": str(uuid.uuid4()),
+        "title": title,
+        "content": content,
+        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
+        "image": img_path,
+        "file": file_path
+    }
+    data = load_json(NOTICE_FILE)
+    data.insert(0, new_notice)
+    save_json(NOTICE_FILE, data)
+    st.session_state.expanded = {}
+    st.toast("공지가 등록되었습니다.")
+    st.rerun()
 
 def render_notice_list(show_delete=False):
-    # ... (동일)
-    pass
+    data = load_json(NOTICE_FILE)
+    for idx, n in enumerate(data):
+        key = f"notice_{idx}"
+        expanded = st.session_state.expanded.get(key, False)
+        with st.expander(f"{n['date']} | {n['title']}", expanded=expanded):
+            st.markdown(n["content"])
+            if n.get("image") and os.path.exists(n["image"]):
+                st.image(n["image"], use_container_width=True)
+            if n.get("file") and os.path.exists(n["file"]):
+                href = f'<a href="data:file/octet-stream;base64,{base64.b64encode(open(n["file"], "rb").read()).decode()}" download="{os.path.basename(n["file"])}">{_("file_download")}</a>'
+                st.markdown(href, unsafe_allow_html=True)
+            if show_delete and st.button(_("remove"), key=f"del_{idx}"):
+                data.pop(idx)
+                save_json(NOTICE_FILE, data)
+                st.session_state.expanded = {}
+                st.toast("공지가 삭제되었습니다.")
+                st.rerun()
+        if st.session_state.expanded.get(key, False) != expanded:
+            st.session_state.expanded[key] = expanded
 
 # 지도 + 도시 관리
 def render_map():
@@ -90,7 +127,7 @@ def render_map():
     with col_btn:
         if st.session_state.admin:
             if st.button(_("add_city"), key="btn_add_city"):
-                st.session_state.adding_cities.append(None)  # 추가 폼 슬롯
+                st.session_state.adding_cities.append(None)
                 st.rerun()
 
     cities_data = load_json(CITY_FILE)
@@ -103,7 +140,7 @@ def render_map():
     existing = {c["city"] for c in cities_data}
     available = [c for c in cities_list if c not in existing]
 
-    # --- 동적 추가 폼 (정상 작동) ---
+    # --- 동적 추가 폼 ---
     for i in range(len(st.session_state.adding_cities)):
         with st.container():
             st.markdown("---")
@@ -118,7 +155,6 @@ def render_map():
                     index=idx,
                     key=f"add_select_{i}"
                 )
-                # 실시간 저장
                 if city_name != current:
                     st.session_state.adding_cities[i] = city_name
             with col_del:
@@ -330,8 +366,59 @@ def render_map():
 
     st_folium(m, width=900, height=550)
 
-# 사이드바 + 탭 + 메인 (동일)
-# ... (위와 동일)
+# 사이드바
+with st.sidebar:
+    lang_options = ["한국어", "English", "हिंदी"]
+    lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
+    current_idx = lang_options.index("한국어" if st.session_state.lang == "ko" else "English" if st.session_state.lang == "en" else "हिंदी")
+    selected_lang = st.selectbox("언어", lang_options, index=current_idx)
+    new_lang = lang_map[selected_lang]
+    if new_lang != st.session_state.lang:
+        st.session_state.lang = new_lang
+        st.rerun()
+
+    st.markdown("---")
+    if not st.session_state.admin:
+        st.markdown("### 관리자 로그인")
+        pw = st.text_input(_("password"), type="password")
+        if st.button(_("login")):
+            if pw == "0000":
+                st.session_state.admin = True
+                st.success("관리자 모드 ON")
+                st.rerun()
+            else:
+                st.error(_("wrong_pw"))
+    else:
+        st.success("관리자 모드")
+        if st.button(_("logout")):
+            st.session_state.admin = False
+            st.rerun()
+
+# 메인 제목
+st.markdown(f"# {_('title')} ")
+st.caption(_("caption"))
+
+# 탭 정의 (여기서!)
+tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
+
+# 탭 내용
+with tab1:
+    if st.session_state.admin:
+        with st.form("notice_form", clear_on_submit=True):
+            t = st.text_input(_("title_label"))
+            c = st.text_area(_("content_label"))
+            img = st.file_uploader(_("upload_image"), type=["png", "jpg", "jpeg"])
+            f = st.file_uploader(_("upload_file"))
+            if st.form_submit_button(_("submit")):
+                if t.strip() and c.strip():
+                    add_notice(t, c, img, f)
+                else:
+                    st.warning(_("warning"))
+        render_notice_list(show_delete=True)
+    else:
+        render_notice_list(show_delete=False)
+        if st.button("새로고침"):
+            st.rerun()
 
 with tab2:
     render_map()
