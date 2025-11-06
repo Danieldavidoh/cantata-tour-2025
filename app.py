@@ -38,7 +38,7 @@ for key, val in defaults.items():
         st.session_state[key] = val
 
 # =============================================
-# 다국어 (한국어 / English / हिंदी)
+# 다국어 (모든 키 포함)
 # =============================================
 LANG = {
     "ko": {
@@ -64,8 +64,13 @@ LANG = {
         "date": "날짜",
         "add": "추가",
         "cancel": "취소",
-        "notice_added": "공지가 등록되었습니다.",
-        "notice_deleted": "공지가 삭제되었습니다.",
+        "title_label": "제목",
+        "content_label": "내용",
+        "upload_image": "이미지 업로드",
+        "upload_file": "파일 업로드",
+        "submit": "등록",
+        "warning": "제목과 내용을 모두 입력해주세요.",
+        "file_download": "파일 다운로드",
     },
     "en": {
         "title": "Cantata Tour 2025",
@@ -90,8 +95,13 @@ LANG = {
         "date": "Date",
         "add": "Add",
         "cancel": "Cancel",
-        "notice_added": "Notice added.",
-        "notice_deleted": "Notice deleted.",
+        "title_label": "Title",
+        "content_label": "Content",
+        "upload_image": "Upload Image",
+        "upload_file": "Upload File",
+        "submit": "Submit",
+        "warning": "Please enter both title and content.",
+        "file_download": "Download File",
     },
     "hi": {
         "title": "कांताता टूर 2025",
@@ -116,8 +126,13 @@ LANG = {
         "date": "तारीख",
         "add": "जोड़ें",
         "cancel": "रद्द करें",
-        "notice_added": "सूचना जोड़ी गई।",
-        "notice_deleted": "सूचना हटाई गई।",
+        "title_label": "शीर्षक",
+        "content_label": "सामग्री",
+        "upload_image": "छवि अपलोड करें",
+        "upload_file": "फ़ाइल अपलोड करें",
+        "submit": "जमा करें",
+        "warning": "कृपया शीर्षक और सामग्री दोनों दर्ज करें।",
+        "file_download": "फ़ाइल डाउनलोड करें",
     }
 }
 _ = LANG[st.session_state.lang]
@@ -147,7 +162,7 @@ def extract_latlon_from_shortlink(short_url):
     return None, None
 
 # =============================================
-# 공지 기능
+# 공지 기능 (완전 복구)
 # =============================================
 def add_notice(title, content, image_file=None, upload_file=None):
     img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{image_file.name}") if image_file else None
@@ -172,7 +187,7 @@ def add_notice(title, content, image_file=None, upload_file=None):
     data.insert(0, new_notice)
     save_json(NOTICE_FILE, data)
     st.session_state.expanded = {}
-    st.toast(_["notice_added"])
+    st.toast("공지가 등록되었습니다.")
     st.rerun()
 
 def render_notice_list(show_delete=False):
@@ -191,7 +206,7 @@ def render_notice_list(show_delete=False):
                 data.pop(idx)
                 save_json(NOTICE_FILE, data)
                 st.session_state.expanded = {}
-                st.toast(_["notice_deleted"])
+                st.toast("공지가 삭제되었습니다.")
                 st.rerun()
         if st.session_state.expanded.get(key, False) != expanded:
             st.session_state.expanded[key] = expanded
@@ -260,7 +275,9 @@ def render_map():
                     if st.button(_["register"], key=f"reg_{city_name}"):
                         lat, lon = None, None
                         if map_link.strip():
-                            lat, lon = extract_latlon_from_shortlink(map_link)
+                            lat, lng = extract_latlon_from_shortlink(map_link)
+                            if lat and lng:
+                                lon = lng
                         if not lat or not lon:
                             coords = {
                                 "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567),
@@ -369,7 +386,7 @@ def render_map():
                         st.session_state.edit_city = None
                         st.rerun()
 
-    # Google Maps (항상 최신 반영)
+    # Google Maps
     st.markdown("---")
     if cities_data:
         maps_url = generate_google_maps_url(cities_data)
@@ -384,15 +401,14 @@ def render_map():
             src="{maps_url}">
         </iframe>
         '''
-        st.components.v1.html(iframe, height=550, scrolling=True)
+        st.components.v1.html(iframe, height=550)
     else:
         st.info("कोई शहर पंजीकृत नहीं" if st.session_state.lang == "hi" else "No cities registered." if st.session_state.lang == "en" else "등록된 도시 없음")
 
 # =============================================
-# 사이드바 (힌디어 포함)
+# 사이드바
 # =============================================
 with st.sidebar:
-    # 언어 선택
     lang_options = ["한국어", "English", "हिंदी"]
     lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
     current_idx = lang_options.index("한국어" if st.session_state.lang == "ko" else "English" if st.session_state.lang == "en" else "हिंदी")
@@ -405,7 +421,6 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # 관리자 로그인
     if not st.session_state.admin:
         st.markdown("### प्रशासक लॉगिन" if st.session_state.lang == "hi" else "### Admin Login" if st.session_state.lang == "en" else "### 관리자 로그인")
         pw = st.text_input(_["password"], type="password")
