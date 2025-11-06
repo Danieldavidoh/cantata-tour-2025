@@ -1,5 +1,5 @@
-# app.py - 크리스마스 에디션 최종 완성 (2025.11.07) 🎅🔥
-# 알림음 울림 + 슬라이드 알림 + 공지 접힘 + 구글맵 마커 + 일반모드 공지 시작
+# app.py - 크리스마스 에디션 최종 패치 (2025.11.07) 🎅🔥
+# 알림음 + 슬라이드 알림 + 공지 항상 접힘 + 일반모드 공지 시작
 
 import streamlit as st
 from datetime import datetime
@@ -30,10 +30,11 @@ UPLOAD_DIR = "uploads"
 CITY_FILE = "cities.json"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# --- 4. 세션 ---
+# --- 4. 세션 초기화 (expanded 항상 초기화) ---
 defaults = {
     "admin": False, "lang": "ko", "edit_city": None, "expanded": {}, "adding_cities": [],
-    "pw": "0009", "seen_notices": [], "active_tab": "공지", "new_notice": False, "sound_played": False
+    "pw": "0009", "seen_notices": [], "active_tab": "공지", "new_notice": False, "sound_played": False,
+    "user_interacted": False  # 사용자 상호작용 추적
 }
 for k, v in defaults.items():
     if k not in st.session_state: st.session_state[k] = v
@@ -61,10 +62,10 @@ LANG = {
 }
 _ = lambda key: LANG[st.session_state.lang].get(key, key)
 
-# --- 6. 5초 Jingle Bells WAV (Base64) ---
+# --- 6. 5초 Jingle Bells WAV ---
 JINGLE_BELLS_WAV = "UklGRnoGAABXQVZFZm10IBAAAAABAAEAIlYAAIlYAABQTFRFAAAAAP4AAAD8AAAAAAAAAAAAAAACAgICAgMEBQYHCAkKCwwNDg8QERITFBUWFhcYGBkaGxwdHh8gIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs8PT4/QEFCQkNERUZGRkdISUpLTE1OT09QUVJTVFVaW1xdXl9gYWFhYmNkZWZnaGlqa2ttbW5vcHFyc3R1dnd4eXp7fH1+f4CBgoOEhYaHiImKi4yNjo+QkZKTlJWWl5iZmpucnZ6foKGio6SlpqeoqaqrrK2ur7CxsrO0tba3uLm6u7y9vr/AwcLDxMXGx8jJysvMzc7P0NHS09TV1tfY2drb3N3e3+Dh4uPk5ebn6Onq6+zt7u/w8fLz9PX29/j5+vv8/f7/AAA="
 
-# --- 7. 테마 + 알림음 + 슬라이드 알림 ---
+# --- 7. 테마 + 알림음 + 슬라이드 알림 + 사용자 상호작용 감지 ---
 st.markdown(f"""
 <style>
 .stApp {{ background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #f0f0f0; }}
@@ -77,10 +78,14 @@ st.markdown(f"""
 .stButton>button {{ background: #c0392b !important; color: white !important; border: 2px solid #e74c3c !important; border-radius: 12px !important; }}
 .stButton>button:hover {{ background: #e74c3c !important; }}
 .new-badge {{ background: #e74c3c; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7em; margin-left: 5px; }}
-.slide-alert {{ position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background: #e74c3c; color: white; padding: 12px 24px; border-radius: 50px; font-weight: bold; box-shadow: 0 4px 15px rgba(231,76,60,0.5); z-index: 9999; animation: slideIn 0.5s ease-out; }}
+.slide-alert {{ position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background: #e74c3c; color: white; padding: 12px 24px; border-radius: 50px; font-weight: bold; box-shadow: 0 4px 15px rgba(231,76,60,0.5); z-index: 9999; animation: slideIn 0.5s ease-out forwards; opacity: 0; }}
 @keyframes slideIn {{ from {{ top: -60px; opacity: 0; }} to {{ top: 10px; opacity: 1; }} }}
 </style>
 <script>
+let hasInteracted = false;
+document.addEventListener('click', () => {{ hasInteracted = true; }}, {{ once: true }});
+document.addEventListener('keydown', () => {{ hasInteracted = true; }}, {{ once: true }});
+
 function createSnowflake() {{
     const s = document.createElement('div'); s.classList.add('snowflake');
     s.innerText = ['❅','❆','✻','✼'][Math.floor(Math.random()*4)];
@@ -93,18 +98,30 @@ function createSnowflake() {{
 setInterval(createSnowflake, 400);
 
 function playJingleBells() {{
-    const audio = new Audio('data:audio/wav;base64,{JINGLE_BELLS_WAV}');
-    audio.volume = 0.7;
-    audio.play().catch(() => {{}});
+    if (hasInteracted) {{
+        const audio = new Audio('data:audio/wav;base64,{JINGLE_BELLS_WAV}');
+        audio.volume = 0.7;
+        audio.play().catch(() => {{}});
+    }}
 }}
 
 function showSlideAlert() {{
-    const alert = document.createElement('div');
-    alert.className = 'slide-alert';
-    alert.innerText = '{_("new_notice")}';
-    document.body.appendChild(alert);
-    setTimeout(() => alert.remove(), 5000);
+    if (hasInteracted) {{
+        const alert = document.createElement('div');
+        alert.className = 'slide-alert';
+        alert.innerText = '{_("new_notice")}';
+        document.body.appendChild(alert);
+        setTimeout(() => {{
+            alert.style.animation = 'slideOut 0.5s ease-in forwards';
+            setTimeout(() => alert.remove(), 500);
+        }}, 4500);
+    }}
 }}
+const style = document.createElement('style');
+style.innerHTML = `
+@keyframes slideOut {{ from {{ top: 10px; opacity: 1; }} to {{ top: -60px; opacity: 0; }} }}
+`;
+document.head.appendChild(style);
 </script>
 """, unsafe_allow_html=True)
 
@@ -160,6 +177,7 @@ def add_notice(title, content, img=None, file=None):
     st.session_state.seen_notices = []
     st.session_state.new_notice = True
     st.session_state.active_tab = "공지"
+    st.session_state.expanded = {}  # 강제 접힘 초기화
     st.rerun()
 
 def render_notices():
@@ -170,8 +188,10 @@ def render_notices():
         if new: has_new = True
         title = f"{n['date']} | {n['title']}"
         if new: title += ' <span class="new-badge">NEW</span>'
-        # 항상 접힌 상태
-        with st.expander(title, expanded=False):
+        # 항상 접힌 상태 + 세션 expanded 초기화
+        key = f"notice_{i}"
+        expanded = st.session_state.expanded.get(key, False)
+        with st.expander(title, expanded=expanded):
             st.markdown(n["content"])
             if n.get("image") and os.path.exists(n["image"]): st.image(n["image"], use_container_width=True)
             if n.get("file") and os.path.exists(n["file"]):
@@ -182,15 +202,20 @@ def render_notices():
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
             if new and not st.session_state.admin:
                 st.session_state.seen_notices.append(n["id"])
+            # expander 상태 저장
+            if st.session_state.expanded.get(key, False) != expanded:
+                st.session_state.expanded[key] = expanded
 
-    # 새 공지 → 알림음 + 슬라이드 알림
+    # 새 공지 → 알림음 + 슬라이드 (사용자 상호작용 후)
     if has_new and not st.session_state.get("sound_played", False):
         st.markdown("<script>playJingleBells(); showSlideAlert();</script>", unsafe_allow_html=True)
         st.session_state.sound_played = True
+        # 사용자 상호작용 강제 활성화
+        st.markdown("<script>hasInteracted = true;</script>", unsafe_allow_html=True)
     elif not has_new:
         st.session_state.sound_played = False
 
-# --- 12. 지도 (구글맵 마커 스타일) ---
+# --- 12. 지도 ---
 def render_map():
     st.subheader(_('map_title'))
     if st.session_state.admin and st.button(_('add_city'), key="add_city_top"):
@@ -224,7 +249,6 @@ def render_map():
     if len(cities) > 1:
         st.markdown(f"<div style='text-align:center;color:#e74c3c;font-size:1.3em;margin:15px 0'>🎅 총 거리: {total_dist:.0f}km</div>", unsafe_allow_html=True)
 
-    # 구글맵 스타일 마커 (빨간 핀)
     m = folium.Map(location=[19.0, 73.0], zoom_start=7, tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", attr="Google")
     coords = []
     for c in cities:
@@ -239,17 +263,18 @@ def render_map():
         AntPath(coords, color="#e74c3c", weight=6, opacity=0.9, delay=800).add_to(m)
     st_folium(m, width=900, height=550, key=f"map_{len(cities)}", returned_objects=[])
 
-# --- 13. 탭 + 일반모드 공지 시작 ---
-if not st.session_state.admin and st.session_state.active_tab != "공지":
+# --- 13. 탭 + 일반모드 공지 시작 + 강제 접힘 ---
+if not st.session_state.admin:
     st.session_state.active_tab = "공지"
-    st.rerun()
-
-tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
+    st.session_state.expanded = {}  # 일반모드 진입 시 강제 접힘
 
 if st.session_state.get("new_notice", False):
     st.session_state.active_tab = "공지"
     st.session_state.new_notice = False
+    st.session_state.expanded = {}  # 새 공지 시 강제 접힘
     st.rerun()
+
+tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
 
 with tab1:
     if st.session_state.admin:
