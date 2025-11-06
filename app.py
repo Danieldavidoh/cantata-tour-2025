@@ -38,7 +38,7 @@ defaults = {
     "selected_city": None,
     "mode": None,
     "expanded": {},
-    "current_tab": "tab_map"  # 기본 탭
+    "current_tab": "tab_map"
 }
 for key, val in defaults.items():
     if key not in st.session_state:
@@ -173,9 +173,10 @@ def render_notice_list(show_delete=False):
 def render_map():
     st.subheader(_["map_title"])
 
+    # 항상 최신 데이터 로드
     cities_data = load_json(CITY_FILE)
 
-    # 관리자: + 버튼 (오른쪽 끝 고정)
+    # 관리자: + 버튼 (오른쪽 끝)
     if st.session_state.admin:
         with st.container():
             col_left, col_right = st.columns([9, 1])
@@ -184,7 +185,7 @@ def render_map():
                     st.session_state.mode = "add"
                     st.rerun()
 
-    # 새 도시 추가
+    # 새 도시 추가 폼 (등록 후 바로 아래에 도시 표시)
     if st.session_state.mode == "add" and st.session_state.admin:
         if not os.path.exists(CITY_LIST_FILE):
             default_cities = ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad", "Kolhapur", "Solapur", "Thane"]
@@ -199,83 +200,81 @@ def render_map():
             if st.button("닫기"):
                 st.session_state.mode = None
                 st.rerun()
-            return
+        else:
+            with st.expander("새 도시 추가", expanded=True):
+                city_name = st.selectbox(_["select_city"], available_cities)
+                venue = st.text_input(_["venue"], placeholder="예: 오디토리움")
+                seats = st.number_input(_["seats"], min_value=0, step=50, value=0)
+                venue_type = st.radio("공연형태", [_["indoor"], _["outdoor"]], horizontal=True)
+                map_link = st.text_input(_["google_link"], placeholder="https://maps.app.goo.gl/...")
+                note = st.text_area(_["note"], placeholder="특이사항 입력")
 
-        with st.expander("새 도시 추가", expanded=True):
-            city_name = st.selectbox(_["select_city"], available_cities)
-            venue = st.text_input(_["venue"], placeholder="예: 오디토리움")
-            seats = st.number_input(_["seats"], min_value=0, step=50, value=0)
-            venue_type = st.radio("공연형태", [_["indoor"], _["outdoor"]], horizontal=True)
-            map_link = st.text_input(_["google_link"], placeholder="https://maps.app.goo.gl/...")
-            note = st.text_area(_["note"], placeholder="특이사항 입력")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button(_["register"], key="register_city"):
+                        lat, lon = None, None
+                        if map_link.strip():
+                            lat, lon = extract_latlon_from_shortlink(map_link)
+                        if not lat or not lon:
+                            city_coords = {
+                                "Mumbai": (19.0760, 72.8777),
+                                "Pune": (18.5204, 73.8567),
+                                "Nagpur": (21.1458, 79.0882),
+                                "Nashik": (19.9975, 73.7898),
+                                "Aurangabad": (19.8762, 75.3433),
+                                "Kolhapur": (16.7050, 74.2433),
+                                "Solapur": (17.6599, 75.9064),
+                                "Thane": (19.2183, 72.9781),
+                            }
+                            lat, lon = city_coords.get(city_name, (19.0, 73.0))
 
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button(_["register"], key="register_city"):
-                    lat, lon = None, None
-                    if map_link.strip():
-                        lat, lon = extract_latlon_from_shortlink(map_link)
-                    if not lat or not lon:
-                        city_coords = {
-                            "Mumbai": (19.0760, 72.8777),
-                            "Pune": (18.5204, 73.8567),
-                            "Nagpur": (21.1458, 79.0882),
-                            "Nashik": (19.9975, 73.7898),
-                            "Aurangabad": (19.8762, 75.3433),
-                            "Kolhapur": (16.7050, 74.2433),
-                            "Solapur": (17.6599, 75.9064),
-                            "Thane": (19.2183, 72.9781),
+                        nav_url = make_navigation_link(lat, lon)
+                        new_city = {
+                            "city": city_name,
+                            "venue": venue or "미정",
+                            "seats": seats or 0,
+                            "type": venue_type,
+                            "note": note or "없음",
+                            "lat": lat,
+                            "lon": lon,
+                            "nav_url": nav_url,
+                            "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
                         }
-                        lat, lon = city_coords.get(city_name, (19.0, 73.0))
+                        cities_data.append(new_city)
+                        save_json(CITY_FILE, cities_data)
+                        st.session_state.mode = None
+                        st.session_state.expanded = {}
 
-                    nav_url = make_navigation_link(lat, lon)
-                    new_city = {
-                        "city": city_name,
-                        "venue": venue or "미정",
-                        "seats": seats or 0,
-                        "type": venue_type,
-                        "note": note or "없음",
-                        "lat": lat,
-                        "lon": lon,
-                        "nav_url": nav_url,
-                        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
-                    }
-                    cities_data.append(new_city)
-                    save_json(CITY_FILE, cities_data)
-                    st.session_state.mode = None
-                    st.session_state.expanded = {}
+                        if len(cities_data) > 1:
+                            prev = cities_data[-2]
+                            curr = cities_data[-1]
+                            dist = calculate_distance(prev["lat"], prev["lon"], curr["lat"], curr["lon"])
+                            duration = dist / 60
+                            st.success(f"도시 추가 완료!\n\n"
+                                       f"**{prev['city']} → {curr['city']}**\n"
+                                       f"**{_['distance']}:** {dist:.1f}km\n"
+                                       f"**{_['duration']}:** {duration:.1f}h")
+                        else:
+                            st.success("첫 번째 도시가 등록되었습니다.")
+                        st.rerun()
 
-                    if len(cities_data) > 1:
-                        prev = cities_data[-2]
-                        curr = cities_data[-1]
-                        dist = calculate_distance(prev["lat"], prev["lon"], curr["lat"], curr["lon"])
-                        duration = dist / 60
-                        st.success(f"도시 추가 완료!\n\n"
-                                   f"**{prev['city']} → {curr['city']}**\n"
-                                   f"**{_['distance']}:** {dist:.1f}km\n"
-                                   f"**{_['duration']}:** {duration:.1f}h")
-                    else:
-                        st.success("첫 번째 도시가 등록되었습니다.")
-                    st.rerun()
+                with col2:
+                    if st.button("취소", key="cancel_city"):
+                        st.session_state.mode = None
+                        st.rerun()
 
-            with col2:
-                if st.button("취소", key="cancel_city"):
-                    st.session_state.mode = None
-                    st.rerun()
-
-    # 일반 사용자: 도시 목록
-    if not st.session_state.admin and cities_data:
-        for idx, city in enumerate(cities_data):
-            key = f"city_{idx}"
-            expanded = st.session_state.expanded.get(key, False)
-            with st.expander(f"{city['city']}", expanded=expanded):
-                st.markdown(f"**날짜:** {city.get('date', '')}")
-                st.markdown(f"**공연장소:** {city.get('venue', '')}")
-                st.markdown(f"**예상 인원:** {city.get('seats', '')}")
-                st.markdown(f"**구글맵:** {city.get('nav_url', '')}")
-                st.markdown(f"**특이사항:** {city.get('note', '')}")
-            if st.session_state.expanded.get(key, False) != expanded:
-                st.session_state.expanded[key] = expanded
+    # 등록 후 바로 아래에 도시 목록 표시 (관리자/일반 공통)
+    for idx, city in enumerate(cities_data):
+        key = f"city_{idx}"
+        expanded = st.session_state.expanded.get(key, False)
+        with st.expander(f"{city['city']}", expanded=expanded):
+            st.markdown(f"**날짜:** {city.get('date', '')}")
+            st.markdown(f"**공연장소:** {city.get('venue', '')}")
+            st.markdown(f"**예상 인원:** {city.get('seats', '')}")
+            st.markdown(f"**구글맵:** {city.get('nav_url', '')}")
+            st.markdown(f"**특이사항:** {city.get('note', '')}")
+        if st.session_state.expanded.get(key, False) != expanded:
+            st.session_state.expanded[key] = expanded
 
     # 지도 출력
     st.markdown("---")
@@ -318,23 +317,19 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 메인 + 탭 (항상 내용 출력)
+# 메인 + 탭
 # =============================================
 st.markdown(f"# {_['title']} ")
 st.caption(_["caption"])
 
-# 탭 생성
 tab1, tab2 = st.tabs([_["tab_notice"], _["tab_map"]])
 
-# 탭 상태 업데이트
 if tab1:
     st.session_state.current_tab = "tab_notice"
 elif tab2:
     st.session_state.current_tab = "tab_map"
 
-# 탭 내용 출력 (무조건)
 with tab1:
-    # 공지 관리
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
             t = st.text_input(_["title_label"])
@@ -353,5 +348,4 @@ with tab1:
             st.rerun()
 
 with tab2:
-    # 투어 경로
     render_map()
