@@ -1,6 +1,4 @@
 streamlit
-folium
-streamlit-folium
 streamlit-autorefresh
-pandas
 requests
+pytz
