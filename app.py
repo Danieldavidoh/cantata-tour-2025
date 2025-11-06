@@ -64,7 +64,7 @@ def save_json(filename, data):
 
 def extract_latlon_from_shortlink(short_url):
     try:
-       edirects=True, timeout=5)
+        r = requests.get(short_url, allow_redirects=True, timeout=5)  # ← 여기 수정!
         final_url = r.url
         match = re.search(r'@([0-9\.\-]+),([0-9\.\-]+)', final_url)
         if match:
@@ -398,10 +398,9 @@ with st.sidebar:
 st.markdown(f"# {_('title')} ")
 st.caption(_("caption"))
 
-# 탭 정의 (여기서!)
+# 탭 정의
 tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
 
-# 탭 내용
 with tab1:
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
