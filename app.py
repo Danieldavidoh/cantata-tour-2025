@@ -19,11 +19,10 @@ CITY_LIST_FILE = "cities_list.json"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # =============================================
-# cities.json 강제 초기화 (기존 데이터 완전 삭제)
+# cities.json 강제 초기화 (기존 데이터 삭제)
 # =============================================
 if os.path.exists(CITY_FILE):
-    os.remove(CITY_FILE)  # 기존 데이터 삭제
-    st.success("기존 도시 데이터가 초기화되었습니다.")
+    os.remove(CITY_FILE)
 
 # =============================================
 # 세션 초기화
@@ -38,7 +37,8 @@ defaults = {
     "map_link": "",
     "selected_city": None,
     "mode": None,
-    "expanded": {}
+    "expanded": {},
+    "current_tab": "tab_map"  # 탭 유지
 }
 for key, val in defaults.items():
     if key not in st.session_state:
@@ -108,9 +108,8 @@ def extract_latlon_from_shortlink(short_url):
 def make_navigation_link(lat, lon):
     return f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
 
-# 직선 거리 계산 (Haversine 공식)
 def calculate_distance(lat1, lon1, lat2, lon2):
-    R = 6371  # 지구 반지름 (km)
+    R = 6371
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
     a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
@@ -176,30 +175,28 @@ def render_map():
 
     cities_data = load_json(CITY_FILE)
 
-    # 관리자: + 버튼만
+    # 관리자: + 버튼 (항상 오른쪽 끝에 고정)
     if st.session_state.admin:
-        col1, col2 = st.columns([10, 1])
-        with col1:
-            pass
-        with col2:
-            if st.button("+", key="add_city"):
-                st.session_state.mode = "add"
-                st.rerun()
+        with st.container():
+            col_left, col_right = st.columns([9, 1])
+            with col_right:
+                if st.button("+", key="add_city"):
+                    st.session_state.mode = "add"
+                    st.rerun()
 
-    # 새 도시 추가 (도시 선택만 필수)
+    # 새 도시 추가
     if st.session_state.mode == "add" and st.session_state.admin:
         if not os.path.exists(CITY_LIST_FILE):
             default_cities = ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad", "Kolhapur", "Solapur", "Thane"]
             save_json(CITY_LIST_FILE, default_cities)
         cities_list = load_json(CITY_LIST_FILE)
 
-        # 이미 등록된 도시는 제외
         existing = {c["city"] for c in cities_data}
         available_cities = [c for c in cities_list if c not in existing]
 
         if not available_cities:
             st.info("모든 도시가 등록되었습니다.")
-            if st.button("취소"):
+            if st.button("닫기"):
                 st.session_state.mode = None
                 st.rerun()
             return
@@ -212,59 +209,59 @@ def render_map():
             map_link = st.text_input(_["google_link"], placeholder="https://maps.app.goo.gl/...")
             note = st.text_area(_["note"], placeholder="특이사항 입력")
 
-            if st.button(_["register"]):
-                lat, lon = None, None
-                if map_link.strip():
-                    lat, lon = extract_latlon_from_shortlink(map_link)
-                if not lat or not lon:
-                    st.warning("구글맵 링크가 없으면 좌표를 자동 추정합니다.")
-                    # 기본 좌표 (임시)
-                    city_coords = {
-                        "Mumbai": (19.0760, 72.8777),
-                        "Pune": (18.5204, 73.8567),
-                        "Nagpur": (21.1458, 79.0882),
-                        "Nashik": (19.9975, 73.7898),
-                        "Aurangabad": (19.8762, 75.3433),
-                        "Kolhapur": (16.7050, 74.2433),
-                        "Solapur": (17.6599, 75.9064),
-                        "Thane": (19.2183, 72.9781),
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button(_["register"], key="register_city"):
+                    lat, lon = None, None
+                    if map_link.strip():
+                        lat, lon = extract_latlon_from_shortlink(map_link)
+                    if not lat or not lon:
+                        city_coords = {
+                            "Mumbai": (19.0760, 72.8777),
+                            "Pune": (18.5204, 73.8567),
+                            "Nagpur": (21.1458, 79.0882),
+                            "Nashik": (19.9975, 73.7898),
+                            "Aurangabad": (19.8762, 75.3433),
+                            "Kolhapur": (16.7050, 74.2433),
+                            "Solapur": (17.6599, 75.9064),
+                            "Thane": (19.2183, 72.9781),
+                        }
+                        lat, lon = city_coords.get(city_name, (19.0, 73.0))
+
+                    nav_url = make_navigation_link(lat, lon)
+                    new_city = {
+                        "city": city_name,
+                        "venue": venue or "미정",
+                        "seats": seats or 0,
+                        "type": venue_type,
+                        "note": note or "없음",
+                        "lat": lat,
+                        "lon": lon,
+                        "nav_url": nav_url,
+                        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
                     }
-                    lat, lon = city_coords.get(city_name, (19.0, 73.0))
+                    cities_data.append(new_city)
+                    save_json(CITY_FILE, cities_data)
+                    st.session_state.mode = None
+                    st.session_state.expanded = {}
 
-                nav_url = make_navigation_link(lat, lon)
-                new_city = {
-                    "city": city_name,
-                    "venue": venue or "미정",
-                    "seats": seats or 0,
-                    "type": venue_type,
-                    "note": note or "없음",
-                    "lat": lat,
-                    "lon": lon,
-                    "nav_url": nav_url,
-                    "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
-                }
-                cities_data.append(new_city)
-                save_json(CITY_FILE, cities_data)
-                st.session_state.mode = None
-                st.session_state.expanded = {}
+                    if len(cities_data) > 1:
+                        prev = cities_data[-2]
+                        curr = cities_data[-1]
+                        dist = calculate_distance(prev["lat"], prev["lon"], curr["lat"], curr["lon"])
+                        duration = dist / 60
+                        st.success(f"도시 추가 완료!\n\n"
+                                   f"**{prev['city']} → {curr['city']}**\n"
+                                   f"**{_['distance']}:** {dist:.1f}km\n"
+                                   f"**{_['duration']}:** {duration:.1f}h")
+                    else:
+                        st.success("첫 번째 도시가 등록되었습니다.")
+                    st.rerun()
 
-                # 거리/시간 계산 및 표시
-                if len(cities_data) > 1:
-                    prev = cities_data[-2]
-                    curr = cities_data[-1]
-                    dist = calculate_distance(prev["lat"], prev["lon"], curr["lat"], curr["lon"])
-                    duration = dist / 60  # 평균 60km/h
-                    st.success(f"도시 추가 완료!\n\n"
-                               f"**{prev['city']} → {curr['city']}**\n"
-                               f"**{_['distance']}:** {dist:.1f}km\n"
-                               f"**{_['duration']}:** {duration:.1f}h")
-                else:
-                    st.success("첫 번째 도시가 등록되었습니다.")
-                st.rerun()
-
-            if st.button("취소"):
-                st.session_state.mode = None
-                st.rerun()
+            with col2:
+                if st.button("취소", key="cancel_city"):
+                    st.session_state.mode = None
+                    st.rerun()
 
     # 일반 사용자: 도시 목록
     if not st.session_state.admin and cities_data:
@@ -321,30 +318,13 @@ with st.sidebar:
             st.rerun()
 
 # =============================================
-# 메인
+# 메인 + 탭 상태 유지
 # =============================================
 st.markdown(f"# {_['title']} ")
 st.caption(_["caption"])
 
-tab1, tab2 = st.tabs([_["tab_notice"], _["tab_map"]])
+# 탭 선택 유지
+tab_names = [_["tab_notice"], _["tab_map"]]
+tab1, tab2 = st.tabs(tab_names)
 
-with tab1:
-    if st.session_state.admin:
-        with st.form("notice_form", clear_on_submit=True):
-            t = st.text_input(_["title_label"])
-            c = st.text_area(_["content_label"])
-            img = st.file_uploader(_["upload_image"], type=["png", "jpg", "jpeg"])
-            f = st.file_uploader(_["upload_file"])
-            if st.form_submit_button(_["submit"]):
-                if t.strip() and c.strip():
-                    add_notice(t, c, img, f)
-                else:
-                    st.warning(_["warning"])
-        render_notice_list(show_delete=True)
-    else:
-        render_notice_list(show_delete=False)
-        if st.button("새로고침"):
-            st.rerun()
-
-with tab2:
-    render_map()
+# 탭 상태 저장
