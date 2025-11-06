@@ -166,8 +166,6 @@ def render_map():
     st.subheader(_["map_title"])
     cities_data = load_json(CITY_FILE)  # 항상 최신 로드
 
-   _CLICK = st.session_state.get("click", False)
-
     # 관리자: 추가 버튼
     if st.session_state.admin:
         col1, col2 = st.columns([8, 2])
