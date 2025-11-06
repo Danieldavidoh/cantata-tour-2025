@@ -28,7 +28,7 @@ defaults = {
     "venue_type": "실내",
     "note_input": "",
     "map_link": "",
-    "mode": None,                     # add / edit
+    "mode": None,
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -56,7 +56,7 @@ LANG = {
         "delete": "삭제",
         "show_route": "경로 보기",
         "select_city": "도시 선택",
-        "warning": "⚠️ 올바른 정보를 입력하세요.",
+        "warning": "올바른 정보를 입력하세요.",
     },
 }
 _ = LANG[st.session_state.lang]
@@ -86,13 +86,63 @@ def extract_latlon_from_shortlink(short_url):
     return None, None
 
 def make_navigation_link(lat, lon):
-    ua = st.session_state.get("user_agent", "")
-    if "Android" in ua:
-        return f"google.navigation:q={lat},{lon}"
-    elif "iPhone" in ua or "iPad" in ua:
-        return f"comgooglemaps://?daddr={lat},{lon}&directionsmode=driving"
+    return f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
+
+# =============================================
+# 초기 도시 데이터 (Mumbai, Pune, Nagpur)
+# =============================================
+INITIAL_CITIES = [
+    {
+        "city": "Mumbai",
+        "venue": "Gateway of India Hall",
+        "seats": 5000,
+        "type": "실내",
+        "note": "크리스마스 콘서트 메인 무대, 관광객 많음",
+        "lat": 19.076090,
+        "lon": 72.877426,
+        "nav_url": make_navigation_link(19.076090, 72.877426)
+    },
+    {
+        "city": "Pune",
+        "venue": "Osho Auditorium",
+        "seats": 3000,
+        "type": "실외",
+        "note": "젊은 층 많아 에너지 폭발 예상",
+        "lat": 18.516726,
+        "lon": 73.856255,
+        "nav_url": make_navigation_link(18.516726, 73.856255)
+    },
+    {
+        "city": "Nagpur",
+        "venue": "Deogiri Fort Stage",
+        "seats": 2000,
+        "type": "실내",
+        "note": "지역 팬 열광, 과일 테마 장식 추천",
+        "lat": 21.146633,
+        "lon": 79.088860,
+        "nav_url": make_navigation_link(21.146633, 79.088860)
+    }
+]
+
+# =============================================
+# cities.json 초기화 (최초 실행 시 3개 도시 자동 추가)
+# =============================================
+def initialize_cities():
+    current_data = load_json(CITY_FILE)
+    if not current_data:  # 파일 없거나 비어 있으면
+        save_json(CITY_FILE, INITIAL_CITIES)
+        st.success("초기 도시 3개(Mumbai, Pune, Nagpur)가 자동 추가되었습니다!")
     else:
-        return f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
+        # 중복 방지: 없는 도시만 추가
+        existing_cities = {c["city"] for c in current_data}
+        new_cities = [city for city in INITIAL_CITIES if city["city"] not in existing_cities]
+        if new_cities:
+            current_data.extend(new_cities)
+            save_json(CITY_FILE, current_data)
+            st.info(f"추가된 도시: {[c['city'] for c in new_cities]}")
+
+# 앱 시작 시 초기화 실행
+initialize_cities()
 
 # =============================================
 # 도시 관리 섹션
@@ -100,21 +150,15 @@ def make_navigation_link(lat, lon):
 def render_city_section():
     st.subheader(_["show_route"])
 
-    # ------------------------------------------------------------------
-    # 1. 항상 최신 파일을 읽어옴
-    # ------------------------------------------------------------------
     cities_data = load_json(CITY_FILE)
     city_names = [c["city"] for c in cities_data]
 
-    # ------------------------------------------------------------------
-    # 2. 관리자 UI
-    # ------------------------------------------------------------------
     if st.session_state.admin:
         col1, col2 = st.columns([5, 1])
         with col1:
             st.markdown("#### 도시 목록")
         with col2:
-            if st.button("➕ 도시 추가"):
+            if st.button("도시 추가"):
                 st.session_state.selected_city = None
                 st.session_state.venue_input = ""
                 st.session_state.seat_count = 0
@@ -124,18 +168,12 @@ def render_city_section():
                 st.session_state.mode = "add"
                 st.rerun()
 
-        # ------------------------------------------------------------------
-        # 3. 도시 선택 (key 로 강제 리프레시)
-        # ------------------------------------------------------------------
         selected = st.selectbox(
             _["select_city"],
             ["(새 도시 추가)"] + city_names,
             key=f"city_select_{len(city_names)}"
         )
 
-        # ------------------------------------------------------------------
-        # 4. 선택에 따라 입력 폼 초기화
-        # ------------------------------------------------------------------
         if selected == "(새 도시 추가)":
             city_name = st.text_input("도시 이름", key="new_city_name")
             st.session_state.mode = "add"
@@ -143,7 +181,6 @@ def render_city_section():
             city_name = selected
             st.session_state.selected_city = selected
             st.session_state.mode = "edit"
-
             city_info = next((c for c in cities_data if c["city"] == selected), None)
             if city_info:
                 st.session_state.venue_input = city_info.get("venue", "")
@@ -159,9 +196,6 @@ def render_city_section():
         st.text_input(_["google_link"], key="map_link")
         st.text_area(_["note"], key="note_input")
 
-        # ------------------------------------------------------------------
-        # 5. 등록 / 삭제 / 취소
-        # ------------------------------------------------------------------
         c1, c2, c3 = st.columns(3)
         with c1:
             if st.button(_["register"]):
@@ -212,7 +246,7 @@ def render_city_section():
                 st.rerun()
 
     # ------------------------------------------------------------------
-    # 6. 지도 표시 (항상 최신 데이터)
+    # 지도 표시
     # ------------------------------------------------------------------
     st.markdown("---")
     m = folium.Map(location=[19.0, 73.0], zoom_start=6)
