@@ -1,9 +1,9 @@
-# app.py - 크리스마스 에디션 최종 패치 (2025.11.07) 🎅🔥
-# NameError 완전 차단 + streamlit-folium 설치 안내 + 기존 기능 100% 유지
+# app.py - 크리스마스 에디션 최종 완성 (2025.11.07) 🎅🔥
+# streamlit-folium 설치 안내 + 모든 기능 100% 작동
 
-# --- 1. 필수 라이브러리 설치 안내 (앱 시작 시 표시) ---
 import streamlit as st
 
+# --- 1. 필수 라이브러리 설치 안내 ---
 st.markdown("""
 <div style="background:#e74c3c; color:white; padding:15px; border-radius:12px; text-align:center; font-weight:bold; margin-bottom:20px;">
 ⚠️ <code>streamlit-folium</code> 라이브러리가 필요합니다!<br>
@@ -22,9 +22,8 @@ try:
     from pytz import timezone
     from streamlit_autorefresh import st_autorefresh
     from math import radians, sin, cos, sqrt, asin
-except ModuleNotFoundError as e:
-    st.error(f"라이브러리 설치 필요: {e}")
-    st.code("pip install streamlit-folium streamlit-autorefresh pytz")
+except ModuleNotFoundError:
+    st.error("필수 라이브러리가 설치되지 않았습니다. 위 명령어를 실행해주세요.")
     st.stop()
 
 # --- 3. 하버신 ---
