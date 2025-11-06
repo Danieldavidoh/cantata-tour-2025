@@ -1,5 +1,5 @@
-# app.py - 칸타타 투어 2025 (최종 완전판 + 말풍선 라벨 + 반응형 표시) 🎄
-# 라인 위 거리/시간 → 말풍선 + 지도 확대 시에만 보임
+# app.py - 칸타타 투어 2025 (최종 완전판 + 라인 평행 말풍선) 🎄
+# 거리/시간 라벨 → AntPath 라인과 평행 회전 + 말풍선 + 반응형
 
 import streamlit as st
 from datetime import datetime, date
@@ -9,7 +9,7 @@ from folium.plugins import AntPath
 import json, os, uuid, base64
 from pytz import timezone
 from streamlit_autorefresh import st_autorefresh
-from math import radians, sin, cos, sqrt, asin
+from math import radians, sin, cos, sqrt, asin, atan2, degrees
 
 # --- 1. 하버신 거리 계산 ---
 def haversine(lat1, lon1, lat2, lon2):
@@ -256,7 +256,7 @@ def render_notices():
     elif not has_new:
         st.session_state.sound_played = False
 
-# --- 14. 투어 경로 (말풍선 + 반응형) ---
+# --- 14. 투어 경로 (라인 평행 말풍선 + 반응형) ---
 def render_map():
     st.subheader(_('map_title'))
 
@@ -383,7 +383,7 @@ def render_map():
         st_folium(m, width=900, height=550, key="empty_map")
         return
 
-    # --- 지도 + 마커 + 애니메이션 라인 + 말풍선 라벨 ---
+    # --- 지도 + 마커 + 애니메이션 라인 + 평행 말풍선 ---
     total_dist = 0
     coords = []
     m = folium.Map(location=[PUNE_LAT, PUNE_LON], zoom_start=9, tiles="CartoDB positron")
@@ -397,11 +397,11 @@ def render_map():
     </div>
     '''
 
-    # 말풍선 라벨 (zoom >= 10일 때만 표시)
+    # 반응형 스크립트
     label_script = """
     <script>
     const map = window.parent.document.getElementsByClassName('folium-map')[0].firstChild;
-    const labels = document.getElementsByClassName('distance-label');
+    const labels = document.getElementsByClassName('parallel-label');
     function updateLabels() {
         const zoom = map.getZoom();
         for (let i = 0; i < labels.length; i++) {
@@ -472,16 +472,21 @@ def render_map():
                 mid_lat = (c['lat'] + cities[i+1]['lat']) / 2
                 mid_lon = (c['lon'] + cities[i+1]['lon']) / 2
 
-                # 말풍선 마커 (클래스 추가)
+                # 라인 각도 계산
+                bearing = degrees(atan2(cities[i+1]['lon'] - c['lon'], cities[i+1]['lat'] - c['lat']))
+                rotate_angle = bearing - 90  # 수직 조정
+
+                # 평행 말풍선
                 folium.Marker(
                     [mid_lat, mid_lon],
                     icon=folium.DivIcon(html=f'''
-                        <div class="distance-label" style="
-                            background: white; color: #e74c3c; padding: 6px 10px; 
+                        <div class="parallel-label" style="
+                            background: white; color: #e74c3c; padding: 6px 12px; 
                             border-radius: 16px; font-weight: bold; font-size: 11px; 
                             white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                            border: 2px solid #e74c3c; text-align: center;
-                            transform: translate(-50%, -50%);
+                            border: 2px solid #e74c3c; text-align:.center;
+                            transform: translate(-50%, -50%) rotate({rotate_angle}deg);
+                            transform-origin: center;
                         ">
                             {label_text}
                         </div>
@@ -498,7 +503,6 @@ def render_map():
     if len(cities) > 1:
         st.markdown(f"<div style='text-align:center;color:#e74c3c;font-size:1.3em;margin:15px 0'>총 거리: {total_dist:.0f}km</div>", unsafe_allow_html=True)
 
-    # 반응형 스크립트 삽입
     map_html = st_folium(m, width=900, height=550, key=f"map_{len(cities)}", returned_objects=[])
     if map_html:
         st.components.v1.html(label_script, height=0)
