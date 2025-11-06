@@ -43,104 +43,11 @@ for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
-# 다국어 (오류 수정!)
+# 다국어
 LANG = {
-    "ko": { 
-        "title": "칸타타 투어 2025", 
-        "caption": "마하라스트라 투어 관리 시스템", 
-        "tab_notice": "공지 관리", 
-        "tab_map": "투어 경로", 
-        "map_title": "경로 보기", 
-        "add_city": "도시 추가", 
-        "password": "비밀번호", 
-        "login": "로그인", 
-        "logout": "로그아웃", 
-        "wrong_pw": "비밀번호가 틀렸습니다.", 
-        "select_city": "도시 선택", 
-        "venue": "공연장소", 
-        "seats": "예상 인원", 
-        "note": "특이사항", 
-        "google_link": "구글맵 링크", 
-        "indoor": "실내", 
-        "outdoor": "실외", 
-        "register": "등록", 
-        "edit": "수정", 
-        "remove": "삭제",  # ← 여기 수정!
-        "date": "등록일", 
-        "performance_date": "공연 날짜", 
-        "cancel": "취소", 
-        "title_label": "제목", 
-        "content_label": "내용", 
-        "upload_image": "이미지 업로드", 
-        "upload_file": "파일 업로드", 
-        "submit": "등록", 
-        "warning": "제목과 내용을 모두 입력해주세요.", 
-        "file_download": "파일 다운로드" 
-    },
-    "en": { 
-        "title": "Cantata Tour 2025", 
-        "caption": "Maharashtra Tour Management System", 
-        "tab_notice": "Notice", 
-        "tab_map": "Tour Route", 
-        "map_title": "View Route", 
-        "add_city": "Add City", 
-        "password": "Password", 
-        "login": "Login", 
-        "logout": "Logout", 
-        "wrong_pw": "Wrong password.", 
-        "select_city": "Select City", 
-        "venue": "Venue", 
-        "seats": "Expected Attendance", 
-        "note": "Notes", 
-        "google_link": "Google Maps Link", 
-        "indoor": "Indoor", 
-        "outdoor": "Outdoor", 
-        "register": "Register", 
-        "edit": "Edit", 
-        "remove": "Remove", 
-        "date": "Registered On", 
-        "performance_date": "Performance Date", 
-        "cancel": "Cancel", 
-        "title_label": "Title", 
-        "content_label": "Content", 
-        "upload_image": "Upload Image", 
-        "upload_file": "Upload File", 
-        "submit": "Submit", 
-        "warning": "Please enter both title and content.", 
-        "file_download": "Download File" 
-    },
-    "hi": { 
-        "title": "कांताता टूर 2025", 
-        "caption": "महाराष्ट्र टूर प्रबंधन प्रणाली", 
-        "tab_notice": "सूचना", 
-        "tab_map": "टूर मार्ग", 
-        "map_title": "मार्ग देखें", 
-        "add_city": "शहर जोड़ें", 
-        "password": "पासवर्ड", 
-        "login": "लॉगिन", 
-        "logout": "लॉगआउट", 
-        "wrong_pw": "गलत पासवर्ड।", 
-        "select_city": "शहर चुनें", 
-        "venue": "स्थल", 
-        "seats": "अपेक्षित उपस्थिति", 
-        "note": "नोट्स", 
-        "google_link": "गूगल मैप्स लिंक", 
-        "indoor": "इनडोर", 
-        "outdoor": "आउटडोर", 
-        "register": "रजिस्टर", 
-        "edit": "संपादित करें", 
-        "remove": "हटाएं", 
-        "date": "तारीख", 
-        "performance_date": "प्रदर्शन तिथि", 
-        "cancel": "रद्द करें", 
-        "title_label": "शीर्षक", 
-        "content_label": "सामग्री", 
-        "upload_image": "छवि अपलोड करें", 
-        "upload_file": "फ़ाइल अपलोड करें", 
-        "submit": "जमा करें", 
-        "warning": "शीर्षक और सामग्री दोनों दर्ज करें।", 
-        "file_download": "फ़ाइल डाउनलोड करें" 
-    }
+    "ko": { "title": "칸타타 투어 2025", "caption": "마하라스트라 투어 관리 시스템", "tab_notice": "공지 관리", "tab_map": "투어 경로", "map_title": "경로 보기", "add_city": "도시 추가", "password": "비밀번호", "login": "로그인", "logout": "로그아웃", "wrong_pw": "비밀번호가 틀렸습니다.", "select_city": "도시 선택", "venue": "공연장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵 링크", "indoor": "실내", "outdoor": "실외", "register": "등록", "edit": "수정", "remove": "삭제", "date": "등록일", "performance_date": "공연 날짜", "cancel": "취소", "title_label": "제목", "content_label": "내용", "upload_image": "이미지 업로드", "upload_file": "파일 업로드", "submit": "등록", "warning": "제목과 내용을 모두 입력해주세요.", "file_download": "파일 다운로드" },
+    "en": { "title": "Cantata Tour 2025", "caption": "Maharashtra Tour Management System", "tab_notice": "Notice", "tab_map": "Tour Route", "map_title": "View Route", "add_city": "Add City", "password": "Password", "login": "Login", "logout": "Logout", "wrong_pw": "Wrong password.", "select_city": "Select City", "venue": "Venue", "seats": "Expected Attendance", "note": "Notes", "google_link": "Google Maps Link", "indoor": "Indoor", "outdoor": "Outdoor", "register": "Register", "edit": "Edit", "remove": "Remove", "date": "Registered On", "performance_date": "Performance Date", "cancel": "Cancel", "title_label": "Title", "content_label": "Content", "upload_image": "Upload Image", "upload_file": "Upload File", "submit": "Submit", "warning": "Please enter both title and content.", "file_download": "Download File" },
+    "hi": { "title": "कांताता टूर 2025", "caption": "महाराष्ट्र टूर प्रबंधन प्रणाली", "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "map_title": "मार्ग देखें", "add_city": "शहर जोड़ें", "password": "पासवर्ड", "login": "लॉगिन", "logout": "लॉगआउट", "wrong_pw": "गलत पासवर्ड।", "select_city": "शहर चुनें", "venue": "स्थल", "seats": "अपेक्षित उपस्थिति", "note": "नोट्स", "google_link": "गूगल मैप्स लिंक", "indoor": "इनडोर", "outdoor": "आउटडोर", "register": "रजिस्टर", "edit": "संपादित करें", "remove": "हटाएं", "date": "तारीख", "performance_date": "प्रदर्शन तिथि", "cancel": "रद्द करें", "title_label": "शीर्षक", "content_label": "सामग्री", "upload_image": "छवि अपलोड करें", "upload_file": "फ़ाइल अपलोड करें", "submit": "जमा करें", "warning": "शीर्षक और सामग्री दोनों दर्ज करें।", "file_download": "फ़ाइल डाउनलोड करें" }
 }
 _ = lambda key: LANG[st.session_state.lang].get(key, key)
 
@@ -301,7 +208,7 @@ def render_map():
     for idx, city in enumerate(cities_data):
         key = f"city_expander_{idx}"
         expanded = st.session_state.expanded.get(key, False)
-        with st.expander(f"{city['city']}']} | {city.get('perf_date', '')}", expanded=expanded):
+        with st.expander(f"{city['city']} | {city.get('perf_date', '')}", expanded=expanded):
             st.write(f"**{_('date')}:** {city.get('date', '')}")
             st.write(f"**{_('performance_date')}:** {city.get('perf_date', '')}")
             st.write(f"**{_('venue')}:** {city.get('venue', '')}")
@@ -504,9 +411,10 @@ with st.sidebar:
 st.markdown(f"# {_('title')} ")
 st.caption(_("caption"))
 
-# 탭 정의
+# 탭 정의 (여기서!)
 tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
 
+# 탭 내용
 with tab1:
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
