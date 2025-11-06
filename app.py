@@ -38,14 +38,14 @@ for key, val in defaults.items():
 # 뭄바이 기준 현재시간 (년도 제외)
 # =============================================
 india_time = datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
-st.markdown(f"<p style='text-align:right;color:gray;font-size:0.9rem;'>🕓 {india_time} (Mumbai)</p>", unsafe_allow_html=True)
+st.markdown(f"<p style='text-align:right;color:gray;font-size:0.9rem;'> {india_time} (Mumbai)</p>", unsafe_allow_html=True)
 
 # =============================================
 # 다국어
 # =============================================
 LANG = {
     "ko": {
-        "title": "칸타타 투어 2025",
+        "title":  "칸타타 투어 2025",
         "caption": "마하라스트라 지역 투어 관리 시스템",
         "tab_notice": "공지 관리",
         "tab_map": "투어 경로",
@@ -65,7 +65,7 @@ LANG = {
         "login": "로그인",
         "logout": "로그아웃",
         "wrong_pw": "비밀번호가 틀렸습니다.",
-        "file_download": "📎 파일 다운로드",
+        "file_download": "파일 다운로드",
         "add_city": "도시 추가",
         "select_city": "도시 선택",
         "venue": "공연장소",
@@ -94,7 +94,6 @@ def save_json(filename, data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 def extract_latlon_from_shortlink(short_url):
-    """maps.app.goo.gl → 실제 좌표 추출"""
     try:
         r = requests.get(short_url, allow_redirects=True, timeout=5)
         final_url = r.url
@@ -106,14 +105,7 @@ def extract_latlon_from_shortlink(short_url):
     return None, None
 
 def make_navigation_link(lat, lon):
-    """OS별 네비게이션 링크 생성"""
-    ua = st.session_state.get("user_agent", "")
-    if "Android" in ua:
-        return f"google.navigation:q={lat},{lon}"
-    elif "iPhone" in ua or "iPad" in ua:
-        return f"comgooglemaps://?daddr={lat},{lon}&directionsmode=driving"
-    else:
-        return f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
+    return f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
 
 # =============================================
 # 공지 기능
@@ -141,7 +133,7 @@ def add_notice(title, content, image_file=None, upload_file=None):
     data = load_json(NOTICE_FILE)
     data.insert(0, new_notice)
     save_json(NOTICE_FILE, data)
-    st.toast("✅ 공지가 등록되었습니다.")
+    st.toast("공지가 등록되었습니다.")
     st.rerun()
 
 def render_notice_list(show_delete=False):
@@ -150,7 +142,7 @@ def render_notice_list(show_delete=False):
         st.info(_["no_notice"])
         return
     for idx, n in enumerate(data):
-        with st.expander(f"📅 {n['date']} | {n['title']}"):
+        with st.expander(f"{n['date']} | {n['title']}"):
             st.markdown(n["content"])
             if n.get("image") and os.path.exists(n["image"]):
                 st.image(n["image"], use_container_width=True)
@@ -160,73 +152,46 @@ def render_notice_list(show_delete=False):
             if show_delete and st.button(_["delete"], key=f"del_{idx}"):
                 data.remove(n)
                 save_json(NOTICE_FILE, data)
-                st.toast("🗑️ 공지가 삭제되었습니다.")
+                st.toast("공지가 삭제되었습니다.")
                 st.rerun()
 
 # =============================================
-# 지도 + 도시 추가
+# 지도 출력 (일반 사용자 전용)
 # =============================================
 def render_map():
     st.subheader(_["map_title"])
 
+    # 관리자 모드일 때는 아예 지도 UI 자체를 숨김
     if st.session_state.admin:
-        with st.expander("➕ 도시 추가", expanded=False):
-            # cities_list.json 존재하지 않으면 150개 기본 도시면 자동 생성
-            if not os.path.exists(CITY_LIST_FILE):
-                default_cities = ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad",
-                                  "Kolhapur", "Solapur", "Thane", "Ratnagiri", "Sangli"]  # 실제 150개 버전 별도 생성 가능
-                save_json(CITY_LIST_FILE, default_cities)
-            cities_list = load_json(CITY_LIST_FILE)
+        st.info("관리자 모드에서는 투어 경로를 확인할 수 없습니다.")
+        return
 
-            city = st.selectbox(_["select_city"], cities_list)
-            st.session_state.venue_input = st.text_input(_["venue"], st.session_state.venue_input)
-            st.session_state.seat_count = st.number_input(_["seats"], min_value=0, step=50, value=st.session_state.seat_count)
-            st.session_state.venue_type = st.radio("공연형태", [_["indoor"], _["outdoor"]], horizontal=True)
-            st.session_state.map_link = st.text_input(_["google_link"], st.session_state.map_link)
-            st.session_state.note_input = st.text_area(_["note"], st.session_state.note_input)
-
-            if st.button(_["register"], key="register_city"):
-                lat, lon = extract_latlon_from_shortlink(st.session_state.map_link)
-                if not lat or not lon:
-                    st.warning("⚠️ 올바른 구글맵 링크를 입력하세요.")
-                    return
-                nav_url = make_navigation_link(lat, lon)
-                new_city = {
-                    "city": city,
-                    "venue": st.session_state.venue_input,
-                    "seats": st.session_state.seat_count,
-                    "type": st.session_state.venue_type,
-                    "note": st.session_state.note_input,
-                    "lat": lat,
-                    "lon": lon,
-                    "nav_url": nav_url,
-                }
-                data = load_json(CITY_FILE)
-                data.append(new_city)
-                save_json(CITY_FILE, data)
-                st.toast("✅ 도시가 추가되었습니다.")
-                st.rerun()
-
-    # 지도 출력
+    # 일반 사용자만 지도 표시
     m = folium.Map(location=[19.0, 73.0], zoom_start=6)
     data = load_json(CITY_FILE)
     coords = []
     for c in data:
         if not all(k in c for k in ["city", "lat", "lon"]):
-            continue  # KeyError 방지
+            continue
         popup_html = f"""
         <b>{c['city']}</b><br>
         장소: {c.get('venue', '')}<br>
         좌석수: {c.get('seats', '')}<br>
         형태: {c.get('type', '')}<br>
-        <a href="{c.get('nav_url', '#')}" target="_blank">🚗 길안내</a><br>
+        <a href="{c.get('nav_url', '#')}" target="_blank">길안내</a><br>
         특이사항: {c.get('note', '')}
         """
-        folium.Marker([c["lat"], c["lon"]], popup=popup_html, tooltip=c["city"],
-                      icon=folium.Icon(color="red", icon="music")).add_to(m)
+        folium.Marker(
+            [c["lat"], c["lon"]],
+            popup=popup_html,
+            tooltip=c["city"],
+            icon=folium.Icon(color="red", icon="music")
+        ).add_to(m)
         coords.append((c["lat"], c["lon"]))
+
     if coords:
         AntPath(coords, color="#ff1744", weight=5, delay=800).add_to(m)
+
     st_folium(m, width=900, height=550)
 
 # =============================================
@@ -241,17 +206,17 @@ with st.sidebar:
 
     st.markdown("---")
     if not st.session_state.admin:
-        st.markdown("### 🔐 관리자 로그인")
+        st.markdown("### 관리자 로그인")
         pw = st.text_input(_["password"], type="password")
         if st.button(_["login"]):
             if pw == "0000":
                 st.session_state.admin = True
-                st.success("✅ 관리자 모드 ON")
+                st.success("관리자 모드 ON")
                 st.rerun()
             else:
                 st.error(_["wrong_pw"])
     else:
-        st.success("✅ 관리자 모드")
+        st.success("관리자 모드")
         if st.button(_["logout"]):
             st.session_state.admin = False
             st.rerun()
@@ -259,7 +224,7 @@ with st.sidebar:
 # =============================================
 # 메인
 # =============================================
-st.markdown(f"# {_['title']} 🎄")
+st.markdown(f"# {_['title']} ")
 st.caption(_["caption"])
 
 tab1, tab2 = st.tabs([_["tab_notice"], _["tab_map"]])
@@ -279,8 +244,8 @@ with tab1:
         render_notice_list(show_delete=True)
     else:
         render_notice_list(show_delete=False)
-        if st.button("🔄 새로고침"):
+        if st.button("새로고침"):
             st.rerun()
 
 with tab2:
-    render_map()
+    render_map()  # 관리자면 "확인 불가" 메시지, 일반 사용자면 지도만 표시
