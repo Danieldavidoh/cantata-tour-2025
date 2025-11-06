@@ -1,142 +1,313 @@
-# app.py - 최종 패치 (2025.11.07) 🔥 화면 사라짐 완전 차단 + 마커·알림음·언어·관리자 ALL OK
-# (이전 전체 코드에 아래 [핵심 패치]만 추가/교체)
+# app.py - 완전 정리판 (2025.11.07) 🔥 마커 복구 + 크리스마스 알림음 유지 (안정화)
+import streamlit as st
+from datetime import datetime
+import folium
+from streamlit_folium import st_folium
+from folium.plugins import AntPath
+import json, os, uuid, base64, re, requests
+from pytz import timezone
+from streamlit_autorefresh import st_autorefresh
+from math import radians, sin, cos, sqrt, asin
 
-# ... (import ~ render_notices() 동일) ...
+# Haversine (완전 클린)
+def haversine(lat1, lon1, lat2, lon2):
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+    c = 2 * asin(sqrt(a))
+    return 6371 * c
 
-# ==================== [11] 지도 & 투어 경로 (화면 사라짐 + 마커 완벽 복구) ====================
+# 3초 리프레시 (관리자 아닐 때만)
+if not st.session_state.get("admin", False):
+    st_autorefresh(interval=3000, key="auto")
+
+st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
+
+NOTICE_FILE = "notice.json"
+UPLOAD_DIR = "uploads"
+CITY_FILE = "cities.json"
+CITY_LIST_FILE = "cities_list.json"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# 세션 기본값 (sound_played 추가)
+defaults = {
+    "admin": False, "lang": "ko", "edit_city": None, "expanded": {}, "adding_cities": [],
+    "pw": "0009", "seen_notices": [], "active_tab": "공지", "new_notice": False, "sound_played": False
+}
+for k, v in defaults.items():
+    if k not in st.session_state: st.session_state[k] = v
+
+# 다국어
+LANG = {
+    "ko": { "title_base": "칸타타 투어", "caption": "마하라스트라", "tab_notice": "공지", "tab_map": "투어 경로",
+            "map_title": "경로 보기", "add_city": "도시 추가", "password": "비밀번호", "login": "로그인",
+            "logout": "로그아웃", "wrong_pw": "비밀번호가 틀렸습니다.", "select_city": "도시 선택",
+            "venue": "공연장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵 링크",
+            "indoor": "실내", "outdoor": "실외", "register": "등록", "edit": "수정", "remove": "삭제",
+            "date": "등록일", "performance_date": "공연 날짜", "cancel": "취소", "title_label": "제목",
+            "content_label": "내용", "upload_image": "이미지 업로드", "upload_file": "파일 업로드",
+            "submit": "등록", "warning": "제목과 내용을 모두 입력해주세요.", "file_download": "파일 다운로드" },
+    "en": { "title_base": "Cantata Tour", "caption": "Maharashtra", "tab_notice": "Notice", "tab_map": "Tour Route",
+            "map_title": "View Route", "add_city": "Add City", "password": "Password", "login": "Login",
+            "logout": "Logout", "wrong_pw": "Wrong password.", "select_city": "Select City", "venue": "Venue",
+            "seats": "Expected Attendance", "note": "Notes", "google_link": "Google Maps Link",
+            "indoor": "Indoor", "outdoor": "Outdoor", "register": "Register", "edit": "Edit", "remove": "Remove",
+            "date": "Registered On", "performance_date": "Performance Date", "cancel": "Cancel",
+            "title_label": "Title", "content_label": "Content", "upload_image": "Upload Image",
+            "upload_file": "Upload File", "submit": "Submit", "warning": "Please enter both title and content.",
+            "file_download": "Download File" },
+    "hi": { "title_base": "कांताता टूर", "caption": "महाराष्ट्र", "tab_notice": "सूचना", "tab_map": "टूर मार्ग",
+            "map_title": "मार्ग देखें", "add_city": "शहर जोड़ें", "password": "पासवर्ड", "login": "लॉगिन",
+            "logout": "लॉगआउट", "wrong_pw": "गलत पासवर्ड।", "select_city": "शहर चुनें", "venue": "स्थल",
+            "seats": "अपेक्षित उपस्थिति", "note": "नोट्स", "google_link": "गूगल मैप्स लिंक",
+            "indoor": "इनडोर", "outdoor": "आउटडोर", "register": "रजिस्टर", "edit": "संपादित करें",
+            "remove": "हटाएं", "date": "तारीख", "performance_date": "प्रदर्शन तिथि", "cancel": "रद्द करें",
+            "title_label": "शीर्षक", "content_label": "सामग्री", "upload_image": "छवि अपलोड करें",
+            "upload_file": "फ़ाइल अपलोड करें", "submit": "जमा करें", "warning": "शीर्षक और सामग्री दोनों दर्ज करें।",
+            "file_download": "फ़ाइल डाउनलोड करें" }
+}
+_ = lambda key: LANG[st.session_state.lang].get(key, key)
+
+# 테마 (모든 이모지, 볼드 제거)
+st.markdown("""
+<style>
+.stApp { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #f0f0f0; overflow: hidden; }
+.christmas-title { text-align: center; margin: 20px 0; }
+.cantata { font-size: 3em; color: #e74c3c; text-shadow: 0 0 10px #ff6b6b; }
+.year { font-size: 2.8em; color: #ecf0f1; text-shadow: 0 0 8px #ffffff; }
+.maha { font-size: 1.8em; color: #3498db; font-style: italic; text-shadow: 0 0 6px #74b9ff; }
+.snowflake { color: rgba(255,255,255,0.5); font-size: 1.2em; position: absolute; top: -10px; animation: fall linear forwards; }
+@keyframes fall { to { transform: translateY(100vh); opacity: 0; }}
+.stButton>button { background: #c0392b !important; color: white !important; border: 2px solid #e74c3c !important; border-radius: 12px !important; }
+.stButton>button:hover { background: #e74c3c !important; }
+.new-badge { background: #e74c3c; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7em; margin-left: 5px; }
+</style>
+
+<script>
+function createSnowflake() {
+    const s = document.createElement('div'); s.classList.add('snowflake');
+    s.innerText = ['❅','❆','✻','✼'][Math.floor(Math.random()*4)];
+    s.style.left = Math.random()*100 + 'vw';
+    s.style.animationDuration = Math.random()*10 + 8 + 's';
+    s.style.opacity = Math.random()*0.4 + 0.3;
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 18000);
+}
+setInterval(createSnowflake, 400);
+
+function playNotification() {
+    const a = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAIlYAAIlYAABQTFRFAAAAAP4AAAD8AAA');
+    a.play().catch(()=>{});
+}
+</script>
+""", unsafe_allow_html=True)
+
+# 제목 (볼드 제거)
+st.markdown(f"""
+<div class="christmas-title">
+<div class="cantata">{_('title_base')}</div>
+<div class="year">2025</div>
+<div class="maha">{_('caption')}</div>
+</div>
+""", unsafe_allow_html=True)
+
+# 사이드바
+with st.sidebar:
+    lang_options = ["한국어", "English", "हिंदी"]
+    lang_map = {"한국어":"ko", "English":"en", "हिंदी":"hi"}
+    selected_lang = st.selectbox("언어", lang_options, index=lang_options.index(next(l for l in lang_options if lang_map[l]==st.session_state.lang)))
+    if lang_map[selected_lang] != st.session_state.lang:
+        st.session_state.lang = lang_map[selected_lang]
+        st.rerun()
+
+    st.markdown("---")
+    if not st.session_state.admin:
+        pw = st.text_input(_("password"), type="password")
+        if st.button(_("login")):
+            if pw == st.session_state.pw:
+                st.session_state.admin = True
+                st.rerun()
+            elif pw == "0691":
+                st.session_state.pw = "9000"
+                st.rerun()
+            elif pw == "0692":
+                st.session_state.pw = "0009"
+                st.rerun()
+            else:
+                st.error(_("wrong_pw"))
+    else:
+        st.success("관리자 모드")
+        if st.button(_("logout")):
+            st.session_state.admin = False
+            st.rerun()
+
+# 공지
+def add_notice(title, content, img=None, file=None):
+    img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{img.name}") if img else None
+    file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.name}") if file else None
+    if img: open(img_path, "wb").write(img.read())
+    if file: open(file_path, "wb").write(file.read())
+    
+    notice = {
+        "id": str(uuid.uuid4()),
+        "title": title,
+        "content": content,
+        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
+        "image": img_path,
+        "file": file_path
+    }
+    data = load_json(NOTICE_FILE)
+    data.insert(0, notice)
+    save_json(NOTICE_FILE, data)
+    
+    st.session_state.seen_notices = []
+    st.session_state.new_notice = True
+    st.session_state.active_tab = "공지"
+    st.rerun()
+
+def render_notices():
+    data = load_json(NOTICE_FILE)
+    has_new = False
+    for i, n in enumerate(data):
+        new = n["id"] not in st.session_state.seen_notices and not st.session_state.admin
+        if new: has_new = True
+        title = f"{n['date']} | {n['title']}"
+        if new: title += ' <span class="new-badge">NEW</span>'
+        
+        with st.expander(title, expanded=st.session_state.expanded.get(f"n{i}", False)):
+            st.markdown(n["content"])
+            if n.get("image") and os.path.exists(n["image"]):
+                st.image(n["image"], use_container_width=True)
+            if n.get("file") and os.path.exists(n["file"]):
+                st.markdown(f'<a href="data:file/octet-stream;base64,{base64.b64encode(open(n["file"],"rb").read()).decode()}" download="{os.path.basename(n["file"])}">파일 다운로드</a>', unsafe_allow_html=True)
+            if st.session_state.admin and st.button("삭제", key=f"del{i}"):
+                data.pop(i)
+                save_json(NOTICE_FILE, data)
+                st.rerun()
+            if new and not st.session_state.admin:
+                st.session_state.seen_notices.append(n["id"])
+    
+    if has_new and not st.session_state.get("sound_played", False):
+        st.markdown("<script>playNotification();</script>", unsafe_allow_html=True)
+        st.session_state.sound_played = True
+    elif not has_new:
+        st.session_state.sound_played = False
+
+def load_json(f):
+    return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
+
+def save_json(f, d):
+    json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+
+# 지도 (안정화된 버전)
 def render_map():
     st.subheader(_('map_title'))
-    
-    # --- 도시 추가 버튼 (관리자만) ---
     if st.session_state.admin:
-        if st.button(_('add_city'), key="add_city_btn"):
+        if st.button(_('add_city')):
             st.session_state.adding_cities.append(None)
             st.rerun()
 
-    # --- 도시 데이터 로드 ---
     cities = sorted(load_json(CITY_FILE), key=lambda x: x.get("perf_date", "9999-12-31"))
-    if not cities:
-        st.info("⚠️ 등록된 도시가 없습니다. 관리자가 도시를 추가해주세요.")
-        return  # 빈 지도 방지
-
+    
+    # 기존 도시 목록 (모든 아이콘 제거)
     total_dist = 0
-    city_details = []  # 화면 유지용 임시 저장
-
-    # --- 도시 목록 + 거리 계산 ---
+    avg_speed = 65
     for i, c in enumerate(cities):
-        with st.expander(f"🎄 {c['city']} | {c.get('perf_date', '미정')}", expanded=False):
-            st.write(f"📅 등록일: {c.get('date', '—')}")
-            st.write(f"🎭 공연 날짜: {c.get('perf_date', '—')}")
-            st.write(f"🏟️ 공연장소: {c.get('venue', '—')}")
-            st.write(f"👥 예상 인원: {c.get('seats', '—')}명")
-            st.write(f"📝 특이사항: {c.get('note', '—')}")
-
-            # --- 관리자 버튼 ---
+        with st.expander(f"{c.get('city','(무명)')} | {c.get('perf_date', '')}"):
+            st.write(f"등록일: {c.get('date', '')}")
+            st.write(f"공연 날짜: {c.get('perf_date', '')}")
+            st.write(f"공연장소: {c.get('venue', '')}")
+            st.write(f"예상 인원: {c.get('seats', '')}")
+            st.write(f"특이사항: {c.get('note', '')}")
+            
             if st.session_state.admin:
                 c1, c2 = st.columns(2)
                 with c1:
-                    if st.button("✏️ 수정", key=f"edit_{i}_{c['city']}"):
-                        st.session_state.edit_city = c["city"]
+                    if st.button("수정", key=f"e{i}"):
+                        st.session_state.edit_city = c.get("city")
                         st.rerun()
                 with c2:
-                    if st.button("🗑️ 삭제", key=f"del_{i}_{c['city']}"):
+                    if st.button("삭제", key=f"d{i}"):
                         cities.pop(i)
                         save_json(CITY_FILE, cities)
                         st.rerun()
-
-        # --- 거리 계산 ---
-        if i < len(cities) - 1:
-            d = haversine(c['lat'], c['lon'], cities[i+1]['lat'], cities[i+1]['lon'])
-            total_dist += d
-            st.markdown(f"<div style='text-align:center; color:#2ecc71; font-weight:bold;'>📍 {d:.0f}km →</div>", unsafe_allow_html=True)
-
-        # --- 지도용 좌표 저장 ---
-        city_details.append({
-            "lat": c["lat"], "lon": c["lon"], "city": c["city"],
-            "date": c.get("perf_date", ""), "venue": c.get("venue", ""),
-            "seats": c.get("seats", ""), "note": c.get("note", "")
-        })
-
-    # --- 총 거리 표시 ---
+        
+        if i < len(cities)-1:
+            # 좌표가 없으면 계산 건너뛰기
+            if all(k in c and k in cities[i+1] for k in ("lat","lon")):
+                d = haversine(c['lat'], c['lon'], cities[i+1]['lat'], cities[i+1]['lon'])
+                total_dist += d
+                st.markdown(f"<div style='text-align:center;color:#2ecc71'>{d:.0f}km</div>", unsafe_allow_html=True)
+    
     if len(cities) > 1:
-        st.markdown(f"<div style='text-align:center; color:#e74c3c; font-size:1.3em; font-weight:bold; margin:15px 0;'>🎅 총 투어 거리: {total_dist:.0f}km 🎄</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align:center;color:#e74c3c'>총 거리: {total_dist:.0f}km</div>", unsafe_allow_html=True)
 
-    # --- Folium 지도 (화면 사라짐 방지 핵심!) ---
-    # 고유 키 + returned_objects=None + height 강제 지정
-    map_key = f"map_{len(cities)}_{total_dist}"
-    m = folium.Map(
-        location=[19.0, 73.0],
-        zoom_start=7,
-        tiles="CartoDB positron",  # 부드러운 크리스마스 톤
-        prefer_canvas=True
-    )
-
+    # 지도 생성
+    # 기본 중심은 마하라스트라 대략 중앙 (변경 가능)
+    m = folium.Map(location=[19.0, 73.0], zoom_start=6, tiles="OpenStreetMap")
     coords = []
-    for idx, c in enumerate(city_details):
-        # 🎄 크리스마스 트리 아이콘
-        icon = folium.Icon(color="red", icon="tree-christmas", prefix="fa", icon_color="white")
-        popup_html = f"""
-        <div style="font-family:Arial; min-width:200px;">
-            <b style="font-size:1.2em; color:#e74c3c;">🎄 {c['city']}</b><br>
-            📅 {c['date'] or '미정'}<br>
-            🎭 {c['venue'] or '—'}<br>
-            👥 {c['seats'] or '—'}명<br>
-            📝 {c['note'] or '—'}
-        </div>
-        """
+    for c in cities:
+        # 좌표 유효성 검사
+        if not all(k in c for k in ("lat","lon")):
+            continue
+
+        # 안전한 아이콘 이름 사용: 'tree' 기본, 또는 cities 데이터에 명시된 icon 사용
+        icon_name = c.get("icon", "tree")
+        try:
+            icon = folium.Icon(color="red", icon=icon_name, prefix="fa")
+        except Exception:
+            icon = folium.Icon(color="red", icon="info-sign")
+
+        popup_html = (
+            f"<b style='font-size:1.05em'>{c.get('city','(무명)')}</b><br>"
+            f"📅 {c.get('perf_date','—')}<br>"
+            f"🎭 {c.get('venue','—')}<br>"
+            f"👥 {c.get('seats','—')}명<br>"
+            f"📝 {c.get('note','—')}"
+        )
         folium.Marker(
             [c["lat"], c["lon"]],
             popup=folium.Popup(popup_html, max_width=300),
-            tooltip=f"🎄 {c['city']}",
+            tooltip=f"🎄 {c.get('city','(무명)')}",
             icon=icon
         ).add_to(m)
         coords.append((c["lat"], c["lon"]))
 
-    # --- 경로선 (산타 썰매 애니메이션) ---
+    # AntPath는 좌표 2개 이상일 때만 추가
     if len(coords) > 1:
-        AntPath(
-            coords,
-            color="#e74c3c",
-            weight=6,
-            opacity=0.9,
-            delay=800,
-            dash_array=[10, 20],
-            pulse_color="#ff6b6b"
-        ).add_to(m)
+        try:
+            AntPath(coords, color="#e74c3c", weight=6, opacity=0.8, delay=600).add_to(m)
+        except Exception:
+            # 실패하더라도 기본 폴리라인으로 표시 (대체)
+            folium.PolyLine(coords, color="#e74c3c", weight=4, opacity=0.7).add_to(m)
 
-    # --- 지도 렌더링 (화면 유지 핵심!) ---
-    st_folium(
-        m,
-        width=900,
-        height=550,
-        key=map_key,              # 고유 키 → 리렌더링 충돌 방지
-        returned_objects=[]       # 불필요한 반환값 제거 → 깜빡임/사라짐 차단
-    )
+    # 지도 표시
+    st_folium(m, width=900, height=550, key="tour_map")
 
-# ==================== [12] 탭 + 강제 이동 (탭 전환 시 화면 유지) ====================
+# 탭 + 강제 이동
 tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
 
-# 새 공지 시 공지 탭 강제 이동
-if st.session_state.get("new_notice", False):
+# 새 공지 시 강제 이동
+if st.session_state.new_notice:
     st.session_state.active_tab = "공지"
     st.session_state.new_notice = False
-    st.rerun()  # 강제 리렌더
 
 with tab1:
-    if st.session_state.get("active_tab") == "공지" or st.session_state.new_notice:
-        if st.session_state.admin:
-            with st.form("notice_form", clear_on_submit=True):
-                t = st.text_input(_("title_label"))
-                c = st.text_area(_("content_label"))
-                img = st.file_uploader(_("upload_image"), type=["png","jpg","jpeg"])
-                f = st.file_uploader(_("upload_file"))
-                if st.form_submit_button(_("submit")):
-                    if t.strip() and c.strip():
-                        add_notice(t, c, img, f)
-                    else:
-                        st.warning(_("warning"))
-        render_notices()
+    st.session_state.active_tab = "공지"
+    if st.session_state.admin:
+        with st.form("notice_form", clear_on_submit=True):
+            t = st.text_input(_("title_label"))
+            c = st.text_area(_("content_label"))
+            img = st.file_uploader(_("upload_image"), type=["png","jpg","jpeg"])
+            f = st.file_uploader(_("upload_file"))
+            if st.form_submit_button(_("submit")):
+                if t.strip() and c.strip():
+                    add_notice(t, c, img, f)
+                else:
+                    st.warning(_("warning"))
+    render_notices()
 
 with tab2:
-    # 탭 전환 시 무조건 지도 렌더
-    render_map()
+    if st.session_state.active_tab != "공지":
+        render_map()
