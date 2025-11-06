@@ -33,28 +33,57 @@ for key, val in defaults.items():
 # =============================================
 # 다국어
 # =============================================
-_ = {
-    "title": "칸타타 투어 2025",
-    "caption": "마하라스트라 지역 투어 관리 시스템",
-    "tab_notice": "공지 관리",
-    "tab_map": "투어 경로",
-    "map_title": "경로 보기",
-    "password": "비밀번호",
-    "login": "로그인",
-    "logout": "로그아웃",
-    "wrong_pw": "비밀번호가 틀렸습니다.",
-    "select_city": "도시 선택",
-    "venue": "공연장소",
-    "seats": "예상 인원",
-    "note": "특이사항",
-    "google_link": "구글맵 링크",
-    "indoor": "실내",
-    "outdoor": "실외",
-    "register": "등록",
-    "edit": "수정",
-    "remove": "삭제",
-    "date": "날짜",
+LANG = {
+    "ko": {
+        "title": "칸타타 투어 2025",
+        "caption": "마하라스트라 지역 투어 관리 시스템",
+        "tab_notice": "공지 관리",
+        "tab_map": "투어 경로",
+        "map_title": "경로 보기",
+        "password": "비밀번호",
+        "login": "로그인",
+        "logout": "로그아웃",
+        "wrong_pw": "비밀번호가 틀렸습니다.",
+        "select_city": "도시 선택",
+        "venue": "공연장소",
+        "seats": "예상 인원",
+        "note": "특이사항",
+        "google_link": "구글맵 링크",
+        "indoor": "실내",
+        "outdoor": "실외",
+        "register": "등록",
+        "edit": "수정",
+        "remove": "삭제",
+        "date": "날짜",
+        "add": "추가",
+        "cancel": "취소",
+    },
+    "en": {
+        "title": "Cantata Tour 2025",
+        "caption": "Maharashtra Tour Management System",
+        "tab_notice": "Notice",
+        "tab_map": "Tour Route",
+        "map_title": "View Route",
+        "password": "Password",
+        "login": "Login",
+        "logout": "Logout",
+        "wrong_pw": "Wrong password.",
+        "select_city": "Select City",
+        "venue": "Venue",
+        "seats": "Expected Attendance",
+        "note": "Notes",
+        "google_link": "Google Maps Link",
+        "indoor": "Indoor",
+        "outdoor": "Outdoor",
+        "register": "Register",
+        "edit": "Edit",
+        "remove": "Remove",
+        "date": "Date",
+        "add": "Add",
+        "cancel": "Cancel",
+    }
 }
+_ = LANG[st.session_state.lang]
 
 # =============================================
 # 유틸
@@ -110,7 +139,7 @@ def render_map():
     if st.session_state.admin:
         col1, col2 = st.columns([8, 2])
         with col2:
-            if st.button("추가", key="add_main"):
+            if st.button(_["add"], key="add_main"):
                 st.session_state.mode = "add"
                 st.session_state.edit_city = None
                 st.rerun()
@@ -125,16 +154,17 @@ def render_map():
         available = [c for c in cities_list if c not in existing]
 
         if not available:
-            st.info("모든 도시 등록됨")
-            if st.button("닫기"):
+            st.info("All cities registered" if st.session_state.lang == "en" else "모든 도시 등록됨")
+            if st.button("Close" if st.session_state.lang == "en" else "닫기"):
                 st.session_state.mode = None
                 st.rerun()
         else:
-            with st.expander("새 도시 추가", expanded=True):
+            with st.expander("Add New City" if st.session_state.lang == "en" else "새 도시 추가", expanded=True):
                 city_name = st.selectbox(_["select_city"], available, key="add_select")
                 venue = st.text_input(_["venue"], key="add_venue")
                 seats = st.number_input(_["seats"], min_value=0, step=50, key="add_seats")
-                venue_type = st.radio("공연형태", [_["indoor"], _["outdoor"]], horizontal=True, key="add_type")
+                venue_type = st.radio("Venue Type" if st.session_state.lang == "en" else "공연형태", 
+                                    [_["indoor"], _["outdoor"]], horizontal=True, key="add_type")
                 map_link = st.text_input(_["google_link"], key="add_link")
                 note = st.text_area(_["note"], key="add_note")
 
@@ -154,10 +184,10 @@ def render_map():
 
                         new_city = {
                             "city": city_name,
-                            "venue": venue or "미정",
+                            "venue": venue or ("TBD" if st.session_state.lang == "en" else "미정"),
                             "seats": seats,
                             "type": venue_type,
-                            "note": note or "없음",
+                            "note": note or ("None" if st.session_state.lang == "en" else "없음"),
                             "lat": lat,
                             "lon": lon,
                             "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
@@ -166,11 +196,11 @@ def render_map():
                         save_json(CITY_FILE, cities_data)
                         st.session_state.mode = None
                         st.session_state.expanded = {}
-                        st.success(f"{city_name} 등록!")
+                        st.success(f"{city_name} registered!" if st.session_state.lang == "en" else f"{city_name} 등록 완료!")
                         st.rerun()
 
                 with c2:
-                    if st.button("취소", key="cancel_add"):
+                    if st.button(_["cancel"], key="cancel_add"):
                         st.session_state.mode = None
                         st.rerun()
 
@@ -179,10 +209,10 @@ def render_map():
         key = f"city_{idx}"
         expanded = st.session_state.expanded.get(key, False)
         with st.expander(f"{city['city']}", expanded=expanded):
-            st.write(f"**날짜:** {city.get('date', '')}")
-            st.write(f"**공연장소:** {city.get('venue', '')}")
-            st.write(f"**예상 인원:** {city.get('seats', '')}")
-            st.write(f"**특이사항:** {city.get('note', '')}")
+            st.write(f"**{_['date']}:** {city.get('date', '')}")
+            st.write(f"**{_['venue']}:** {city.get('venue', '')}")
+            st.write(f"**{_['seats']}:** {city.get('seats', '')}")
+            st.write(f"**{_['note']}:** {city.get('note', '')}")
 
             if st.session_state.admin:
                 c1, c2 = st.columns(2)
@@ -196,7 +226,7 @@ def render_map():
                         cities_data.pop(idx)
                         save_json(CITY_FILE, cities_data)
                         st.session_state.expanded = {}
-                        st.toast("도시 삭제됨")
+                        st.toast("City removed" if st.session_state.lang == "en" else "도시 삭제됨")
                         st.rerun()
 
         if st.session_state.expanded.get(key, False) != expanded:
@@ -206,10 +236,11 @@ def render_map():
     if st.session_state.mode == "edit" and st.session_state.edit_city and st.session_state.admin:
         city = next((c for c in cities_data if c["city"] == st.session_state.edit_city), None)
         if city:
-            with st.expander(f"{city['city']} 수정", expanded=True):
+            with st.expander(f"Edit {city['city']}" if st.session_state.lang == "en" else f"{city['city']} 수정", expanded=True):
                 venue = st.text_input(_["venue"], value=city["venue"], key="edit_venue")
                 seats = st.number_input(_["seats"], min_value=0, step=50, value=city["seats"], key="edit_seats")
-                venue_type = st.radio("공연형태", [_["indoor"], _["outdoor"]], 
+                venue_type = st.radio("Venue Type" if st.session_state.lang == "en" else "공연형태", 
+                                    [_["indoor"], _["outdoor"]], 
                                     index=0 if city["type"] == _["indoor"] else 1, 
                                     horizontal=True, key="edit_type")
                 map_link = st.text_input(_["google_link"], value="", key="edit_link")
@@ -217,7 +248,7 @@ def render_map():
 
                 c1, c2 = st.columns(2)
                 with c1:
-                    if st.button("저장", key="save_edit"):
+                    if st.button("Save" if st.session_state.lang == "en" else "저장", key="save_edit"):
                         lat, lon = city["lat"], city["lon"]
                         if map_link.strip():
                             new_lat, new_lon = extract_latlon_from_shortlink(map_link)
@@ -226,10 +257,10 @@ def render_map():
 
                         updated = {
                             "city": city["city"],
-                            "venue": venue or "미정",
+                            "venue": venue or "TBD",
                             "seats": seats,
                             "type": venue_type,
-                            "note": note or "없음",
+                            "note": note or "None",
                             "lat": lat,
                             "lon": lon,
                             "date": city["date"]
@@ -242,16 +273,16 @@ def render_map():
                         st.session_state.mode = None
                         st.session_state.edit_city = None
                         st.session_state.expanded = {}
-                        st.success("수정 완료!")
+                        st.success("Updated!" if st.session_state.lang == "en" else "수정 완료!")
                         st.rerun()
 
                 with c2:
-                    if st.button("취소", key="cancel_edit"):
+                    if st.button(_["cancel"], key="cancel_edit"):
                         st.session_state.mode = None
                         st.session_state.edit_city = None
                         st.rerun()
 
-    # Google Maps (항상 보임)
+    # Google Maps (즉시 반영)
     st.markdown("---")
     if cities_data:
         maps_url = generate_google_maps_url(cities_data)
@@ -259,32 +290,44 @@ def render_map():
         <iframe 
             width="100%" 
             height="550" 
-            frameborder="0" 
             style="border:0" 
-            src="{maps_url}" 
-            allowfullscreen>
+            loading="lazy" 
+            allowfullscreen 
+            referrerpolicy="no-referrer-when-downgrade"
+            src="{maps_url}">
         </iframe>
         '''
         st.components.v1.html(iframe, height=550)
     else:
-        st.info("등록된 도시 없음")
+        st.info("No cities registered." if st.session_state.lang == "en" else "등록된 도시 없음")
 
 # =============================================
-# 사이드바
+# 사이드바 (언어 + 로그인)
 # =============================================
 with st.sidebar:
+    # 언어 선택
+    lang = st.selectbox("Language" if st.session_state.lang == "en" else "언어", ["한국어", "English"], 
+                        index=0 if st.session_state.lang == "ko" else 1)
+    new_lang = "ko" if lang == "한국어" else "en"
+    if new_lang != st.session_state.lang:
+        st.session_state.lang = new_lang
+        st.rerun()
+
+    st.markdown("---")
+
+    # 관리자 로그인
     if not st.session_state.admin:
-        st.markdown("### 관리자 로그인")
+        st.markdown("### Admin Login")
         pw = st.text_input(_["password"], type="password")
         if st.button(_["login"]):
             if pw == "0000":
                 st.session_state.admin = True
-                st.success("관리자 모드 ON")
+                st.success("Admin mode ON")
                 st.rerun()
             else:
                 st.error(_["wrong_pw"])
     else:
-        st.success("관리자 모드")
+        st.success("Admin mode")
         if st.button(_["logout"]):
             st.session_state.admin = False
             st.rerun()
@@ -303,7 +346,7 @@ elif tab2:
     st.session_state.current_tab = "tab_map"
 
 with tab1:
-    st.write("공지 관리 기능 정상 작동")
+    st.write("Notice management works." if st.session_state.lang == "en" else "공지 관리 기능 정상 작동")
 
 with tab2:
     render_map()
