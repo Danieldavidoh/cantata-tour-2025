@@ -51,19 +51,69 @@ LANG = {
 }
 _ = lambda key: LANG[st.session_state.lang].get(key, key)
 
-# === 크리스마스 테마 CSS + JS ===
-christmas_theme = """
+# === 크리스마스 밤 테마 + 움직이는 아이콘 + 눈 ===
+christmas_night = """
 <style>
-/* 배경: 어두운 밤하늘 */
+/* 배경 */
 .stApp {
     background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
     color: #f0f0f0;
     font-family: 'Segoe UI', sans-serif;
+    overflow: hidden;
 }
 
-/* 눈 효과 */
+/* 제목 */
+.christmas-title {
+    text-align: center;
+    margin: 20px 0;
+}
+.cantata { 
+    font-size: 3em; 
+    font-weight: bold; 
+    color: #e74c3c; 
+    text-shadow: 0 0 10px #ff6b6b;
+}
+.year { 
+    font-size: 2.8em; 
+    font-weight: bold; 
+    color: #ecf0f1; 
+    text-shadow: 0 0 8px #ffffff;
+}
+.maha { 
+    font-size: 1.8em; 
+    color: #3498db; 
+    font-style: italic;
+    text-shadow: 0 0 6px #74b9ff;
+}
+
+/* 움직이는 아이콘 */
+.floating-icons {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+.icon {
+    position: absolute;
+    font-size: 2em;
+    animation: float 6s infinite ease-in-out, spin 8s infinite linear;
+    opacity: 0.8;
+}
+@keyframes float {
+    0%, 100% { transform: translateY(0) translateX(0); }
+    50% { transform: translateY(-20px) translateX(10px); }
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 눈 */
 .snowflake {
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 255, 255, 0.5);
     font-size: 1.2em;
     position: absolute;
     top: -10px;
@@ -75,17 +125,6 @@ christmas_theme = """
     to { transform: translateY(100vh); opacity: 0; }
 }
 
-/* 제목 스타일 */
-.christmas-title {
-    text-align: center;
-    font-size: 2.8em;
-    font-weight: bold;
-    margin: 20px 0;
-}
-.cantata { color: #e74c3c; } /* 빨간색 */
-.year { color: #ecf0f1; } /* 하얀색 */
-.maha { color: #3498db; } /* 청색 */
-
 /* 버튼 */
 .stButton>button {
     background: #c0392b !important;
@@ -96,23 +135,24 @@ christmas_theme = """
 }
 .stButton>button:hover {
     background: #e74c3c !important;
-    transform: scale(1.05);
 }
 
-/* expander */
-.stExpander {
-    background: rgba(46, 125, 50, 0.2) !important;
-    border: 1px solid #27ae60 !important;
-    border-radius: 12px !important;
-}
-.stExpander > div > label {
-    color: #2ecc71 !important;
+/* 취소 버튼 X 검은색 */
+.remove-btn button {
+    color: #000 !important;
     font-weight: bold;
 }
-
-/* 탭 */
-.css-1v0mbdj { background: #2c3e50 !important; }
 </style>
+
+<!-- 움직이는 아이콘 -->
+<div class="floating-icons">
+    <div class="icon" style="top:10%; left:10%; animation-delay:0s;">🎄</div>
+    <div class="icon" style="top:15%; left:80%; animation-delay:1s;">🎁</div>
+    <div class="icon" style="top:70%; left:15%; animation-delay:2s;">🍭</div>
+    <div class="icon" style="top:60%; left:75%; animation-delay:3s;">🧦</div>
+    <div class="icon" style="top:30%; left:60%; animation-delay:4s;">🦌</div>
+    <div class="icon" style="top:40%; left:20%; animation-delay:5s;">🎅</div>
+</div>
 
 <!-- 눈 내리는 JS -->
 <script>
@@ -121,33 +161,28 @@ function createSnowflake() {
     snow.classList.add('snowflake');
     snow.innerText = ['❅', '❆', '✻', '✼'][Math.floor(Math.random() * 4)];
     snow.style.left = Math.random() * 100 + 'vw';
-    snow.style.animationDuration = Math.random() * 8 + 5 + 's';
-    snow.style.opacity = Math.random() * 0.6 + 0.4;
+    snow.style.animationDuration = Math.random() * 10 + 8 + 's';
+    snow.style.opacity = Math.random() * 0.4 + 0.3;
     snow.style.fontSize = Math.random() * 1.2 + 0.8 + 'em';
     document.body.appendChild(snow);
-    setTimeout(() => snow.remove(), 13000);
+    setTimeout(() => snow.remove(), 18000);
 }
-setInterval(createSnowflake, 300);
+setInterval(createSnowflake, 400);
 </script>
-
-<!-- 크리스마스 아이콘 (이모지) -->
-<div style="text-align:center; margin:15px 0;">
-    🎄🎁🍭🧦🦌🎅
-</div>
 """
-st.markdown(christmas_theme, unsafe_allow_html=True)
+st.markdown(christmas_night, unsafe_allow_html=True)
 
 # === 제목 (크리스마스 스타일) ===
 st.markdown(
     '<div class="christmas-title">'
-    '<span class="cantata">칸타타 투어</span> '
-    '<span class="year">2025</span><br>'
-    '<span class="maha">마하라스트라</span>'
+    '<div class="cantata">칸타타 투어</div>'
+    '<div class="year">2025</div>'
+    '<div class="maha">마하라스트라</div>'
     '</div>',
     unsafe_allow_html=True
 )
 
-# === 나머지 기능 (기존 코드 유지) ===
+# === 나머지 기능 ===
 # (이전 코드와 동일 - 생략하지 않고 전체 포함)
 
 # 유틸
@@ -257,9 +292,15 @@ def render_map():
                 if city_name != current:
                     st.session_state.adding_cities[i] = city_name
             with col_del:
-                if st.button("❌", key=f"remove_add_{i}"):
+                # 검은색 X 버튼
+                st.markdown(
+                    '<div class="remove-btn">',
+                    unsafe_allow_html=True
+                )
+                if st.button("×", key=f"remove_add_{i}"):
                     st.session_state.adding_cities.pop(i)
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
             if city_name:
                 venue = st.text_input(_("venue"), key=f"add_venue_{i}")
