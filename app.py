@@ -228,7 +228,7 @@ def render_notices():
     elif not has_new:
         st.session_state.sound_played = False
 
-# --- 13. 지도 (라인 위 수평 라벨 + 과거 흐림) ---
+# --- 13. 지도 (라인 위 수평 라벨 + 과거 아이콘 흐리게) ---
 def render_map():
     st.subheader(_('map_title'))
     PUNE_LAT, PUNE_LON = 18.5204, 73.8567
