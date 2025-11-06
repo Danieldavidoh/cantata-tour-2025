@@ -5,6 +5,7 @@ from streamlit_folium import st_folium
 from folium.plugins import AntPath
 import json, os, uuid, base64, re, requests
 from pytz import timezone
+import math
 
 # =============================================
 # 기본 설정
@@ -16,6 +17,13 @@ UPLOAD_DIR = "uploads"
 CITY_FILE = "cities.json"
 CITY_LIST_FILE = "cities_list.json"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# =============================================
+# cities.json 강제 초기화 (기존 데이터 완전 삭제)
+# =============================================
+if os.path.exists(CITY_FILE):
+    os.remove(CITY_FILE)  # 기존 데이터 삭제
+    st.success("기존 도시 데이터가 초기화되었습니다.")
 
 # =============================================
 # 세션 초기화
@@ -30,7 +38,7 @@ defaults = {
     "map_link": "",
     "selected_city": None,
     "mode": None,
-    "expanded": {}  # 자동 접힘 제어
+    "expanded": {}
 }
 for key, val in defaults.items():
     if key not in st.session_state:
@@ -60,16 +68,15 @@ LANG = {
         "wrong_pw": "비밀번호가 틀렸습니다.",
         "file_download": "파일 다운로드",
         "select_city": "도시 선택",
-        "venue": "공연장소",
-        "seats": "예상 인원",
-        "note": "특이사항",
-        "google_link": "구글맵 링크",
+        "venue": "공연장소 (선택)",
+        "seats": "예상 인원 (선택)",
+        "note": "특이사항 (선택)",
+        "google_link": "구글맵 링크 (선택)",
         "indoor": "실내",
         "outdoor": "실외",
         "register": "등록",
-        "edit": "수정",
-        "remove": "제거",
-        "date": "날짜",
+        "distance": "거리",
+        "duration": "소요시간",
     },
 }
 _ = LANG[st.session_state.lang]
@@ -101,6 +108,15 @@ def extract_latlon_from_shortlink(short_url):
 def make_navigation_link(lat, lon):
     return f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
 
+# 직선 거리 계산 (Haversine 공식)
+def calculate_distance(lat1, lon1, lat2, lon2):
+    R = 6371  # 지구 반지름 (km)
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    return R * c
+
 # =============================================
 # 공지 기능
 # =============================================
@@ -127,7 +143,7 @@ def add_notice(title, content, image_file=None, upload_file=None):
     data = load_json(NOTICE_FILE)
     data.insert(0, new_notice)
     save_json(NOTICE_FILE, data)
-    st.session_state.expanded = {}  # 모든 공지 접기
+    st.session_state.expanded = {}
     st.toast("공지가 등록되었습니다.")
     st.rerun()
 
@@ -149,7 +165,6 @@ def render_notice_list(show_delete=False):
                 st.session_state.expanded = {}
                 st.toast("공지가 삭제되었습니다.")
                 st.rerun()
-        # expander 상태 저장
         if st.session_state.expanded.get(key, False) != expanded:
             st.session_state.expanded[key] = expanded
 
@@ -161,78 +176,107 @@ def render_map():
 
     cities_data = load_json(CITY_FILE)
 
-    # 관리자: + 버튼만 표시
+    # 관리자: + 버튼만
     if st.session_state.admin:
         col1, col2 = st.columns([10, 1])
         with col1:
-            pass  # 빈 공간
+            pass
         with col2:
-            if st.button("plus", key="add_city"):
+            if st.button("+", key="add_city"):
                 st.session_state.mode = "add"
-                st.session_state.selected_city = None
-                st.session_state.venue_input = ""
-                st.session_state.seat_count = 0
-                st.session_state.venue_type = _["indoor"]
-                st.session_state.note_input = ""
-                st.session_state.map_link = ""
                 st.rerun()
 
-    # 도시 추가 폼 (관리자 전용)
+    # 새 도시 추가 (도시 선택만 필수)
     if st.session_state.mode == "add" and st.session_state.admin:
         if not os.path.exists(CITY_LIST_FILE):
-            default_cities = ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad"]
+            default_cities = ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad", "Kolhapur", "Solapur", "Thane"]
             save_json(CITY_LIST_FILE, default_cities)
         cities_list = load_json(CITY_LIST_FILE)
 
+        # 이미 등록된 도시는 제외
+        existing = {c["city"] for c in cities_data}
+        available_cities = [c for c in cities_list if c not in existing]
+
+        if not available_cities:
+            st.info("모든 도시가 등록되었습니다.")
+            if st.button("취소"):
+                st.session_state.mode = None
+                st.rerun()
+            return
+
         with st.expander("새 도시 추가", expanded=True):
-            city_name = st.selectbox(_["select_city"], cities_list)
-            venue = st.text_input(_["venue"])
-            seats = st.number_input(_["seats"], min_value=0, step=50)
+            city_name = st.selectbox(_["select_city"], available_cities)
+            venue = st.text_input(_["venue"], placeholder="예: 오디토리움")
+            seats = st.number_input(_["seats"], min_value=0, step=50, value=0)
             venue_type = st.radio("공연형태", [_["indoor"], _["outdoor"]], horizontal=True)
-            map_link = st.text_input(_["google_link"])
-            note = st.text_area(_["note"])
+            map_link = st.text_input(_["google_link"], placeholder="https://maps.app.goo.gl/...")
+            note = st.text_area(_["note"], placeholder="특이사항 입력")
 
-            c1, c2 = st.columns(2)
-            with c1:
-                if st.button(_["register"]):
+            if st.button(_["register"]):
+                lat, lon = None, None
+                if map_link.strip():
                     lat, lon = extract_latlon_from_shortlink(map_link)
-                    if not lat or not lon:
-                        st.warning("올바른 구글맵 링크를 입력하세요.")
-                    else:
-                        nav_url = make_navigation_link(lat, lon)
-                        new_city = {
-                            "city": city_name,
-                            "venue": venue,
-                            "seats": seats,
-                            "type": venue_type,
-                            "note": note,
-                            "lat": lat,
-                            "lon": lon,
-                            "nav_url": nav_url,
-                            "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
-                        }
-                        cities_data.append(new_city)
-                        save_json(CITY_FILE, cities_data)
-                        st.session_state.mode = None
-                        st.session_state.expanded = {}  # 모든 expander 접기
-                        st.toast("도시가 추가되었습니다.")
-                        st.rerun()
-            with c2:
-                if st.button("취소"):
-                    st.session_state.mode = None
-                    st.rerun()
+                if not lat or not lon:
+                    st.warning("구글맵 링크가 없으면 좌표를 자동 추정합니다.")
+                    # 기본 좌표 (임시)
+                    city_coords = {
+                        "Mumbai": (19.0760, 72.8777),
+                        "Pune": (18.5204, 73.8567),
+                        "Nagpur": (21.1458, 79.0882),
+                        "Nashik": (19.9975, 73.7898),
+                        "Aurangabad": (19.8762, 75.3433),
+                        "Kolhapur": (16.7050, 74.2433),
+                        "Solapur": (17.6599, 75.9064),
+                        "Thane": (19.2183, 72.9781),
+                    }
+                    lat, lon = city_coords.get(city_name, (19.0, 73.0))
 
-    # 일반 사용자: 도시 목록 expander로 표시 (관리자는 숨김)
+                nav_url = make_navigation_link(lat, lon)
+                new_city = {
+                    "city": city_name,
+                    "venue": venue or "미정",
+                    "seats": seats or 0,
+                    "type": venue_type,
+                    "note": note or "없음",
+                    "lat": lat,
+                    "lon": lon,
+                    "nav_url": nav_url,
+                    "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
+                }
+                cities_data.append(new_city)
+                save_json(CITY_FILE, cities_data)
+                st.session_state.mode = None
+                st.session_state.expanded = {}
+
+                # 거리/시간 계산 및 표시
+                if len(cities_data) > 1:
+                    prev = cities_data[-2]
+                    curr = cities_data[-1]
+                    dist = calculate_distance(prev["lat"], prev["lon"], curr["lat"], curr["lon"])
+                    duration = dist / 60  # 평균 60km/h
+                    st.success(f"도시 추가 완료!\n\n"
+                               f"**{prev['city']} → {curr['city']}**\n"
+                               f"**{_['distance']}:** {dist:.1f}km\n"
+                               f"**{_['duration']}:** {duration:.1f}h")
+                else:
+                    st.success("첫 번째 도시가 등록되었습니다.")
+                st.rerun()
+
+            if st.button("취소"):
+                st.session_state.mode = None
+                st.rerun()
+
+    # 일반 사용자: 도시 목록
     if not st.session_state.admin and cities_data:
         for idx, city in enumerate(cities_data):
             key = f"city_{idx}"
             expanded = st.session_state.expanded.get(key, False)
             with st.expander(f"{city['city']}", expanded=expanded):
-                st.markdown(f"**{_['date']}:** {city.get('date', '')}")
-                st.markdown(f"**{_['venue']}:** {city.get('venue', '')}")
-                st.markdown(f"**{_['seats']}:** {city.get('seats', '')}")
-                st.markdown(f"**{_['google_link']}:** {city.get('nav_url', '')}")
-                st.markdown(f"**{_['note']}:** {city.get('note', '')}")
+                st.markdown(f"**날짜:** {city.get('date', '')}")
+                st.markdown(f"**공연장소:** {city.get('venue', '')}")
+                st.markdown(f"**예상 인원:** {city.get('seats', '')}")
+                st.markdown(f"**구글맵:** {city.get('nav_url', '')}")
+                st.markdown(f"**특이사항:** {city.get('note', '')}")
             if st.session_state.expanded.get(key, False) != expanded:
                 st.session_state.expanded[key] = expanded
 
@@ -241,8 +285,6 @@ def render_map():
     m = folium.Map(location=[19.0, 73.0], zoom_start=6)
     coords = []
     for c in cities_data:
-        if not all(k in c for k in ["city", "lat", "lon"]):
-            continue
         popup_html = f"""
         <b>{c['city']}</b><br>
         장소: {c.get('venue','')}<br>
