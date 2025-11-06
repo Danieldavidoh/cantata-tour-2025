@@ -1,5 +1,5 @@
-# app.py - 칸타타 투어 2025 (최종 완전판 + 위도/경도 입력 제거) 🎄
-# 주요 도시: Mumbai, Pune, Nagpur 자동 로드 + selectbox 입력 + 위도/경도 자동 설정
+# app.py - 칸타타 투어 2025 (최종 완전판 + 수정 기능 완벽 작동 + 날짜 표시 오류 해결) 🎄
+# 수정: 도시 고정, 나머지 항목 수정 가능 + perf_date None → "미정" 표시 + 수정 시 기존 값 정확 로드
 
 import streamlit as st
 from datetime import datetime, date
@@ -48,7 +48,8 @@ LANG = {
             "indoor": "실내", "outdoor": "실외", "register": "등록", "edit": "수정", "remove": "삭제",
             "date": "등록일", "performance_date": "공연 날짜", "cancel": "취소", "title_label": "제목",
             "content_label": "내용", "upload_image": "이미지 업로드", "upload_file": "파일 업로드",
-            "submit": "등록", "warning": "제목과 내용을 모두 입력해주세요.", "file_download": "파일 다운로드" },
+            "submit": "등록", "warning": "제목과 내용을 모두 입력해주세요.", "file_download": "파일 다운로드",
+            "pending": "미정" },
     "en": { "title_base": "Cantata Tour", "caption": "Maharashtra", "tab_notice": "Notice", "tab_map": "Tour Route",
             "map_title": "View Route", "add_city": "Add City", "password": "Password", "login": "Login",
             "logout": "Logout", "wrong_pw": "Wrong password.", "select_city": "Select City", "venue": "Venue",
@@ -57,7 +58,7 @@ LANG = {
             "date": "Registered On", "performance_date": "Performance Date", "cancel": "Cancel",
             "title_label": "Title", "content_label": "Content", "upload_image": "Upload Image",
             "upload_file": "Upload File", "submit": "Submit", "warning": "Please enter both title and content.",
-            "file_download": "Download File" },
+            "file_download": "Download File", "pending": "TBD" },
     "hi": { "title_base": "कांताता टूर", "caption": "महाराष्ट्र", "tab_notice": "सूचना", "tab_map": "टूर मार्ग",
             "map_title": "मार्ग देखें", "add_city": "शहर जोड़ें", "password": "पासवर्ड", "login": "लॉगिन",
             "logout": "लॉगआउट", "wrong_pw": "गलत पासवर्ड।", "select_city": "शहर चुनें", "venue": "स्थल",
@@ -66,7 +67,7 @@ LANG = {
             "remove": "हटाएं", "date": "तारीख", "performance_date": "प्रदर्शन तिथि", "cancel": "रद्द करें",
             "title_label": "शीर्षक", "content_label": "सामग्री", "upload_image": "छवि अपलोड करें",
             "upload_file": "फ़ाइल अपलोड करें", "submit": "जमा करें", "warning": "शीर्षक और सामग्री दोनों दर्ज करें।",
-            "file_download": "फ़ाइल डाउन로드 करें" }
+            "file_download": "फ़ाइल डाउन로드 करें", "pending": "निर्धारित नहीं" }
 }
 
 # --- 6. 번역 함수 ---
@@ -156,7 +157,7 @@ def save_json(f, d):
     with open(f, "w", encoding="utf-8") as file:
         json.dump(d, file, ensure_ascii=False, indent=2)
 
-# --- 11. 초기 도시 데이터 (좌표 포함) ---
+# --- 11. 초기 도시 데이터 ---
 DEFAULT_CITIES = [
     {
         "city": "Mumbai",
@@ -196,11 +197,10 @@ DEFAULT_CITIES = [
     }
 ]
 
-# 초기 데이터 저장 (한 번만)
 if not os.path.exists(CITY_FILE):
     save_json(CITY_FILE, DEFAULT_CITIES)
 
-# --- 12. 도시 좌표 매핑 (자동 설정용) ---
+# --- 12. 도시 좌표 매핑 ---
 CITY_COORDS = {
     "Mumbai": (19.0760, 72.8777),
     "Pune": (18.5204, 73.8567),
@@ -256,22 +256,20 @@ def render_notices():
     elif not has_new:
         st.session_state.sound_played = False
 
-# --- 14. 투어 경로 (위도/경도 입력 제거 + 자동 설정) ---
+# --- 14. 투어 경로 + 수정 기능 (완벽 작동) ---
 def render_map():
     st.subheader(_('map_title'))
 
-    # --- Pune 중심 좌표 ---
     PUNE_LAT, PUNE_LON = 18.5204, 73.8567
     today = date.today()
 
-    # --- 안전한 데이터 로드 및 정렬 ---
     raw_cities = load_json(CITY_FILE)
     cities = []
     for city in raw_cities:
         try:
             perf_date = city.get("perf_date")
-            if perf_date is None:
-                perf_date = "9999-12-31"
+            if perf_date is None or perf_date == "9999-12-31":
+                perf_date = None
             elif not isinstance(perf_date, str):
                 perf_date = str(perf_date)
             city["perf_date"] = perf_date
@@ -279,21 +277,73 @@ def render_map():
         except:
             continue
 
-    cities = sorted(cities, key=lambda x: x.get("perf_date", "9999-12-31"))
+    cities = sorted(cities, key=lambda x: x.get("perf_date", "9999-12-31") or "9999-12-31")
 
-    # --- 관리자: 도시 추가 폼 (위도/경도 제거) ---
-    if st.session_state.admin:
+    # --- 수정 모드 ---
+    if st.session_state.get("edit_city"):
+        edit_city_name = st.session_state.edit_city
+        edit_city = next((c for c in cities if c["city"] == edit_city_name), None)
+        if edit_city:
+            with st.expander(f"✏️ {edit_city_name} 수정 중", expanded=True):
+                with st.form("edit_city_form", clear_on_submit=True):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown(f"**도시:** {edit_city_name} (고정)")
+                        venue = st.text_input(_("venue"), value=edit_city["venue"] or "")
+                        # 공연 날짜: None → None, 유효 날짜 → date 객체
+                        try:
+                            perf_date_val = datetime.strptime(edit_city["perf_date"], "%Y-%m-%d").date() if edit_city["perf_date"] else None
+                        except:
+                            perf_date_val = None
+                        perf_date_input = st.date_input(_("performance_date"), value=perf_date_val)
+                    with col2:
+                        seats_val = int(edit_city["seats"]) if edit_city["seats"].isdigit() else 0
+                        seats = st.number_input(_("seats"), min_value=0, step=50, value=seats_val)
+                        note = st.text_area(_("note"), value=edit_city["note"] or "", height=80)
+                        gmap = st.text_input(_("google_link"), value=edit_city["google_link"] or "")
+
+                    indoor = st.checkbox(_("indoor"), value=edit_city.get("indoor", True))
+
+                    col_btn = st.columns([1, 1, 3])
+                    with col_btn[0]:
+                        if st.form_submit_button("저장", use_container_width=True):
+                            updated_city = {
+                                "city": edit_city_name,
+                                "venue": venue.strip(),
+                                "seats": str(seats),
+                                "note": note.strip(),
+                                "google_link": gmap.strip(),
+                                "indoor": indoor,
+                                "lat": edit_city["lat"],
+                                "lon": edit_city["lon"],
+                                "perf_date": str(perf_date_input) if perf_date_input else None,
+                                "date": edit_city["date"]
+                            }
+                            data = load_json(CITY_FILE)
+                            for i, c in enumerate(data):
+                                if c["city"] == edit_city_name:
+                                    data[i] = updated_city
+                                    break
+                            save_json(CITY_FILE, data)
+                            st.session_state.edit_city = None
+                            st.success(f"{edit_city_name} 수정 완료!")
+                            st.rerun()
+                    with col_btn[1]:
+                        if st.form_submit_button("취소", use_container_width=True):
+                            st.session_state.edit_city = None
+                            st.rerun()
+
+    # --- 관리자: 도시 추가 폼 ---
+    if st.session_state.admin and not st.session_state.get("edit_city"):
         with st.expander("도시 추가", expanded=True):
             with st.form("add_city_form", clear_on_submit=True):
                 col1, col2 = st.columns(2)
                 with col1:
-                    # 주요 도시 selectbox
                     major_cities = ["Mumbai", "Pune", "Nagpur"]
-                    selected_city = st.selectbox(_("select_city"), options=major_cities, placeholder="도시 선택")
+                    selected_city = st.selectbox(_("select_city"), options=major_cities)
                     venue = st.text_input(_("venue"), placeholder="예: Gateway of India")
                     perf_date_input = st.date_input(_("performance_date"), value=None)
                 with col2:
-                    # 예상인원 ±50 단위
                     seats = st.number_input(_("seats"), min_value=0, step=50, value=500)
                     note = st.text_area(_("note"), height=80)
                     gmap = st.text_input(_("google_link"))
@@ -304,7 +354,6 @@ def render_map():
                     if not selected_city or not venue.strip():
                         st.error("도시 선택과 장소는 필수입니다!")
                     else:
-                        # 자동 좌표 설정
                         lat, lon = CITY_COORDS.get(selected_city, (PUNE_LAT, PUNE_LON))
                         new_city = {
                             "city": selected_city,
@@ -335,48 +384,44 @@ def render_map():
         st_folium(m, width=900, height=550, key="empty_map")
         return
 
-    # --- 도시 있음: 목록 + 거리 + 지도 ---
+    # --- 도시 목록 + 지도 ---
     total_dist = 0
     coords = []
     m = folium.Map(location=[PUNE_LAT, PUNE_LON], zoom_start=9, tiles="CartoDB positron")
 
     for i, c in enumerate(cities):
+        # 공연 날짜 표시: None → "미정"
+        display_date = _("pending") if not c.get("perf_date") else c["perf_date"]
+
         try:
-            perf_date_obj = datetime.strptime(c['perf_date'], "%Y-%m-%d").date() if c['perf_date'] != "9999-12-31" else None
+            perf_date_obj = datetime.strptime(c['perf_date'], "%Y-%m-%d").date() if c.get('perf_date') else None
         except:
             perf_date_obj = None
 
-        # --- 마커 상태 결정 (구글 스타일) ---
         if perf_date_obj and perf_date_obj < today:
-            opacity = 0.4
-            color = "gray"
-            icon = "circle"
+            opacity = 0.4; color = "gray"; icon = "circle"
         elif perf_date_obj and perf_date_obj == today:
-            opacity = 1.0
-            color = "black"
-            icon = "circle"
+            opacity = 1.0; color = "black"; icon = "circle"
         else:
-            opacity = 1.0
-            color = "red" if c.get("indoor") else "blue"
-            icon = "tree-christmas"
+            opacity = 1.0; color = "red" if c.get("indoor") else "blue"; icon = "tree-christmas"
 
         folium.Marker(
             [c["lat"], c["lon"]],
-            popup=f"<b style='color:#e74c3c'>{c['city']}</b><br>{c.get('perf_date','—')}<br>{c.get('venue','—')}",
+            popup=f"<b style='color:#e74c3c'>{c['city']}</b><br>{display_date}<br>{c.get('venue','—')}",
             tooltip=c["city"],
             icon=folium.Icon(color=color, icon=icon, prefix="fa", icon_color="white")
         ).add_to(m)
 
-        with st.expander(f"{c['city']} | {c.get('perf_date', '미정')}"):
+        with st.expander(f"{c['city']} | {display_date}"):
             st.write(f"등록일: {c.get('date', '—')}")
-            st.write(f"공연 날짜: {c.get('perf_date', '—')}")
+            st.write(f"공연 날짜: {display_date}")
             st.write(f"장소: {c.get('venue', '—')}")
             st.write(f"예상 인원: {c.get('seats', '—')}")
             st.write(f"특이사항: {c.get('note', '—')}")
             if c.get("google_link"):
                 st.markdown(f"[구글맵 보기]({c['google_link']})")
 
-            if st.session_state.admin:
+            if st.session_state.admin and not st.session_state.get("edit_city"):
                 c1, c2 = st.columns(2)
                 with c1:
                     if st.button("수정", key=f"edit_{i}"):
