@@ -1,5 +1,5 @@
 # app.py - 크리스마스 에디션 최종 패치 (2025.11.07) 🎅🔥
-# 일반모드: 공지 아래 "전체 닫기" 버튼 + NameError 완전 차단
+# 전체닫기 버튼 삭제 + 탭 이동 시 자동 접힘 + 공지 클릭 시 항상 접힘 + 알림음/표시 유지
 
 import streamlit as st
 from datetime import datetime
@@ -47,16 +47,15 @@ LANG = {
             "note": "특이사항", "register": "등록", "edit": "수정", "remove": "삭제", "date": "등록일",
             "performance_date": "공연 날짜", "title_label": "제목", "content_label": "내용", "submit": "등록",
             "warning": "제목과 내용을 모두 입력해주세요.", "file_download": "파일 다운로드", "new_notice": "새로운 공지가 있습니다!",
-            "city_name": "도시명", "lat": "위도", "lon": "경도", "perf_date": "공연 날짜", "save": "저장", "cancel": "취소",
-            "collapse_all": "전체 닫기" },
-    # 영어/힌디어 생략
+            "city_name": "도시명", "lat": "위도", "lon": "경도", "perf_date": "공연 날짜", "save": "저장", "cancel": "취소" },
+    # 영어/힌디어 생략 (기존과 동일)
 }
 _ = lambda key: LANG[st.session_state.lang].get(key, key)
 
-# --- 6. 5초 Jingle Bells WAV ---
+# --- 6. 5초 크리스마스 캐롤 WAV (Jingle Bells) ---
 JINGLE_BELLS_WAV = "UklGRnoGAABXQVZFZm10IBAAAAABAAEAIlYAAIlYAABQTFRFAAAAAP4AAAD8AAAAAAAAAAAAAAACAgICAgMEBQYHCAkKCwwNDg8QERITFBUWFhcYGBkaGxwdHh8gIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs8PT4/QEFCQkNERUZGRkdISUpLTE1OT09QUVJTVFVaW1xdXl9gYWFhYmNkZWZnaGlqa2ttbW5vcHFyc3R1dnd4eXp7fH1+f4CBgoOEhYaHiImKi4yNjo+QkZKTlJWWl5iZmpucnZ6foKGio6SlpqeoqaqrrK2ur7CxsrO0tba3uLm6u7y9vr/AwcLDxMXGx8jJysvMzc7P0NHS09TV1tfY2drb3N3e3+Dh4uPk5ebn6Onq6+zt7u/w8fLz9PX29/j5+vv8/f7/AAA="
 
-# --- 7. 테마 + 알림음 + 슬라이드 ---
+# --- 7. 테마 + 알림음 + 슬라이드 알림 ---
 st.markdown(f"""
 <style>
 .stApp {{ background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #f0f0f0; }}
@@ -153,7 +152,7 @@ with st.sidebar:
 def load_json(f): return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
 def save_json(f, d): json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
-# --- 11. 공지 ---
+# --- 11. 공지 추가 ---
 def add_notice(title, content, img=None, file=None):
     img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{img.name}") if img else None
     file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.name}") if file else None
@@ -171,7 +170,7 @@ def add_notice(title, content, img=None, file=None):
     st.session_state.expanded = {}
     st.rerun()
 
-# --- 12. 공지 렌더링 (NameError 방지 + 전체 닫기) ---
+# --- 12. 공지 렌더링 (항상 접힘 + NameError 차단) ---
 def render_notices():
     data = load_json(NOTICE_FILE)
     if not data:
@@ -197,8 +196,10 @@ def render_notices():
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
             if new and not st.session_state.admin:
                 st.session_state.seen_notices.append(n["id"])
+        # expander 상태 업데이트
+        st.session_state.expanded[key] = expanded  # 실시간 업데이트
 
-    # 새 공지 알림
+    # 새 공지 → 알림음 + 슬라이드
     if has_new and not st.session_state.get("sound_played", False):
         st.markdown("<script>playJingleBells(); showSlideAlert();</script>", unsafe_allow_html=True)
         st.session_state.sound_played = True
@@ -226,7 +227,7 @@ def city_form(index=None):
                 if not city_name or not lat or not lon:
                     st.error("필수 입력")
                 else:
-                    new_city = {**city, "city": city_name, "lat": float(lat), "lon": float(lon), "perf_date": perf_date.strftime("%Y-%m-%d"), "venue": venue, "seats": seats, "note": note, "date": datetime.now().strftime("%Y-%m-%d")}
+                    new_city = {"city": city_name, "lat": float(lat), "lon": float(lon), "perf_date": perf_date.strftime("%Y-%m-%d"), "venue": venue, "seats": seats, "note": note, "date": datetime.now().strftime("%Y-%m-%d")}
                     if is_edit: cities[index] = new_city
                     else: cities.append(new_city)
                     save_json(CITY_FILE, cities)
@@ -297,6 +298,8 @@ if st.session_state.get("new_notice", False):
 tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
 
 with tab1:
+    if st.session_state.active_tab == "공지":
+        st.session_state.expanded = {}  # 공지 탭 클릭 시 항상 접힘
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
             t = st.text_input(_("title_label"))
@@ -308,18 +311,9 @@ with tab1:
                     add_notice(t, c, img, f)
                 else:
                     st.warning(_("warning"))
-    
-    # 일반모드: 전체 닫기 버튼
-    if not st.session_state.admin:
-        col1, col2 = st.columns([1, 6])
-        with col1:
-            if st.button(f"🔽 {_('collapse_all')}", key="collapse_all_btn"):
-                st.session_state.expanded = {}
-                st.rerun()
-        with col2:
-            st.write("")  # 여백
-
-    render_notices()  # 이제 안전하게 호출
+    render_notices()
 
 with tab2:
+    if st.session_state.active_tab == "투어 경로":
+        st.session_state.expanded = {}  # 투어경로 이동 시 공지 접힘
     render_map()
