@@ -167,12 +167,14 @@ def load_json(f):
 def save_json(f, d):
     json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
-# --- 9. 초기 도시 ---
+# --- 9. 초기 도시 (Pune 추가) ---
 DEFAULT_CITIES = [
     {"city": "Mumbai", "venue": "Gateway of India", "seats": "5000", "note": "인도 영화 수도",
      "google_link": "https://goo.gl/maps/abc123", "indoor": False, "date": "11/07 02:01"},
     {"city": "Pune", "venue": "Shaniwar Wada", "seats": "3000", "note": "IT 허브",
      "google_link": "https://goo.gl/maps/def456", "indoor": True, "date": "11/07 02:01"},
+    {"city": "Pune", "venue": "Aga Khan Palace", "seats": "2500", "note": "역사적 장소",
+     "google_link": "https://goo.gl/maps/pune2", "indoor": False, "date": "11/08 14:00"},
     {"city": "Nagpur", "venue": "Deekshabhoomi", "seats": "2000", "note": "오렌지 도시",
      "google_link": "https://goo.gl/maps/ghi789", "indoor": False, "date": "11/07 02:01"}
 ]
@@ -208,7 +210,6 @@ def add_notice(title, content, img=None, file=None):
     data.insert(0, notice)
     save_json(NOTICE_FILE, data)
 
-    # 일반 사용자용 알림 강제 활성화
     st.session_state.new_notice = True
     st.session_state.alert_active = True
     st.session_state.current_alert_id = notice["id"]
@@ -233,10 +234,7 @@ def render_notices():
     data = load_json(NOTICE_FILE)
     
     for i, n in enumerate(data):
-        # NEW 뱃지: 일반 사용자만 안 읽은 것에만 표시
-        badge = ''
-        if not st.session_state.admin and n["id"] not in st.session_state.seen_notices:
-            badge = ' NEW'
+        badge = ''  # NEW 제거
 
         formatted_date = format_notice_date(n['date'])
         title = f"{formatted_date} | {n['title']}{badge}"
@@ -257,7 +255,6 @@ def render_notices():
                 save_json(NOTICE_FILE, data)
                 st.rerun()
 
-            # 일반 사용자: 열 때만 seen 처리 + NEW 제거
             if not st.session_state.admin and n["id"] not in st.session_state.seen_notices and expanded:
                 st.session_state.seen_notices.append(n["id"])
                 if n["id"] == st.session_state.current_alert_id:
@@ -269,13 +266,12 @@ def render_notices():
             elif not expanded and exp_key in st.session_state.expanded_notices:
                 st.session_state.expanded_notices.remove(exp_key)
 
-    # 알림 팝업 + 사운드 (일반 사용자만)
     if not st.session_state.admin and st.session_state.alert_active and st.session_state.current_alert_id:
         play_carol()
         st.markdown(f"""
         <div class="alert-box" id="alert">
             <span>{_("new_notice_alert")}</span>
-            <span class="alert-close" onclick="document.getElementById('alert').remove()">×</span>
+            <span class="alert-close" onclick="document.getElementById('alert').remove()">X</span>
         </div>
         <script>
             setTimeout(() => {{
@@ -391,7 +387,7 @@ def render_map():
                         st.session_state.edit_city = None
                         st.rerun()
 
-    # --- 지도 (말풍선에 예상인원 + 구글맵 네비 링크) ---
+    # --- 지도 (tooltip 제거, popup에 아이콘 포함) ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="CartoDB positron")
 
     for i, c in enumerate(cities):
@@ -402,23 +398,23 @@ def render_map():
         coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
         indoor_text = _(f"indoor") if c.get("indoor") else _(f"outdoor")
         perf_date_formatted = format_date_with_weekday(c.get("perf_date"))
-
-        # 구글맵 네비게이션 링크 (모바일에서 바로 안내)
         lat, lon = coords
         google_nav = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving"
-        google_link_html = f'<br><a href="{google_nav}" target="_blank">🚗 길 안내 시작</a>' if c.get("google_link") else ""
+        google_link_html = f'<br><a href="{google_nav}" target="_blank">길 안내 시작</a>' if c.get("google_link") else ""
 
         popup_html = f"""
-        <b>{c['city']}</b><br>
-        {perf_date_formatted}<br>
-        {c.get('venue','—')}<br>
-        예상 인원: {c.get('seats','—')}<br>
-        유형: {indoor_text}{google_link_html}
+        <div style="font-size: 14px; line-height: 1.5;">
+            <b>도시: {c['city']}</b><br>
+            날짜: {perf_date_formatted}<br>
+            장소: {c.get('venue','—')}<br>
+            예상 인원: {c.get('seats','—')}<br>
+            {'실내' if c.get('indoor') else '야외'} 유형: {indoor_text}{google_link_html}
+        </div>
         """
         folium.Marker(
             coords,
             popup=folium.Popup(popup_html, max_width=300),
-            tooltip=c["city"],
+            # tooltip 완전 제거
             icon=folium.Icon(color=color, icon="music", prefix="fa")
         ).add_to(m)
 
@@ -432,14 +428,14 @@ def render_map():
         exp_key = f"city_{c['city']}"
         expanded = exp_key in st.session_state.expanded_cities
         with st.expander(f"{c['city']} | {format_date_with_weekday(c.get('perf_date'))}", expanded=expanded):
-            indoor_icon = "🏠" if c.get("indoor") else "🌳"
+            indoor_icon = "실내" if c.get("indoor") else "야외"
             st.markdown(f"""
             <div>
-                <span class="city-icon">📍</span>
+                <span class="city-icon">장소</span>
                 <span class="city-label">{_(f'venue')}:</span> {c.get('venue','—')}
             </div>
             <div>
-                <span class="city-icon">👥</span>
+                <span class="city-icon">예상 인원</span>
                 <span class="city-label">{_(f'seats')}:</span> {c.get('seats','—')}
             </div>
             <div>
@@ -447,13 +443,13 @@ def render_map():
                 <span class="city-label">유형:</span> {indoor_text}
             </div>
             <div>
-                <span class="city-icon">📝</span>
+                <span class="city-icon">특이사항</span>
                 <span class="city-label">{_(f'note')}:</span> {c.get('note','—')}
             </div>
             """, unsafe_allow_html=True)
 
             if c.get("google_link"):
-                st.markdown(f"[🚗 길 안내 시작]({google_nav})")
+                st.markdown(f"[길 안내 시작]({google_nav})")
 
             if st.session_state.admin:
                 c1, c2 = st.columns(2)
