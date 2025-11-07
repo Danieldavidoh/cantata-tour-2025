@@ -28,7 +28,7 @@ LANG = {
 }
 
 # --- 4. 세션 상태 ---
-defaults = { "admin": False, "lang": "ko", "tab_selection": "공지", "new_notice": False, "sound_played": False, "seen_notices": [], "expanded_notices": [], "expanded_cities": [], "last_tab": None, "alert_active": False, "current_alert_id": None, "password": "0009", "show_pw_form": False, "sidebar_open": False, "notice_open": False, "adding_city": False, "edit_mode": {} }
+defaults = { "admin": False, "lang": "ko", "tab_selection": None, "new_notice": False, "sound_played": False, "seen_notices": [], "expanded_notices": [], "expanded_cities": [], "last_tab": None, "alert_active": False, "current_alert_id": None, "password": "0009", "show_pw_form": False, "sidebar_open": False, "notice_open": False, "adding_city": False, "edit_mode": {} }
 for k, v in defaults.items():
     if k not in st.session_state: st.session_state[k] = v
 
@@ -55,12 +55,14 @@ def play_carol():
         st.session_state.sound_played = True
         st.markdown("<audio autoplay><source src='carol.wav' type='audio/wav'></audio>", unsafe_allow_html=True)
 
-# --- 8. CSS + 상단 고정 ---
+# --- 8. CSS + 상단 고정 제목 ---
 st.markdown("""
 <style>
     [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding-top: 0 !important; }
-    .main-title { text-align: center; font-size: 2.8em !important; font-weight: bold; margin: 10px 0 5px 0 !important; text-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-    .tab-container { background: rgba(255,255,255,0.9); padding: 8px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 5px 0; }
+    .fixed-title { position: fixed; top: 25%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; text-align: center; width: 100%; }
+    .main-title { font-size: 3.2em !important; font-weight: bold; text-shadow: 0 3px 8px rgba(0,0,0,0.5); }
+    .tab-container { background: rgba(255,255,255,0.9); padding: 8px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 10px 0; position: relative; z-index: 10; }
+    .content-area { margin-top: 120px; } /* 탭 아래 여백 */
     .snowflake { position: fixed; top: -15px; color: white; font-size: 1.1em; pointer-events: none; animation: fall linear infinite; opacity: 0.3 !important; text-shadow: 0 0 4px rgba(255,255,255,0.6); z-index: 1; }
     @keyframes fall { 0% { transform: translateY(0) rotate(0deg); } 100% { transform: translateY(120vh) rotate(360deg); } }
     .hamburger { position: fixed; top: 15px; left: 15px; z-index: 10000; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
@@ -83,9 +85,11 @@ for i in range(26):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 ---
+# --- 제목 (화면 상단 1/4에 고정) ---
+st.markdown('<div class="fixed-title">', unsafe_allow_html=True)
 title_html = f'<span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span>'
 st.markdown(f'<h1 class="main-title">{title_html}</h1>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 모바일 햄버거 메뉴 ---
 st.markdown(f'''
@@ -107,7 +111,8 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-# --- 탭 ---
+# --- 탭 (제목 아래 고정) ---
+st.markdown('<div class="content-area">', unsafe_allow_html=True)
 st.markdown('<div class="tab-container">', unsafe_allow_html=True)
 tab_col1, tab_col2 = st.columns(2)
 with tab_col1:
@@ -162,7 +167,7 @@ with st.sidebar:
                     else:
                         st.error(_("pw_error"))
 
-# --- 공지 (공지 탭일 때만 표시) ---
+# --- 공지 (공지 버튼 클릭 시만 표시) ---
 if st.session_state.tab_selection == _(f"tab_notice"):
     st.markdown("### 📢 " + _("tab_notice"))
     if st.session_state.admin:
@@ -194,18 +199,16 @@ if st.session_state.tab_selection == _(f"tab_notice"):
         if n.get("image") and os.path.exists(n["image"]): st.image(n["image"], use_column_width=True)
         if n.get("file") and os.path.exists(n["file"]):
             b64 = base64.b64encode(open(n["file"], "rb").read()).decode()
-            st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">📎 다운로드</a>', unsafe_allow_html=True)
+            st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">다운로드</a>', unsafe_allow_html=True)
         if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
             data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
 
-# --- 투어 경로 (투어 경로 탭일 때만 표시) ---
+# --- 투어 경로 (투어 경로 버튼 클릭 시만 표시) ---
 elif st.session_state.tab_selection == _(f"tab_map"):
     if st.session_state.admin:
-        # --- 도시 추가 버튼 ---
         if st.button(_("add_city"), key="add_city_btn"):
             st.session_state.adding_city = True
 
-        # --- 도시 추가 폼 ---
         if st.session_state.get("adding_city", False):
             with st.container():
                 city_name = st.text_input("새 도시 입력", key="new_city_name")
@@ -246,12 +249,14 @@ elif st.session_state.tab_selection == _(f"tab_map"):
         is_future = c.get("perf_date", "9999-12-31") >= str(date.today())
         color = "red" if is_future else "gray"
         indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
-        popup_html = f"<div style='font-size:14px; line-height:1.6;'><b>{c['city']}</b><br>{_('perf_date')}: {c.get('perf_date','미정')}<br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br><a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving' target='_blank'>🚗 {_('google_link')}</a></div>"
+        popup_html = f"<div style='font-size:14px; line-height:1.6;'><b>{c['city']}</b><br>{_('perf_date')}: {c.get('perf_date','미정')}<br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br><a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving' target='_blank'>{_('google_link')}</a></div>"
         folium.Marker(coords, popup=folium.Popup(popup_html, max_width=300), icon=folium.Icon(color=color, icon="music", prefix="fa")).add_to(m)
         if i < len(cities) - 1:
             nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
             AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
     st_folium(m, width=900, height=550, key="tour_map")
+
+st.markdown('</div>', unsafe_allow_html=True)  # content-area 닫기
 
 # --- 탭 전환 ---
 if st.session_state.tab_selection != st.session_state.get("last_tab"):
