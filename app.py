@@ -215,22 +215,32 @@ def add_notice(title, content, img=None, file=None):
     data = load_json(NOTICE_FILE)
     data.insert(0, notice)
     save_json(NOTICE_FILE, data)
-    st.session_state.seen_notices = []
-    st.session_state.new_notice = True
-    st.session_state.alert_active = True
-    st.session_state.current_alert_id = notice["id"]
+
+    # 일반 사용자만 알림 트리거
+    if not st.session_state.admin:
+        st.session_state.seen_notices = []
+        st.session_state.new_notice = True
+        st.session_state.alert_active = True
+        st.session_state.current_alert_id = notice["id"]
     st.rerun()
 
 def render_notices():
     data = load_json(NOTICE_FILE)
     has_new = False
     latest_new_id = None
+
+    # 일반 사용자만 NEW 체크
+    if not st.session_state.admin:
+        for i, n in enumerate(data):
+            new = n["id"] not in st.session_state.seen_notices
+            if new:
+                has_new = True
+                if not latest_new_id: latest_new_id = n["id"]
+
+    # 공지 목록 렌더링
     for i, n in enumerate(data):
-        new = n["id"] not in st.session_state.seen_notices and not st.session_state.admin
-        if new:
-            has_new = True
-            if not latest_new_id: latest_new_id = n["id"]
-        title = f"{format_notice_date(n['date'])} | {n['title']}" + (' <span class="new-badge">NEW</span>' if new else '')
+        new_badge = ' <span class="new-badge">NEW</span>' if (not st.session_state.admin and n["id"] not in st.session_state.seen_notices) else ''
+        title = f"{format_notice_date(n['date'])} | {n['title']}{new_badge}"
         exp_key = f"notice_{n['id']}"
         expanded = exp_key in st.session_state.expanded_notices
         with st.expander(title, expanded=expanded):
@@ -244,19 +254,18 @@ def render_notices():
                 data.pop(i)
                 save_json(NOTICE_FILE, data)
                 st.rerun()
-            if new and not st.session_state.admin:
+            if not st.session_state.admin and n["id"] not in st.session_state.seen_notices:
                 st.session_state.seen_notices.append(n["id"])
             if expanded and exp_key not in st.session_state.expanded_notices:
                 st.session_state.expanded_notices.append(exp_key)
             elif not expanded and exp_key in st.session_state.expanded_notices:
                 st.session_state.expanded_notices.remove(exp_key)
-            # 새 공지 열리면 알림 끄기
-            if expanded and n["id"] == st.session_state.current_alert_id:
+            if not st.session_state.admin and expanded and n["id"] == st.session_state.current_alert_id:
                 st.session_state.alert_active = False
                 st.rerun()
 
-    # 알림 유지
-    if st.session_state.alert_active and st.session_state.current_alert_id:
+    # 알림은 일반 사용자만
+    if not st.session_state.admin and st.session_state.alert_active and st.session_state.current_alert_id:
         st.markdown("<script>playChristmasCarol();</script>", unsafe_allow_html=True)
         alert_html = f'''
         <div class="christmas-alert">
@@ -266,7 +275,7 @@ def render_notices():
         '''
         st.markdown(alert_html, unsafe_allow_html=True)
 
-# --- 12. 지도 (라벨 270° 회전 + 수정 모드 완벽 진입) ---
+# --- 12. 지도 (거리 라벨 90° 초과 회전 방지 + 검정 진한 글씨) ---
 def render_map():
     st.subheader("경로 보기")
     today = date.today()
@@ -294,27 +303,31 @@ def render_map():
                 label_text = f"{dist_km:.0f}km → {time_str}".strip()
                 mid_lat, mid_lon = (c['lat'] + next_c['lat']) / 2, (c['lon'] + next_c['lon']) / 2
                 bearing = degrees(atan2(next_c['lon'] - c['lon'], next_c['lat'] - c['lat']))
+                
+                # 90° 이상 뒤집히지 않게 보정
+                bearing = (bearing + 360) % 360
+                if 90 < bearing < 270:
+                    bearing += 180
+                    bearing = bearing % 360
+
                 path_opacity = 0.3 if is_past else 1.0
-                # 270도 추가 회전 → 수직 정렬
-                rotated_bearing = bearing + 270
+
+                # 오직 검정색 진한 글씨 + 흰색 외곽선
                 folium.Marker([mid_lat, mid_lon], icon=folium.DivIcon(html=f'''
                     <div style="
-                        transform: translate(-50%,-50%) rotate({rotated_bearing}deg);
-                        background: rgba(231, 76, 60, {path_opacity});
-                        color: white;
-                        padding: 2px 6px;
-                        border-radius: 4px;
-                        font-weight: bold;
-                        font-size: 11px;
+                        transform: translate(-50%,-50%) rotate({bearing}deg);
+                        color: black;
+                        font-weight: 900;
+                        font-size: 13px;
                         white-space: nowrap;
-                        text-shadow: 1px 1px 2px black;
-                        box-shadow: 0 0 5px rgba(0,0,0,0.5);
+                        text-shadow: 2px 2px 4px white, -2px -2px 4px white, 2px -2px 4px white, -2px 2px 4px white;
+                        opacity: {path_opacity};
                     ">{label_text}</div>''')).add_to(m)
+                
                 AntPath([(c['lat'], c['lon']), (next_c['lat'], next_c['lon'])],
                         color="#e74c3c", weight=6, opacity=path_opacity,
                         delay=800, dash_array=[20,30]).add_to(m)
 
-            # 도시 expander + 수정 모드 완벽 진입
             exp_key = f"city_{c['city']}"
             expanded = exp_key in st.session_state.expanded_cities
             with st.expander(f"{c['city']} | {c.get('perf_date','미정')}", expanded=expanded):
@@ -328,7 +341,7 @@ def render_map():
                     with c1:
                         if st.button("수정", key=f"edit_city_{c['city']}_{i}"):
                             st.session_state.edit_city = c["city"]
-                            st.rerun()  # 즉시 리런 → 수정 모드 진입 보장
+                            st.rerun()
                     with c2:
                         if st.button("삭제", key=f"del_city_{c['city']}_{i}"):
                             raw_cities = [x for x in raw_cities if x["city"] != c["city"]]
