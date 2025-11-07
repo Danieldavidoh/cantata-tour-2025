@@ -66,37 +66,41 @@ for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-# --- 6. 다국어 ---
+# --- 6. 다국어 (모든 문자열 한 줄로 유지 + 멀티라인 문자열 사용) ---
 LANG = {
-    "ko": { "title_base": "칸타타 투어", "caption": "마하라스트라", "tab_notice": "공지", "tab_map": "투어 경로",
-            "map_title": "경로 보기", "add_city": "도시 추가", "password": "비밀번호", "login": "로그인",
-            "logout": "로그아웃", "wrong_pw": "비밀번호가 틀렸습니다.", "select_city": "도시 선택",
-            "venue": "공연장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵 링크",
-            "indoor": "실내", "outdoor": "실외", "register": "등록", "edit": "수정", "remove": "삭제",
-            "date": "등록일", "performance_date": "공연 날짜", "cancel": "취소", "title_label": "제목",
-            "content_label": "내용", "upload_image": "이미지 업로드", "upload_file": "파일 업로드",
-            "submit": "등록", "warning": "제목과 내용을 모두 입력해주세요.", "file_download": "파일 다운로드",
-            "pending": "미정", "est_time": "{hours}h {mins}m" },
-    "en": { "title_base": "Cantata Tour", "caption": "Maharashtra", "tab_notice": "Notice", "tab_map": "Tour Route",
-            "map_title": "View Route", "add_city": "Add City", "password": "Password", "login": "Login",
-            "logout": "Logout", "wrong_pw": "Wrong password.", "select_city": "Select City", "venue": "Venue",
-            "seats": "Expected Attendance", "note": "Notes", "google_link": "Google Maps Link",
-            "indoor": "Indoor", "outdoor": "Outdoor", "register": "Register", "edit": "Edit", "remove": "Remove",
-            "date": "Registered On", "performance_date": "Performance Date", "cancel": "Cancel",
-            "title_label": "Title", "content_label": "Content", "upload_image": "Upload Image",
-            "upload_file": "Upload File", "submit": "Submit", "warning": "Please enter both title and content.",
-            "file_download": "Download File", "pending": "TBD", "est_time": "{hours}h {mins}m" },
-    "hi": { "title_base": "कांताता टूर", "caption": "महाराष्ट्र", "tab_notice": "सूचना", "tab_map": "टूर मार्ग",
-            "map_title": "मार्ग देखें", "add_city": "शहर जोड़ें", "password": "पासवर्ड", "login": "लॉगिन",
-            "logout": "लॉगआउट", "wrong_pw": "गलत पासवर्ड।", "select_city": "शहर चुनें", "venue
-
-": "स्थल",
-            "seats": "अपेक्षित उपस्थिति", "note": "नोट्स", "google_link": "गूगल मैप्स लिंक",
-            "indoor": "इनडोर", "outdoor": "आउटडोर", "register": "रजिस्टर", "edit": "संपादित करें",
-            "remove": "हटाएं", "date": "तारीख", "performance_date": "प्रदर्शन तिथि", "cancel": "रद्द करें",
-            "title_label": "शीर्षक", "content_label": "सामग्री", "upload_image": "छवि अपलोड करें",
-            "upload_file": "फ़ाइल अपलोड करें", "submit": "जमा करें", "warning": "शीर्षक और सामग्री दोनों दर्ज करें।",
-            "file_download": "फ़ाइल डाउन로드 करें", "pending": "निर्धारित नहीं", "est_time": "{hours}घं {mins}मि" }
+    "ko": {
+        "title_base": "칸타타 투어", "caption": "마하라스트라", "tab_notice": "공지", "tab_map": "투어 경로",
+        "map_title": "경로 보기", "add_city": "도시 추가", "password": "비밀번호", "login": "로그인",
+        "logout": "로그아웃", "wrong_pw": "비밀번호가 틀렸습니다.", "select_city": "도시 선택",
+        "venue": "공연장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵 링크",
+        "indoor": "실내", "outdoor": "실외", "register": "등록", "edit": "수정", "remove": "삭제",
+        "date": "등록일", "performance_date": "공연 날짜", "cancel": "취소", "title_label": "제목",
+        "content_label": "내용", "upload_image": "이미지 업로드", "upload_file": "파일 업로드",
+        "submit": "등록", "warning": "제목과 내용을 모두 입력해주세요.", "file_download": "파일 다운로드",
+        "pending": "미정", "est_time": "{hours}h {mins}m"
+    },
+    "en": {
+        "title_base": "Cantata Tour", "caption": "Maharashtra", "tab_notice": "Notice", "tab_map": "Tour Route",
+        "map_title": "View Route", "add_city": "Add City", "password": "Password", "login": "Login",
+        "logout": "Logout", "wrong_pw": "Wrong password.", "select_city": "Select City", "venue": "Venue",
+        "seats": "Expected Attendance", "note": "Notes", "google_link": "Google Maps Link",
+        "indoor": "Indoor", "outdoor": "Outdoor", "register": "Register", "edit": "Edit", "remove": "Remove",
+        "date": "Registered On", "performance_date": "Performance Date", "cancel": "Cancel",
+        "title_label": "Title", "content_label": "Content", "upload_image": "Upload Image",
+        "upload_file": "Upload File", "submit": "Submit", "warning": "Please enter both title and content.",
+        "file_download": "Download File", "pending": "TBD", "est_time": "{hours}h {mins}m"
+    },
+    "hi": {
+        "title_base": "कांताता टूर", "caption": "महाराष्ट्र", "tab_notice": "सूचना", "tab_map": "टूर मार्ग",
+        "map_title": "मार्ग देखें", "add_city": "शहर जोड़ें", "password": "पासवर्ड", "login": "लॉगिन",
+        "logout": "लॉगआउट", "wrong_pw": "गलत पासवर्ड।", "select_city": "शहर चुनें",
+        "venue": "स्थल", "seats": "अपेक्षित उपस्थिति", "note": "नोट्स", "google_link": "गूगल मैप्स लिंक",
+        "indoor": "इनडोर", "outdoor": "आउटडोर", "register": "रजिस्टर", "edit": "संपादित करें",
+        "remove": "हटाएं", "date": "तारीख", "performance_date": "प्रदर्शन तिथि", "cancel": "रद्द करें",
+        "title_label": "शीर्षक", "content_label": "सामग्री", "upload_image": "छवि अपलोड करें",
+        "upload_file": "फ़ाइल अपलोड करें", "submit": "जमा करें", "warning": "शीर्षक और सामग्री दोनों दर्ज करें।",
+        "file_download": "फ़ाइल डाउन로드 करें", "pending": "निर्धारित नहीं", "est_time": "{hours}घं {mins}मि"
+    }
 }
 
 _ = lambda key: LANG[st.session_state.lang].get(key, key)
@@ -243,7 +247,7 @@ def render_notices():
     elif not has_new:
         st.session_state.sound_played = False
 
-# --- 13. 지도 (실제 시간 + 라인 위 평행 텍스트) ---
+# --- 13. 지도 ---
 def render_map():
     st.subheader(_('map_title'))
     PUNE_LAT, PUNE_LON = 18.5204, 73.8567
@@ -352,11 +356,11 @@ def render_map():
 
         is_past = perf_date_obj and perf_date_obj < today
 
-        # 아이콘: 모든 활성 도시 → 빨간색 음악 노트, 과거 → 완전 투명
+        # 아이콘: 과거 도시 → 완전 투명
         icon_opacity = 0.0 if is_past else 1.0
         icon = folium.Icon(color="red", icon="music", prefix="fa", opacity=icon_opacity)
 
-        # 말풍선: 고정 너비 280px, 최대 7줄, 중앙 정렬
+        # 말풍선: 고정 너비 280px, 중앙 정렬
         popup_html = f'''
         <div class="popup-content">
             <b>{c['city']}</b><br>
@@ -395,7 +399,7 @@ def render_map():
                         save_json(CITY_FILE, cities)
                         st.rerun()
 
-        # 연결 라인: 과거 구간은 투명, 삭제된 도시는 자동 제거됨
+        # 연결 라인: 과거 구간 투명
         if i < len(cities)-1:
             next_c = cities[i+1]
             next_is_past = False
@@ -405,7 +409,6 @@ def render_map():
             except:
                 next_is_past = False
 
-            # 현재 → 다음 구간이 과거면 투명
             line_opacity = 0.0 if is_past or next_is_past else 0.9
             segment_coords = [(c['lat'], c['lon']), (next_c['lat'], next_c['lon'])]
             AntPath(segment_coords, color="#e74c3c", weight=6, opacity=line_opacity, delay=800, dash_array=[20, 30]).add_to(m)
