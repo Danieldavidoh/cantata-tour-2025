@@ -6,7 +6,6 @@ from folium.plugins import AntPath
 import json, os, uuid, base64
 from pytz import timezone
 from streamlit_autorefresh import st_autorefresh
-from math import radians, sin, cos, sqrt, asin, atan2, degrees
 import requests
 
 # --- 1. 기본 설정 ---
@@ -26,22 +25,28 @@ LANG = {
     "ko": {
         "tab_notice": "공지", "tab_map": "투어 경로", "today": "오늘", "yesterday": "어제",
         "new_notice_alert": "새 공지가 도착했어요!", "warning": "제목·내용 입력",
-        "edit": "수정", "save": "저장", "cancel": "취소", "indoor": "실내", "outdoor": "실외"
+        "edit": "수정", "save": "저장", "cancel": "취소", "add_city": "도시 추가",
+        "indoor": "실내", "outdoor": "실외", "venue": "장소", "seats": "예상 인원",
+        "note": "특이사항", "google_link": "구글맵 링크", "perf_date": "공연 날짜"
     },
     "en": {
         "tab_notice": "Notice", "tab_map": "Tour Route", "today": "Today", "yesterday": "Yesterday",
         "new_notice_alert": "New notice!", "warning": "Enter title & content",
-        "edit": "Edit", "save": "Save", "cancel": "Cancel", "indoor": "Indoor", "outdoor": "Outdoor"
+        "edit": "Edit", "save": "Save", "cancel": "Cancel", "add_city": "Add City",
+        "indoor": "Indoor", "outdoor": "Outdoor", "venue": "Venue", "seats": "Expected",
+        "note": "Note", "google_link": "Google Maps Link", "perf_date": "Performance Date"
     },
     "hi": {
         "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "today": "आज", "yesterday": "कल",
         "new_notice_alert": "नई सूचना!", "warning": "शीर्षक·सामग्री दर्ज करें",
-        "edit": "संपादन", "save": "सहेजें", "cancel": "रद्द करें", "indoor": "इनडोर", "outdoor": "आउटडोर"
+        "edit": "संपादन", "save": "सहेजें", "cancel": "रद्द करें", "add_city": "शहर जोड़ें",
+        "indoor": "इनडोर", "outdoor": "आउटडोर", "venue": "स्थल", "seats": "अपेक्षित",
+        "note": "नोट", "google_link": "गूगल मैप लिंक", "perf_date": "प्रदर्शन तिथि"
     }
 }
 
 defaults = {
-    "admin": False, "lang": "ko", "edit_city": None,
+    "admin": False, "lang": "ko", "edit_city": None, "adding_city": False,
     "tab_selection": "공지", "new_notice": False, "sound_played": False,
     "seen_notices": [], "expanded_notices": [], "expanded_cities": [],
     "last_tab": None, "alert_active": False, "current_alert_id": None
@@ -58,7 +63,7 @@ def play_carol():
         st.session_state.sound_played = True
         st.audio("carol.wav", autoplay=True)
 
-play_carol()  # 페이지 로드 시 재생
+play_carol()
 
 # --- 5. 알림 CSS ---
 st.markdown("""
@@ -121,39 +126,12 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE):
     save_json(CITY_FILE, DEFAULT_CITIES)
 
-# --- 9. 거리 계산 (위도/경도 제거 → 하드코딩) ---
+# --- 9. 하드코딩 좌표 ---
 CITY_COORDS = {
     "Mumbai": (19.0760, 72.8777),
     "Pune": (18.5204, 73.8567),
     "Nagpur": (21.1458, 79.0882)
 }
-
-def get_real_travel_time(city1, city2):
-    try:
-        key = st.secrets.get("GOOGLE_API_KEY", "")
-        if key and city1 in CITY_COORDS and city2 in CITY_COORDS:
-            lat1, lon1 = CITY_COORDS[city1]
-            lat2, lon2 = CITY_COORDS[city2]
-            url = "https://maps.googleapis.com/maps/api/distancematrix/json"
-            p = {"origins": f"{lat1},{lon1}", "destinations": f"{lat2},{lon2}",
-                 "key": key, "mode": "driving"}
-            r = requests.get(url, params=p, timeout=5).json()
-            if r["rows"][0]["elements"][0]["status"] == "OK":
-                d = r["rows"][0]["elements"][0]["distance"]["value"] / 1000
-                m = r["rows"][0]["elements"][0]["duration"]["value"] // 60
-                return d, m
-    except:
-        pass
-    # Fallback: 거리 테이블
-    distances = {
-        ("Mumbai", "Pune"): (148, 150),
-        ("Pune", "Mumbai"): (148, 150),
-        ("Pune", "Nagpur"): (700, 600),
-        ("Nagpur", "Pune"): (700, 600),
-        ("Mumbai", "Nagpur"): (840, 720),
-        ("Nagpur", "Mumbai"): (840, 720),
-    }
-    return distances.get((city1, city2), (0, 0))
 
 # --- 10. 공지 기능 ---
 def add_notice(title, content, img=None, file=None):
@@ -177,8 +155,7 @@ def add_notice(title, content, img=None, file=None):
     data.insert(0, notice)
     save_json(NOTICE_FILE, data)
 
-    # 일반 사용자도 무조건 알림
-    st.session_state.seen_notices = []
+    # 일반 사용자용 알림 강제 활성화
     st.session_state.new_notice = True
     st.session_state.alert_active = True
     st.session_state.current_alert_id = notice["id"]
@@ -200,8 +177,21 @@ def format_notice_date(d):
 
 def render_notices():
     data = load_json(NOTICE_FILE)
+    
+    # 관리자: 모든 공지 보임 (NEW 없음)
+    # 일반 사용자: seen_notices 기반으로 NEW 표시
     for i, n in enumerate(data):
-        badge = ' NEW' if n["id"] not in st.session_state.seen_notices else ''
+        # NEW 뱃지 로직
+        is_new = False
+        if st.session_state.admin:
+            badge = ''
+        else:
+            if n["id"] not in st.session_state.seen_notices:
+                is_new = True
+                badge = ' NEW'
+            else:
+                badge = ''
+
         title = f"{format_notice_date(n['date'])} | {n['title']}{badge}"
         exp_key = f"notice_{n['id']}"
         expanded = exp_key in st.session_state.expanded_notices
@@ -220,20 +210,20 @@ def render_notices():
                 save_json(NOTICE_FILE, data)
                 st.rerun()
 
-            if n["id"] not in st.session_state.seen_notices:
+            # 일반 사용자: 열 때만 seen 처리
+            if not st.session_state.admin and is_new and expanded:
                 st.session_state.seen_notices.append(n["id"])
+                if n["id"] == st.session_state.current_alert_id:
+                    st.session_state.alert_active = False
+                    st.rerun()
 
             if expanded and exp_key not in st.session_state.expanded_notices:
                 st.session_state.expanded_notices.append(exp_key)
             elif not expanded and exp_key in st.session_state.expanded_notices:
                 st.session_state.expanded_notices.remove(exp_key)
 
-            if expanded and n["id"] == st.session_state.current_alert_id:
-                st.session_state.alert_active = False
-                st.rerun()
-
-    # 강제 알림 팝업
-    if st.session_state.alert_active and st.session_state.current_alert_id:
+    # 일반 사용자 전용 알림 팝업
+    if not st.session_state.admin and st.session_state.alert_active and st.session_state.current_alert_id:
         st.markdown(f"""
         <div class="alert-box" id="alert">
             <span>{_("new_notice_alert")}</span>
@@ -248,14 +238,53 @@ def render_notices():
         </script>
         """, unsafe_allow_html=True)
 
-# --- 11. 지도 + 도시 수정 ---
+# --- 11. 지도 + 도시 추가/수정 ---
 def render_map():
     st.subheader("경로 보기")
     today = date.today()
     raw_cities = load_json(CITY_FILE)
     cities = sorted(raw_cities, key=lambda x: x.get("perf_date", "9999-12-31"))
 
-    # --- 도시 수정 폼 (드롭다운 + 실내/실외 라디오) ---
+    # --- 도시 추가 폼 ---
+    if st.session_state.admin:
+        if st.button(_(f"add_city"), key="add_city_btn"):
+            st.session_state.adding_city = True
+
+        if st.session_state.get("adding_city"):
+            st.markdown("### 새 도시 추가")
+            with st.form("add_city_form"):
+                new_city = st.text_input("도시명 (새로 추가)")
+                venue = st.text_input(_(f"venue"))
+                seats = st.text_input(_(f"seats"))
+                indoor = st.radio("장소 유형", [_(f"indoor"), _(f"outdoor")])
+                note = st.text_area(_(f"note"))
+                google_link = st.text_input(_(f"google_link"))
+                perf_date = st.date_input(_(f"perf_date"), value=None)
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.form_submit_button(_(f"save")):
+                        if new_city.strip() and new_city not in [c["city"] for c in raw_cities]:
+                            new_data = {
+                                "city": new_city, "venue": venue, "seats": seats,
+                                "indoor": indoor == _(f"indoor"), "note": note,
+                                "google_link": google_link,
+                                "perf_date": perf_date.strftime("%Y-%m-%d") if perf_date else None,
+                                "date": datetime.now().strftime("%m/%d %H:%M")
+                            }
+                            raw_cities.append(new_data)
+                            save_json(CITY_FILE, raw_cities)
+                            st.session_state.adding_city = False
+                            st.success("도시 추가 완료!")
+                            st.rerun()
+                        else:
+                            st.error("도시명 중복 또는 비어있음")
+                with col2:
+                    if st.form_submit_button(_(f"cancel")):
+                        st.session_state.adding_city = False
+                        st.rerun()
+
+    # --- 도시 수정 폼 ---
     if st.session_state.admin and st.session_state.get("edit_city"):
         city_to_edit = next((c for c in raw_cities if c["city"] == st.session_state.edit_city), None)
         if city_to_edit:
@@ -263,13 +292,13 @@ def render_map():
             with st.form("edit_city_form"):
                 city = st.selectbox("도시 선택", options=[c["city"] for c in raw_cities],
                                     index=[c["city"] for c in raw_cities].index(st.session_state.edit_city))
-                venue = st.text_input("장소", value=city_to_edit["venue"])
-                seats = st.text_input("예상 인원", value=city_to_edit["seats"])
-                indoor = st.radio("장소 유형", options=[_(f"indoor"), _(f"outdoor")],
+                venue = st.text_input(_(f"venue"), value=city_to_edit["venue"])
+                seats = st.text_input(_(f"seats"), value=city_to_edit["seats"])
+                indoor = st.radio("장소 유형", [_(f"indoor"), _(f"outdoor")],
                                   index=0 if city_to_edit.get("indoor", False) else 1)
-                note = st.text_area("특이사항", value=city_to_edit.get("note", ""))
-                google_link = st.text_input("구글맵 링크", value=city_to_edit.get("google_link", ""))
-                perf_date = st.date_input("공연 날짜", value=(
+                note = st.text_area(_(f"note"), value=city_to_edit.get("note", ""))
+                google_link = st.text_input(_(f"google_link"), value=city_to_edit.get("google_link", ""))
+                perf_date = st.date_input(_(f"perf_date"), value=(
                     datetime.strptime(city_to_edit["perf_date"], "%Y-%m-%d").date()
                     if city_to_edit.get("perf_date") and city_to_edit["perf_date"] != "9999-12-31"
                     else None
@@ -280,33 +309,33 @@ def render_map():
                     if st.form_submit_button(_(f"save")):
                         updated = {
                             "city": city, "venue": venue, "seats": seats,
-                            "indoor": indoor == _(f"indoor"),
-                            "note": note, "google_link": google_link,
+                            "indoor": indoor == _(f"indoor"), "note": note,
+                            "google_link": google_link,
                             "perf_date": perf_date.strftime("%Y-%m-%d") if perf_date else None,
                             "date": city_to_edit["date"]
                         }
                         raw_cities = [updated if c["city"] == st.session_state.edit_city else c for c in raw_cities]
                         save_json(CITY_FILE, raw_cities)
                         st.session_state.edit_city = None
-                        st.success("저장 완료!")
+                        st.success("수정 완료!")
                         st.rerun()
                 with col2:
                     if st.form_submit_button(_(f"cancel")):
                         st.session_state.edit_city = None
                         st.rerun()
 
-    # --- 지도 ---
+    # --- 지도 (거리 라벨 없음) ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="CartoDB positron")
 
     for i, c in enumerate(cities):
         is_past = (c.get('perf_date') and c['perf_date'] != "9999-12-31" and
                    datetime.strptime(c['perf_date'], "%Y-%m-%d").date() < today)
-        opacity = 0.3 if is_past else 1.0
         color = "red" if not is_past else "gray"
 
+        coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
         popup_html = f"<b>{c['city']}</b><br>{c.get('perf_date','미정')}<br>{c.get('venue','—')}"
         folium.Marker(
-            CITY_COORDS.get(c["city"], (18.5204, 73.8567)),
+            coords,
             popup=folium.Popup(popup_html, max_width=280),
             tooltip=c["city"],
             icon=folium.Icon(color=color, icon="music", prefix="fa")
@@ -314,29 +343,18 @@ def render_map():
 
         if i < len(cities) - 1:
             nxt = cities[i + 1]
-            dist, mins = get_real_travel_time(c["city"], nxt["city"])
-            label = f"{dist:.0f}km → {mins//60}h {mins%60}m"
-            lat1, lon1 = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
-            lat2, lon2 = CITY_COORDS.get(nxt["city"], (18.5204, 73.8567))
-            mid_lat, mid_lon = (lat1 + lat2) / 2, (lon1 + lon2) / 2
-
-            folium.Marker([mid_lat, mid_lon], icon=folium.DivIcon(html=f"""
-                <div style="font-size:10pt; background:white; padding:2px 6px; border-radius:4px; border:1px solid #ccc;">
-                    {label}
-                </div>
-            """)).add_to(m)
-
-            AntPath([(lat1, lon1), (lat2, lon2)],
+            nxt_coords = CITY_COORDS.get(nxt["city"], (18.5204, 73.8567))
+            opacity = 0.3 if is_past else 1.0
+            AntPath([coords, nxt_coords],
                     color="#e74c3c", weight=6, opacity=opacity, delay=800, dash_array=[20, 30]).add_to(m)
 
-        # 도시 정보
         exp_key = f"city_{c['city']}"
         expanded = exp_key in st.session_state.expanded_cities
         with st.expander(f"{c['city']} | {c.get('perf_date','미정')}", expanded=expanded):
-            st.write(f"**장소**: {c.get('venue','—')}")
-            st.write(f"**예상 인원**: {c.get('seats','—')}")
+            st.write(f"**{_(f'venue')}**: {c.get('venue','—')}")
+            st.write(f"**{_(f'seats')}**: {c.get('seats','—')}")
             st.write(f"**유형**: {_(f'indoor') if c.get('indoor') else _(f'outdoor')}")
-            st.write(f"**특이사항**: {c.get('note','—')}")
+            st.write(f"**{_(f'note')}**: {c.get('note','—')}")
             if c.get("google_link"):
                 st.markdown(f"[구글맵 보기]({c['google_link']})")
 
