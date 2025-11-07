@@ -12,7 +12,7 @@ import requests
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
 if not st.session_state.get("admin", False):
-    st_autorefresh(interval=3000, key="auto_refresh_user")
+    st_autorefresh(interval=5000, key="auto_refresh_user")  # 5초로 변경
 
 # --- 2. 파일 ---
 NOTICE_FILE = "notice.json"
@@ -59,7 +59,7 @@ defaults = {
     "tab_selection": "공지", "new_notice": False, "sound_played": False,
     "seen_notices": [], "expanded_notices": [], "expanded_cities": [],
     "last_tab": None, "alert_active": False, "current_alert_id": None,
-    "password": "0009", "show_pw_form": False
+    "password": "0009", "show_pw_form": False, "map_fullscreen": False
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -67,7 +67,7 @@ for k, v in defaults.items():
 
 _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
 
-# --- 4. 캐롤 사운드 (강제 재생 보장) ---
+# --- 4. 캐롤 사운드 ---
 def play_carol():
     if os.path.exists("carol.wav"):
         st.session_state.sound_played = True
@@ -77,7 +77,7 @@ def play_carol():
         </audio>
         """, unsafe_allow_html=True)
 
-# --- 5. 알림 CSS + 아이콘 스타일 ---
+# --- 5. CSS + 전체화면 토글 스크립트 ---
 st.markdown("""
 <style>
     .alert-box {
@@ -101,10 +101,33 @@ st.markdown("""
         margin-right: 8px;
         font-size: 1.2em;
     }
+    
+    /* 전체화면 토글 */
+    .fullscreen-map {
+        position: fixed !important;
+        top: 0; left: 0; width: 100vw !important; height: 100vh !important;
+        z-index: 9998; background: white;
+    }
 </style>
+<script>
+    let mapClicked = false;
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.folium-map')) {
+            if (!mapClicked) {
+                const map = e.target.closest('.folium-map');
+                map.classList.add('fullscreen-map');
+                mapClicked = true;
+            } else {
+                const map = document.querySelector('.fullscreen-map');
+                if (map) map.classList.remove('fullscreen-map');
+                mapClicked = false;
+            }
+        }
+    });
+</script>
 """, unsafe_allow_html=True)
 
-# --- 6. 제목을 제일 위에 배치 (탭보다 위) ---
+# --- 6. 제목 ---
 st.markdown('# 칸타타 투어 2025 마하라스트라')
 
 # --- 7. 사이드바 ---
@@ -234,10 +257,13 @@ def render_notices():
     data = load_json(NOTICE_FILE)
     
     for i, n in enumerate(data):
-        badge = ''  # NEW 제거
+        # NEW 아이콘: 일반 사용자만, 안 읽은 것에만
+        new_icon = ''
+        if not st.session_state.admin and n["id"] not in st.session_state.seen_notices:
+            new_icon = '🔔'
 
         formatted_date = format_notice_date(n['date'])
-        title = f"{formatted_date} | {n['title']}{badge}"
+        title = f"{formatted_date} | {n['title']} {new_icon}"
         exp_key = f"notice_{n['id']}"
         expanded = exp_key in st.session_state.expanded_notices
 
@@ -255,6 +281,7 @@ def render_notices():
                 save_json(NOTICE_FILE, data)
                 st.rerun()
 
+            # 일반 사용자: 열 때만 seen 처리 + NEW 아이콘 제거
             if not st.session_state.admin and n["id"] not in st.session_state.seen_notices and expanded:
                 st.session_state.seen_notices.append(n["id"])
                 if n["id"] == st.session_state.current_alert_id:
@@ -271,7 +298,7 @@ def render_notices():
         st.markdown(f"""
         <div class="alert-box" id="alert">
             <span>{_("new_notice_alert")}</span>
-            <span class="alert-close" onclick="document.getElementById('alert').remove()">X</span>
+            <span class="alert-close" onclick="document.getElementById('alert').remove()">×</span>
         </div>
         <script>
             setTimeout(() => {{
@@ -301,7 +328,7 @@ def render_map():
     cities = sorted(raw_cities, key=lambda x: x.get("perf_date", "9999-12-31"))
     city_names = [c["city"] for c in raw_cities]
 
-    # --- 도시 추가 폼 ---
+    # --- 도시 추가 폼 (Pune 포함) ---
     if st.session_state.admin:
         if st.button(_(f"add_city"), key="add_city_btn"):
             st.session_state.adding_city = True
@@ -387,7 +414,7 @@ def render_map():
                         st.session_state.edit_city = None
                         st.rerun()
 
-    # --- 지도 (tooltip 제거, popup에 아이콘 포함) ---
+    # --- 지도 (전체화면 토글 + popup 아이콘) ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="CartoDB positron")
 
     for i, c in enumerate(cities):
@@ -414,7 +441,6 @@ def render_map():
         folium.Marker(
             coords,
             popup=folium.Popup(popup_html, max_width=300),
-            # tooltip 완전 제거
             icon=folium.Icon(color=color, icon="music", prefix="fa")
         ).add_to(m)
 
