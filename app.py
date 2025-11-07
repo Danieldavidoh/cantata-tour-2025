@@ -24,7 +24,6 @@ def haversine(lat1, lon1, lat2, lon2):
 def get_real_travel_time(lat1, lon1, lat2, lon2):
     api_key = st.secrets.get("GOOGLE_MAPS_API_KEY", None)
     if not api_key:
-        # API 키 없으면 평균 속도 55km/h
         dist = haversine(lat1, lon1, lat2, lon2)
         mins = int(dist * 60 / 55)
         return dist, mins
@@ -42,7 +41,6 @@ def get_real_travel_time(lat1, lon1, lat2, lon2):
             return dist, mins
     except:
         pass
-    # 실패 시 fallback
     dist = haversine(lat1, lon1, lat2, lon2)
     mins = int(dist * 60 / 55)
     return dist, mins
@@ -90,7 +88,9 @@ LANG = {
             "file_download": "Download File", "pending": "TBD", "est_time": "{hours}h {mins}m" },
     "hi": { "title_base": "कांताता टूर", "caption": "महाराष्ट्र", "tab_notice": "सूचना", "tab_map": "टूर मार्ग",
             "map_title": "मार्ग देखें", "add_city": "शहर जोड़ें", "password": "पासवर्ड", "login": "लॉगिन",
-            "logout": "लॉगआउट", "wrong_pw": "गलत पासवर्ड।", "select_city": "शहर चुनें", "venue": "स्थल",
+            "logout": "लॉगआउट", "wrong_pw": "गलत पासवर्ड।", "select_city": "शहर चुनें", "venue
+
+": "स्थल",
             "seats": "अपेक्षित उपस्थिति", "note": "नोट्स", "google_link": "गूगल मैप्स लिंक",
             "indoor": "इनडोर", "outdoor": "आउटडोर", "register": "रजिस्टर", "edit": "संपादित करें",
             "remove": "हटाएं", "date": "तारीख", "performance_date": "प्रदर्शन तिथि", "cancel": "रद्द करें",
@@ -116,6 +116,8 @@ st.markdown(f"""
 .stButton>button {{ background: #c0392b !important; color: white !important; border: 2px solid #e74c3c !important; border-radius: 12px !important; }}
 .stButton>button:hover {{ background: #e74c3c !important; }}
 .new-badge {{ background: #e74c3c; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7em; margin-left: 5px; }}
+.popup-content {{ max-width: 280px; text-align: center; color: #e74c3c; line-height: 1.6; }}
+.popup-content b {{ font-size: 1.3em; }}
 </style>
 <script>
 function createSnowflake() {{
@@ -339,24 +341,7 @@ def render_map():
         st_folium(m, width=900, height=550, key="empty_map")
         return
 
-    total_dist = 0
     m = folium.Map(location=[PUNE_LAT, PUNE_LON], zoom_start=9, tiles="CartoDB positron")
-
-    # 반응형 스크립트
-    label_script = """
-    <script>
-    const map = window.parent.document.getElementsByClassName('folium-map')[0].firstChild;
-    const labels = document.getElementsByClassName('parallel-text');
-    function updateLabels() {
-        const zoom = map.getZoom();
-        for (let i = 0; i < labels.length; i++) {
-            labels[i].style.display = zoom >= 10 ? 'block' : 'none';
-        }
-    }
-    map.on('zoomend', updateLabels);
-    updateLabels();
-    </script>
-    """
 
     for i, c in enumerate(cities):
         display_date = _("pending") if not c.get("perf_date") else c["perf_date"]
@@ -367,13 +352,27 @@ def render_map():
 
         is_past = perf_date_obj and perf_date_obj < today
 
-        # 모든 활성 아이콘은 빨간색 (실내/실외 구분 없이), 오늘 포함
-        icon_color = "red"
-        marker_opacity = 0.35 if is_past else 1.0  # 지난 도시는 65% 투명도 (35% 불투명)
+        # 아이콘: 모든 활성 도시 → 빨간색 음악 노트, 과거 → 완전 투명
+        icon_opacity = 0.0 if is_past else 1.0
+        icon = folium.Icon(color="red", icon="music", prefix="fa", opacity=icon_opacity)
 
-        # 추천 아이콘: 음악 관련 'music' 아이콘 사용 (Font Awesome)
-        icon = folium.Icon(color=icon_color, icon="music", prefix="fa", opacity=marker_opacity)
-        folium.Marker([c["lat"], c["lon"]], popup=f"<b>{c['city']}</b><br>{display_date}<br>{c.get('venue','—')}", tooltip=c["city"], icon=icon).add_to(m)
+        # 말풍선: 고정 너비 280px, 최대 7줄, 중앙 정렬
+        popup_html = f'''
+        <div class="popup-content">
+            <b>{c['city']}</b><br>
+            {display_date}<br>
+            {c.get('venue','—')}<br>
+            인원: {c.get('seats','—')}<br>
+            {c.get('note','—')}<br>
+            <a href="{c.get('google_link','')}" target="_blank">구글맵</a>
+        </div>
+        '''
+        folium.Marker(
+            [c["lat"], c["lon"]],
+            popup=folium.Popup(popup_html, max_width=280),
+            tooltip=c["city"],
+            icon=icon
+        ).add_to(m)
 
         with st.expander(f"{c['city']} | {display_date}"):
             st.write(f"등록일: {c.get('date', '—')}")
@@ -396,49 +395,22 @@ def render_map():
                         save_json(CITY_FILE, cities)
                         st.rerun()
 
+        # 연결 라인: 과거 구간은 투명, 삭제된 도시는 자동 제거됨
         if i < len(cities)-1:
             next_c = cities[i+1]
-            dist_km, mins = get_real_travel_time(c['lat'], c['lon'], next_c['lat'], next_c['lon'])
-            total_dist += dist_km
-            hours = mins // 60
-            mins_remain = mins % 60
-            time_str = _(f"est_time").format(hours=hours, mins=mins_remain) if hours or mins_remain else ""
-            label_text = f"{dist_km:.0f}km {time_str}".strip()
+            next_is_past = False
+            try:
+                next_perf = datetime.strptime(next_c['perf_date'], "%Y-%m-%d").date() if next_c.get('perf_date') else None
+                next_is_past = next_perf and next_perf < today
+            except:
+                next_is_past = False
 
-            mid_lat = (c['lat'] + next_c['lat']) / 2
-            mid_lon = (c['lon'] + next_c['lon']) / 2
-
-            # 라인 각도 계산 (위쪽 평행)
-            bearing = degrees(atan2(next_c['lon'] - c['lon'], next_c['lat'] - c['lat']))
-            rotate = bearing
-
-            # 평행 텍스트 (말풍선 없이, 라인 위쪽)
-            folium.Marker(
-                [mid_lat, mid_lon],
-                icon=folium.DivIcon(html=f'''
-                    <div class="parallel-text" style="
-                        color: #e74c3c; font-weight: bold; font-size: 12px; 
-                        white-space: nowrap; text-shadow: 0 0 4px white;
-                        transform: translate(-50%, -50%) rotate({rotate}deg);
-                        transform-origin: center; pointer-events: none;
-                        opacity: {0.35 if is_past else 1.0};
-                    ">
-                        {label_text}
-                    </div>
-                ''')
-            ).add_to(m)
-
-            # 연결 라인: 세그먼트별 AntPath, 과거는 흐리게
+            # 현재 → 다음 구간이 과거면 투명
+            line_opacity = 0.0 if is_past or next_is_past else 0.9
             segment_coords = [(c['lat'], c['lon']), (next_c['lat'], next_c['lon'])]
-            segment_opacity = 0.35 if is_past else 0.9
-            AntPath(segment_coords, color="#e74c3c", weight=6, opacity=segment_opacity, delay=800, dash_array=[20, 30]).add_to(m)
+            AntPath(segment_coords, color="#e74c3c", weight=6, opacity=line_opacity, delay=800, dash_array=[20, 30]).add_to(m)
 
-    if len(cities) > 1:
-        st.markdown(f"<div style='text-align:center;color:#e74c3c;font-size:1.3em;margin:15px 0'>총 거리: {total_dist:.0f}km</div>", unsafe_allow_html=True)
-
-    map_html = st_folium(m, width=900, height=550, key=f"map_{len(cities)}", returned_objects=[])
-    if map_html:
-        st.components.v1.html(label_script, height=0)
+    st_folium(m, width=900, height=550, key=f"map_{len(cities)}")
 
 # --- 14. 탭 ---
 tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
