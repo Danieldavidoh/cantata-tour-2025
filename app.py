@@ -207,12 +207,12 @@ def load_json(f):
 def save_json(f, d):
     json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
-# --- 9. 초기 도시 (Pune 추가) ---
+# --- 9. 초기 도시 (Pune 추가 + 오류 수정) ---
 DEFAULT_CITIES = [
     {"city": "Mumbai", "venue": "Gateway of India", "seats": "5000", "note": "인도 영화 수도",
      "google_link": "https://goo.gl/maps/abc123", "indoor": False, "date": "11/07 02:01"},
     {"city": "Pune", "venue": "Shaniwar Wada", "seats": "3000", "note": "IT 허브",
-     "google_link": "https://goo.gl/maps/def456", ": True, "date": "11/07 02:01"},
+     "google_link": "https://goo.gl/maps/def456", "indoor": True, "date": "11/07 02:01"},
     {"city": "Pune", "venue": "Aga Khan Palace", "seats": "2500", "note": "역사적 장소",
      "google_link": "https://goo.gl/maps/pune2", "indoor": False, "date": "11/08 14:00"},
     {"city": "Nagpur", "venue": "Deekshabhoomi", "seats": "2000", "note": "오렌지 도시",
@@ -503,7 +503,6 @@ def render_map():
                     if st.button("삭제", key=f"del_{c['city']}"):
                         raw_cities = [x for x in raw_cities if x["city"] != c["city"]]
                         save_json(CITY_FILE, raw_cities)
-                        st.r: True
                         st.rerun()
 
             if expanded and exp_key not in st.session_state.expanded_cities:
