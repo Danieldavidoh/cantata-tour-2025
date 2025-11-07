@@ -1,7 +1,4 @@
-import json
-import os
-import uuid
-import base64
+import json, os, uuid, base64
 import streamlit as st
 from datetime import datetime, date, timedelta
 import folium
@@ -58,13 +55,12 @@ def play_carol():
         st.session_state.sound_played = True
         st.markdown("<audio autoplay><source src='carol.wav' type='audio/wav'></audio>", unsafe_allow_html=True)
 
-# --- 8. CSS + 모바일 최적화 ---
+# --- 8. CSS + 상단 고정 레이아웃 ---
 st.markdown("""
 <style>
-    html, body, [data-testid="stAppViewContainer"] { height: 100vh; overflow: hidden; margin: 0; padding: 0; }
-    [data-testid="stAppViewBlockContainer"] { height: 100vh; overflow-y: auto; padding: 0 10px 60px 10px; }
-    .main-title { text-align: center; font-size: 2.8em !important; font-weight: bold; margin: 20px 0 15px 0 !important; text-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-    .tab-container { background: rgba(255,255,255,0.9); padding: 8px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 10px 0; }
+    [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding-top: 0 !important; }
+    .main-title { text-align: center; font-size: 2.8em !important; font-weight: bold; margin: 10px 0 5px 0 !important; text-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+    .tab-container { background: rgba(255,255,255,0.9); padding: 8px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 5px 0; }
     .snowflake { position: fixed; top: -15px; color: white; font-size: 1.1em; pointer-events: none; animation: fall linear infinite; opacity: 0.3 !important; text-shadow: 0 0 4px rgba(255,255,255,0.6); z-index: 1; }
     @keyframes fall { 0% { transform: translateY(0) rotate(0deg); } 100% { transform: translateY(120vh) rotate(360deg); } }
     .hamburger { position: fixed; top: 15px; left: 15px; z-index: 10000; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
@@ -87,7 +83,7 @@ for i in range(26):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 ---
+# --- 제목 (상단 고정) ---
 title_html = f'<span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span>'
 st.markdown(f'<h1 class="main-title">{title_html}</h1>', unsafe_allow_html=True)
 
@@ -146,7 +142,6 @@ with st.sidebar:
             st.session_state.admin = False
             st.rerun()
 
-        # --- 비밀번호 변경 버튼 ---
         if st.button(_("change_pw"), key="show_change_pw_btn"):
             st.session_state.show_pw_form = not st.session_state.show_pw_form
 
@@ -210,35 +205,37 @@ elif st.session_state.tab_selection == _(f"tab_map"):
         if st.button(_("add_city"), key="add_city_btn"):
             st.session_state.adding_city = True
 
-        # --- 도시 추가 폼 ---
+        # --- 도시 추가 폼 (도시 선택만) ---
         if st.session_state.get("adding_city", False):
             with st.container():
-                col_city, col_rest = st.columns([2, 5])
-                with col_city:
-                    city_name = st.text_input("도시명", label_visibility="collapsed", placeholder="새 도시 입력", key="new_city_name")
-                with col_rest:
-                    if city_name:
-                        with st.form("city_form_add"):
-                            perf_date = st.date_input(_("perf_date"), key="add_perf_date")
-                            venue = st.text_input(_("venue"), key="add_venue")
-                            seats = st.number_input(_("seats"), min_value=0, value=500, step=50, key="add_seats")
-                            indoor = st.radio("유형", [_(f"indoor"), _(f"outdoor")], key="add_indoor")
-                            note = st.text_area(_("note"), key="add_note")
-                            google_link = st.text_input(_("google_link"), key="add_link")
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                if st.form_submit_button(_("save"), key="save_city_btn"):
-                                    new_city = { "city": city_name, "venue": venue, "seats": str(seats), "indoor": indoor == _(f"indoor"), "note": note, "google_link": google_link, "perf_date": str(perf_date), "date": datetime.now().strftime("%m/%d %H:%M") }
-                                    data = load_json(CITY_FILE)
-                                    data.append(new_city)
-                                    save_json(CITY_FILE, data)
-                                    st.session_state.adding_city = False
-                                    st.success("도시 추가 완료!")
-                                    st.rerun()
-                            with col2:
-                                if st.form_submit_button(_("cancel"), key="cancel_city_btn"):
-                                    st.session_state.adding_city = False
-                                    st.rerun()
+                cities = load_json(CITY_FILE)
+                city_names = [c["city"] for c in cities]
+                selected_city = st.selectbox("도시 선택", city_names + ["새 도시 입력"], key="select_city_add")
+                if selected_city == "새 도시 입력":
+                    st.session_state.adding_city = False
+                    st.rerun()
+                if selected_city:
+                    with st.form("city_form_add"):
+                        perf_date = st.date_input(_("perf_date"), key="add_perf_date")
+                        venue = st.text_input(_("venue"), key="add_venue")
+                        seats = st.number_input(_("seats"), min_value=0, value=500, step=50, key="add_seats")
+                        indoor = st.radio("유형", [_(f"indoor"), _(f"outdoor")], key="add_indoor")
+                        note = st.text_area(_("note"), key="add_note")
+                        google_link = st.text_input(_("google_link"), key="add_link")
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.form_submit_button(_("save"), key="save_city_btn"):
+                                new_city = { "city": selected_city, "venue": venue, "seats": str(seats), "indoor": indoor == _(f"indoor"), "note": note, "google_link": google_link, "perf_date": str(perf_date), "date": datetime.now().strftime("%m/%d %H:%M") }
+                                data = load_json(CITY_FILE)
+                                data.append(new_city)
+                                save_json(CITY_FILE, data)
+                                st.session_state.adding_city = False
+                                st.success("도시 추가 완료!")
+                                st.rerun()
+                        with col2:
+                            if st.form_submit_button(_("cancel"), key="cancel_city_btn"):
+                                st.session_state.adding_city = False
+                                st.rerun()
 
     # --- 지도 ---
     cities = load_json(CITY_FILE)
@@ -249,7 +246,7 @@ elif st.session_state.tab_selection == _(f"tab_map"):
         is_future = c.get("perf_date", "9999-12-31") >= str(date.today())
         color = "red" if is_future else "gray"
         indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
-        popup_html = f"<div style='font-size:14px; line-height:1.6;'><b>{c['city']}</b><br>{_('perf_date')}: {c.get('perf_date','미정')}<br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br><a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving' target='_blank'>{_('google_link')}</a></div>"
+        popup_html = f"<div style='font-size:14px; line-height:1.6;'><b>{c['city']}</b><br>{_('perf_date')}: {c.get('perf_date','미정')}<br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br><a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving' target='_blank'>🚗 {_('google_link')}</a></div>"
         folium.Marker(coords, popup=folium.Popup(popup_html, max_width=300), icon=folium.Icon(color=color, icon="music", prefix="fa")).add_to(m)
         if i < len(cities) - 1:
             nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
