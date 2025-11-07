@@ -35,7 +35,7 @@ defaults = {
     "admin": False, "lang": "ko", "edit_city": None,
     "tab_selection": "공지", "new_notice": False, "sound_played": False,
     "seen_notices": [], "expanded_notices": [], "expanded_cities": [], "last_tab": None,
-    "notice_alert_shown": False, "current_alert_id": None
+    "alert_active": False, "current_alert_id": None
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -46,7 +46,7 @@ _ = lambda key: LANG.get(st.session_state.lang, LANG["ko"]).get(key, key)
 # --- 5. 크리스마스 캐롤 ---
 CHRISTMAS_CAROL_WAV = "UklGRu4FAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA..."
 
-# --- 6. 크리스마스 지옥불 알림 (눈 + 산타 + 벨 + 선물 + 확인 전까지 유지) ---
+# --- 6. 크리스마스 알림 (제목 아래 고정 + 새 공지 열 때까지 유지) ---
 st.markdown(f"""
 <style>
 .stApp {{ background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #f0f0f0; }}
@@ -55,38 +55,31 @@ st.markdown(f"""
 .year {{ font-size: 2.8em; color: #ecf0f1; text-shadow: 0 0 8px #ffffff; }}
 .maha {{ font-size: 1.8em; color: #3498db; font-style: italic; text-shadow: 0 0 6px #74b9ff; }}
 
-/* 크리스마스 지옥불 알림 */
+/* 알림: 제목 아래 고정 */
 .christmas-alert {{
     position: fixed;
-    top: 20px;
+    top: 140px;           /* 제목 아래 */
     right: 10%;
-    background: linear-gradient(45deg, #c21500, #ffc500, #ff6b35, #c21500);
+    background: linear-gradient(45deg, #c21500, #ffc500, #ff6b35);
     background-size: 400% 400%;
     color: white;
-    padding: 18px 40px;
+    padding: 16px 36px;
     border-radius: 70px;
     font-weight: 900;
-    font-size: 1.4em;
+    font-size: 1.3em;
     z-index: 99999;
-    box-shadow: 
-        0 0 30px rgba(255, 255, 255, 0.8),
-        0 0 60px rgba(255, 215, 0, 0.7),
-        0 0 100px rgba(255, 0, 0, 0.5);
-    animation: 
-        slideRight 7s forwards,
-        pulseBg 2s infinite,
-        shake 0.6s infinite alternate,
-        snow 3s infinite linear;
+    box-shadow: 0 0 40px rgba(255, 255, 255, 0.8), 0 0 80px rgba(255, 215, 0, 0.6);
+    animation: pulseBg 2s infinite, shake 0.6s infinite alternate;
     border: 4px solid #fff;
     text-shadow: 0 0 15px #000;
     font-family: 'Comic Sans MS', cursive;
-    overflow: visible;
+    white-space: nowrap;
 }}
 
 .christmas-alert::before {{
     content: '❄️🎄🎅🔔🎁';
     position: absolute;
-    top: -30px; left: 50%; transform: translateX(-50%);
+    top: -35px; left: 50%; transform: translateX(-50%);
     font-size: 2em;
     animation: bellRing 1s infinite;
 }}
@@ -104,14 +97,12 @@ st.markdown(f"""
     font-size: 1em;
 }}
 
-@keyframes slideRight {{ 0% {{ transform: translateX(200%) rotate(15deg); opacity: 0; }} 15% {{ transform: translateX(0) rotate(0); opacity: 1; }} 85% {{ opacity: 1; }} 100% {{ opacity: 0; }} }}
 @keyframes pulseBg {{ 0%, 100% {{ background-position: 0% 50%; }} 50% {{ background-position: 100% 50%; }} }}
 @keyframes shake {{ 0% {{ transform: translateX(0); }} 100% {{ transform: translateX(-4px); }} }}
-@keyframes snow {{ 0% {{ background-position: 0 0; }} 100% {{ background-position: 0 100px; }} }}
 @keyframes bellRing {{ 0%, 100% {{ transform: rotate(0deg); }} 25% {{ transform: rotate(-15deg); }} 75% {{ transform: rotate(15deg); }} }}
 
 @media (max-width: 768px) {{
-    .christmas-alert {{ right: 5%; font-size: 1.1em; padding: 14px 28px; }}
+    .christmas-alert {{ top: 120px; right: 5%; font-size: 1.1em; padding: 12px 24px; }}
 }}
 </style>
 
@@ -226,7 +217,7 @@ def add_notice(title, content, img=None, file=None):
     save_json(NOTICE_FILE, data)
     st.session_state.seen_notices = []
     st.session_state.new_notice = True
-    st.session_state.notice_alert_shown = False
+    st.session_state.alert_active = True
     st.session_state.current_alert_id = notice["id"]
     st.rerun()
 
@@ -259,24 +250,23 @@ def render_notices():
                 st.session_state.expanded_notices.append(exp_key)
             elif not expanded and exp_key in st.session_state.expanded_notices:
                 st.session_state.expanded_notices.remove(exp_key)
+            # 새 공지 열리면 알림 끄기
+            if expanded and n["id"] == st.session_state.current_alert_id:
+                st.session_state.alert_active = False
+                st.rerun()
 
-    # 새 공지 알림 (확인 전까지 유지)
-    if has_new and (not st.session_state.notice_alert_shown or st.session_state.current_alert_id != latest_new_id):
+    # 알림 유지 (새 공지 열릴 때까지)
+    if st.session_state.alert_active and st.session_state.current_alert_id:
         st.markdown("<script>playChristmasCarol();</script>", unsafe_allow_html=True)
-        st.session_state.notice_alert_shown = True
-        st.session_state.current_alert_id = latest_new_id
         alert_html = f'''
         <div class="christmas-alert">
             <span>{_("new_notice_alert")}</span>
-            <button class="close-btn" onclick="document.getElementById('alert-container').remove()">×</button>
+            <button class="close-btn" onclick="this.parentElement.remove()">×</button>
         </div>
-        <div id="alert-container"></div>
         '''
         st.markdown(alert_html, unsafe_allow_html=True)
-    elif not has_new:
-        st.session_state.notice_alert_shown = False
 
-# --- 12. 지도 (과거 도시 투명도 0.3 적용) ---
+# --- 12. 지도 (거리/시간 한 줄로 연결선 위에) ---
 def render_map():
     st.subheader("경로 보기")
     today = date.today()
@@ -301,13 +291,24 @@ def render_map():
                 next_c = cities[i+1]
                 dist_km, mins = get_real_travel_time(c['lat'], c['lon'], next_c['lat'], next_c['lon'])
                 time_str = f"{mins//60}h {mins%60}m" if mins else ""
-                label_text = f"{dist_km:.0f}km {time_str}".strip()
+                label_text = f"{dist_km:.0f}km → {time_str}".strip()
                 mid_lat, mid_lon = (c['lat'] + next_c['lat']) / 2, (c['lon'] + next_c['lon']) / 2
                 bearing = degrees(atan2(next_c['lon'] - c['lon'], next_c['lat'] - c['lat']))
                 path_opacity = 0.3 if is_past else 1.0
+                # 한 줄로 나란히
                 folium.Marker([mid_lat, mid_lon], icon=folium.DivIcon(html=f'''
-                    <div style="transform: translate(-50%,-50%) rotate({bearing}deg); opacity: {path_opacity}; color:#e74c3c; font-weight:bold; font-size:12px;">
-                    {label_text}</div>''')).add_to(m)
+                    <div style="
+                        transform: translate(-50%,-50%) rotate({bearing}deg);
+                        background: rgba(231, 76, 60, {path_opacity});
+                        color: white;
+                        padding: 2px 6px;
+                        border-radius: 4px;
+                        font-weight: bold;
+                        font-size: 11px;
+                        white-space: nowrap;
+                        text-shadow: 1px 1px 2px black;
+                        box-shadow: 0 0 5px rgba(0,0,0,0.5);
+                    ">{label_text}</div>''')).add_to(m)
                 AntPath([(c['lat'], c['lon']), (next_c['lat'], next_c['lon'])],
                         color="#e74c3c", weight=6, opacity=path_opacity,
                         delay=800, dash_array=[20,30]).add_to(m)
@@ -323,7 +324,7 @@ def render_map():
                 if st.session_state.admin:
                     c1, c2 = st.columns(2)
                     with c1:
-                        if st.button("수정", key=f"edit_city_{c['city']}_{i}"):  # 고유 key
+                        if st.button("수정", key=f"edit_city_{c['city']}_{i}"):
                             st.session_state.edit_city = c["city"]
                             st.rerun()
                     with c2:
