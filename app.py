@@ -81,21 +81,29 @@ def play_carol():
         </audio>
         """, unsafe_allow_html=True)
 
-# --- 5. 고요한 크리스마스 밤 고급 UI ---
+# --- 5. 고급 크리스마스 UI (빨강, 녹색, 흰색, 노란색, 검정) + 별, 트리, 선물, 종, 양말, 사탕, 루돌프, 산타 ---
 st.markdown("""
 <style>
-    /* 전체 배경: 깊은 겨울 밤 */
+    /* 전체 배경: 검정 + 은하수 별 */
     .stApp {
-        background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-        background-size: 400% 400%;
-        animation: gradient 20s ease infinite;
-        color: #e0e0e0;
+        background: #000000;
+        color: #ffffff;
         font-family: 'Playfair Display', serif;
+        position: relative;
+        overflow: hidden;
     }
-    @keyframes gradient {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
+
+    /* 은하수 별들 */
+    @keyframes twinkle {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
+    }
+    .star {
+        position: absolute;
+        background: #ffffff;
+        border-radius: 50%;
+        animation: twinkle 3s infinite;
+        pointer-events: none;
     }
 
     /* 제목: 고급스러운 크리스마스 */
@@ -103,155 +111,225 @@ st.markdown("""
         text-align: center;
         margin-bottom: 30px;
         line-height: 1.2;
+        position: relative;
+        z-index: 10;
     }
     .main-title .cantata {
-        color: #b71c1c !important;
+        color: #DC143C !important;
         font-size: 2.8em;
         font-weight: 700;
-        text-shadow: 0 0 15px rgba(183, 28, 28, 0.7), 0 0 30px rgba(255, 215, 0, 0.3);
+        text-shadow: 0 0 15px #FFD700, 0 0 30px #FF4500;
     }
     .main-title .year {
-        color: #f5f5f5 !important;
+        color: #FFFFFF !important;
         font-size: 2.8em;
         font-weight: 700;
-        text-shadow: 0 0 15px rgba(255, 255, 255, 0.7), 0 0 30px rgba(135, 206, 250, 0.3);
+        text-shadow: 0 0 15px #FFFFFF, 0 0 30px #87CEEB;
     }
     .main-title .maharashtra {
-        color: #9e9e9e !important;
+        color: #D3D3D3 !important;
         font-size: 1.8em;
         font-style: italic;
         display: block;
         margin-top: -10px;
-        text-shadow: 0 0 10px rgba(158, 158, 158, 0.5);
+        text-shadow: 0 0 10px #9E9E9E;
     }
 
-    /* 탭 버튼: 고급스러운 은은한 빛 */
+    /* 탭 버튼: 고급스러운 빨강 + 금색 테두리 */
     .stButton > button {
-        background: rgba(255, 255, 255, 0.1) !important;
-        color: #ffffff !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        border-radius: 12px !important;
-        padding: 14px 28px !important;
+        background: #8B0000 !important;
+        color: #FFFFFF !important;
+        border: 2px solid #FFD700 !important;
+        border-radius: 14px !important;
+        padding: 14px 30px !important;
         font-weight: 600;
         font-size: 1.1em;
         transition: all 0.4s ease;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(5px);
+        box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);
     }
     .stButton > button:hover {
-        background: rgba(255, 255, 255, 0.2) !important;
+        background: #B22222 !important;
         transform: translateY(-3px);
-        box-shadow: 0 8px 30px rgba(135, 206, 250, 0.3);
+        box-shadow: 0 8px 30px rgba(255, 215, 0, 0.5);
     }
 
-    /* 공지 expander: 고급스러운 유리 효과 */
+    /* 공지 expander: 녹색 트리 + 금색 테두리 */
     .streamlit-expanderHeader {
-        background: rgba(255, 255, 255, 0.08) !important;
-        color: #e0e0e0 !important;
+        background: #006400 !important;
+        color: #FFFFFF !important;
         border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        border: 2px solid #FFD700;
         padding: 14px 18px;
         font-size: 1.05em;
-        backdrop-filter: blur(8px);
         transition: all 0.3s ease;
     }
     .streamlit-expanderHeader:hover {
-        background: rgba(255, 255, 255, 0.15) !important;
-        box-shadow: 0 4px 15px rgba(135, 206, 250, 0.2);
+        background: #228B22 !important;
+        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
     }
     .streamlit-expander {
-        background: rgba(255, 255, 255, 0.05) !important;
+        background: rgba(0, 100, 0, 0.7) !important;
         border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 2px solid #FFD700;
         margin-bottom: 14px;
-        backdrop-filter: blur(10px);
     }
 
-    /* 입력 폼: 고급스러운 유리 */
+    /* 입력 폼: 흰색 배경 + 빨강 테두리 */
     .stTextInput > div > div > input,
     .stTextArea > div > div > textarea,
     .stSelectbox > div > div > select,
     .stDateInput > div > div > input {
-        background: rgba(255, 255, 255, 0.1) !important;
-        color: #ffffff !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        background: #FFFFFF !important;
+        color: #000000 !important;
+        border: 2px solid #DC143C !important;
         border-radius: 10px;
-        backdrop-filter: blur(5px);
     }
 
-    /* 사이드바: 고급스러운 어두운 유리 */
+    /* 사이드바: 검정 + 금색 테두리 */
     .css-1d391kg {
-        background: rgba(15, 12, 41, 0.9);
-        border-right: 1px solid rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
+        background: #000000;
+        border-right: 3px solid #FFD700;
     }
 
-    /* 알림 박스: 고급스러운 은은한 빛 */
+    /* 알림 박스: 금색 선물 */
     .alert-box {
         position: fixed; top: 20px; right: 20px; z-index: 9999;
-        background: rgba(255, 255, 255, 0.2); color: #ffffff; padding: 18px 26px;
-        border-radius: 16px; box-shadow: 0 10px 35px rgba(135, 206, 250, 0.3);
+        background: #FFD700; color: #8B0000; padding: 18px 26px;
+        border-radius: 16px; box-shadow: 0 10px 35px rgba(139, 0, 0, 0.5);
         font-weight: 600; font-size: 17px; display: flex; align-items: center; gap: 14px;
         animation: slideIn 0.6s ease-out, glow 2s infinite;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        backdrop-filter: blur(12px);
-    }
-    @keyframes glow {
-        0%, 100% { box-shadow: 0 10px 35px rgba(135, 206, 250, 0.3); }
-        50% { box-shadow: 0 15px 45px rgba(135, 206, 250, 0.5); }
+        border: 3px solid #228B22;
     }
 
     /* 전체화면 지도 */
     .fullscreen-map {
         position: fixed !important;
         top: 0; left: 0; width: 100vw !important; height: 100vh !important;
-        z-index: 9998; background: #0a0a1a;
+        z-index: 9998; background: #000000;
     }
 
     /* 도시 라벨 */
     .city-label {
-        color: #e0e0e0 !important;
+        color: #FFD700 !important;
         font-weight: 600;
         font-size: 1.05em;
     }
     .city-icon {
         margin-right: 8px;
-        font-size: 1.2em;
-        color: #87CEEB;
+        font-size: 1.3em;
+        color: #FFFFFF;
     }
 
-    /* 투명한 눈 결정체 */
-    .snowflake {
-        color: rgba(255, 255, 255, 0.5);
-        font-size: 1.5em;
-        position: absolute;
-        top: -10px;
-        z-index: 1;
-        user-select: none;
-        animation: fall linear forwards;
-        pointer-events: none;
+    /* 크리스마스 요소 애니메이션 */
+    @keyframes float-tree {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-15px); }
     }
-    @keyframes fall {
-        to { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    @keyframes sway-gift {
+        0%, 100% { transform: rotate(-5deg); }
+        50% { transform: rotate(5deg); }
+    }
+    @keyframes ring-bell {
+        0%, 100% { transform: rotate(-15deg); }
+        50% { transform: rotate(15deg); }
+    }
+    @keyframes bounce-candy {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+    @keyframes hop-rudolph {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-20px); }
+    }
+    @keyframes slide-santa {
+        0% { transform: translateX(-100vw) translateY(-50px); }
+        100% { transform: translateX(100vw) translateY(-50px); }
+    }
+
+    .christmas-tree {
+        position: absolute; bottom: 10%; left: 5%; font-size: 4em; animation: float-tree 6s ease-in-out infinite; z-index: 1;
+    }
+    .gift-box {
+        position: absolute; bottom: 15%; right: 8%; font-size: 2.5em; animation: sway-gift 4s ease-in-out infinite; z-index: 1;
+    }
+    .bell {
+        position: absolute; top: 15%; left: 10%; font-size: 2em; animation: ring-bell 3s ease-in-out infinite; z-index: 1;
+    }
+    .stocking {
+        position: absolute; top: 20%; right: 12%; font-size: 2.5em; animation: bounce-candy 3.5s ease-in-out infinite; z-index: 1;
+    }
+    .candy-cane {
+        position: absolute; bottom: 18%; left: 12%; font-size: 2em; animation: bounce-candy 4s ease-in-out infinite; z-index: 1;
+    }
+    .rudolph {
+        position: absolute; top: 25%; left: 50%; font-size: 2.5em; animation: hop-rudolph 3s ease-in-out infinite; z-index: 1;
+    }
+    .santa {
+        position: absolute; top: 8%; font-size: 2em; animation: slide-santa 25s linear infinite; z-index: 1;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 투명한 눈 결정체 스크립트 ---
+# --- 크리스마스 요소 + 은하수 별 스크립트 ---
 st.markdown("""
 <script>
-    function createSnowflake() {
-        const snowflake = document.createElement('div');
-        snowflake.classList.add('snowflake');
-        snowflake.innerText = ['❄', '❅', '❆'][Math.floor(Math.random() * 3)];
-        snowflake.style.left = Math.random() * 100 + 'vw';
-        snowflake.style.animationDuration = Math.random() * 10 + 8 + 's';
-        snowflake.style.opacity = Math.random() * 0.4 + 0.3;
-        snowflake.style.fontSize = Math.random() * 14 + 14 + 'px';
-        document.body.appendChild(snowflake);
-        setTimeout(() => snowflake.remove(), 18000);
+    // 은하수 별들
+    function createStar() {
+        const star = document.createElement('div');
+        star.classList.add('star');
+        star.style.width = Math.random() * 3 + 'px';
+        star.style.height = star.style.width;
+        star.style.left = Math.random() * 100 + 'vw';
+        star.style.top = Math.random() * 100 + 'vh';
+        star.style.animationDelay = Math.random() * 3 + 's';
+        document.body.appendChild(star);
+        setTimeout(() => star.remove(), 10000);
     }
-    setInterval(createSnowflake, 300);
+
+    // 크리스마스 요소
+    function addChristmasElements() {
+        const tree = document.createElement('div');
+        tree.classList.add('christmas-tree');
+        tree.innerHTML = '🎄';
+        document.body.appendChild(tree);
+
+        const gift = document.createElement('div');
+        gift.classList.add('gift-box');
+        gift.innerHTML = '🎁';
+        document.body.appendChild(gift);
+
+        const bell = document.createElement('div');
+        bell.classList.add('bell');
+        bell.innerHTML = '🔔';
+        document.body.appendChild(bell);
+
+        const stocking = document.createElement('div');
+        stocking.classList.add('stocking');
+        stocking.innerHTML = '🧦';
+        document.body.appendChild(stocking);
+
+        const candy = document.createElement('div');
+        candy.classList.add('candy-cane');
+        candy.innerHTML = '🍭';
+        document.body.appendChild(candy);
+
+        const rudolph = document.createElement('div');
+        rudolph.classList.add('rudolph');
+        rudolph.innerHTML = '🦌';
+        document.body.appendChild(rudolph);
+
+        const santa = document.createElement('div');
+        santa.classList.add('santa');
+        santa.innerHTML = '🎅🛷';
+        document.body.appendChild(santa);
+    }
+
+    // 초기 생성
+    for (let i = 0; i < 150; i++) createStar();
+    addChristmasElements();
+
+    // 주기적 생성
+    setInterval(() => { for (let i = 0; i < 5; i++) createStar(); }, 1000);
 </script>
 """, unsafe_allow_html=True)
 
@@ -578,7 +656,7 @@ def render_map():
             nxt_coords = CITY_COORDS.get(nxt["city"], (18.5204, 73.8567))
             opacity = 0.3 if is_past else 1.0
             AntPath([coords, nxt_coords],
-                    color="#87CEEB", weight=5, opacity=opacity, delay=800, dash_array=[20, 30]).add_to(m)
+                    color="#FFD700", weight=5, opacity=opacity, delay=800, dash_array=[20, 30]).add_to(m)
 
         exp_key = f"city_{c['city']}"
         expanded = exp_key in st.session_state.expanded_cities
