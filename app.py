@@ -381,10 +381,10 @@ def render_map():
         except:
             perf_date_obj = None
 
-        is_past_segment = (today_index != -1 and i < today_index)
+        is_past = perf_date_obj and perf_date_obj < today
 
-        # 아이콘: 이전 도시 50% 더 흐림 (원래 1.0 → 0.5)
-        icon_opacity = 0.5 if is_past_segment else 1.0
+        # 아이콘
+        icon_opacity = 0.5 if is_past else 1.0
         icon = folium.Icon(color="red", icon="music", prefix="fa", opacity=icon_opacity)
 
         # 말풍선
@@ -421,7 +421,7 @@ def render_map():
             rotate = bearing
 
             # 라벨 (항상 표시, 줌에 따라 가시성 제어)
-            label_opacity = 0.5 if is_past_segment else 1.0
+            label_opacity = 0.5 if is_past else 1.0
             folium.Marker(
                 [mid_lat, mid_lon],
                 icon=folium.DivIcon(html=f'''
@@ -435,7 +435,7 @@ def render_map():
             ).add_to(m)
 
             # 라인: 이전 구간 50% 더 흐림
-            line_opacity = 0.5 if is_past_segment else 1.0
+            line_opacity = 0.5 if is_past else 1.0
             segment_coords = [(c['lat'], c['lon']), (next_c['lat'], next_c['lon'])]
             AntPath(segment_coords, color="#e74c3c", weight=6, opacity=line_opacity, delay=800, dash_array=[20, 30]).add_to(m)
 
