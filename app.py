@@ -229,7 +229,7 @@ def render_notices():
         if new: title += ' <span class="new-badge">NEW</span>'
 
         with st.expander(title, expanded=False):
-            st.markdown(n[" colaboradores"])
+            st.markdown(n["content"])
             if n.get("image") and os.path.exists(n["image"]): st.image(n["image"], use_container_width=True)
             if n.get("file") and os.path.exists(n["file"]):
                 with open(n["file"], "rb") as f:
@@ -268,7 +268,7 @@ def render_map():
 
     cities = sorted(cities, key=lambda x: x.get("perf_date", "9999-12-31") or "9999-12-31")
 
-    # 수정/추가 폼 생략 (기존 유지)
+    # 수정/추가 폼 (기존 코드 유지 - 생략)
 
     if not cities:
         st.warning("도시 없음")
@@ -327,6 +327,28 @@ def render_map():
             line_opacity = 0.35 if is_past_segment else 1.0
             segment_coords = [(c['lat'], c['lon']), (cities[i+1]['lat'], cities[i+1]['lon'])]
             AntPath(segment_coords, color="#e74c3c", weight=6, opacity=line_opacity, delay=800, dash_array=[20, 30]).add_to(m)
+
+        # 도시 정보 expander
+        with st.expander(f"{c['city']} | {display_date}"):
+            st.write(f"등록일: {c.get('date', '—')}")
+            st.write(f"공연 날짜: {display_date}")
+            st.write(f"장소: {c.get('venue', '—')}")
+            st.write(f"예상 인원: {c.get('seats', '—')}")
+            st.write(f"특이사항: {c.get('note', '—')}")
+            if c.get("google_link"):
+                st.markdown(f"[구글맵 보기]({c['google_link']})")
+
+            if st.session_state.admin and not st.session_state.get("edit_city"):
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button("수정", key=f"edit_{i}"):
+                        st.session_state.edit_city = c["city"]
+                        st.rerun()
+                with c2:
+                    if st.button("삭제", key=f"del_{i}"):
+                        cities.pop(i)
+                        save_json(CITY_FILE, cities)
+                        st.rerun()
 
     st_folium(m, width=900, height=550, key=f"map_{len(cities)}")
 
