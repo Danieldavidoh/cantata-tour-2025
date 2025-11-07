@@ -101,11 +101,6 @@ st.markdown("""
         margin-right: 8px;
         font-size: 1.2em;
     }
-    
-    /* 탭 아래로 내리기 */
-    .main-title {
-        margin-top: 40px !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -497,8 +492,8 @@ if st.session_state.get("new_notice", False):
     st.session_state.new_notice = False
     st.rerun()
 
-# --- 13. 렌더링 (제목 아래로 내림) ---
-st.markdown('<div class="main-title"># 칸타타 투어 2025 마하라스트라</div>', unsafe_allow_html=True)
+# --- 13. 렌더링 (제목을 원래 위치로 복구) ---
+st.markdown('# 칸타타 투어 2025 마하라스트라')
 
 if tab_selection == _(f"tab_notice"):
     if st.session_state.admin:
