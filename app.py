@@ -1,4 +1,4 @@
-# app.py - 칸타타 투어 2025 (간결화 + 탭 전환 시 expander 접힘 + 오류 수정)
+# app.py - 칸타타 투어 2025 (간결화 + 탭 전환 시 expander 접힘 + 오류 완전 수정)
 
 import streamlit as st
 from datetime import datetime, date, timedelta
@@ -22,16 +22,21 @@ CITY_FILE = "cities.json"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-defaults = {"admin": False, "lang": "ko", "edit_city": None, "tab_selection": _("tab_notice"), "new_notice": False, "sound_played": False}
-for k, v in defaults.items():
-    if k not in st.session_state: st.session_state[k] = v
-
-# --- 다국어 ---
+# --- 다국어 (먼저 정의) ---
 LANG = {
     "ko": {"tab_notice": "공지", "tab_map": "투어 경로", "today": "오늘", "yesterday": "어제", "new_notice_alert": "따끈한 공지가 도착했어요!"},
     "en": {"tab_notice": "Notice", "tab_map": "Tour Route", "today": "Today", "yesterday": "Yesterday", "new_notice_alert": "Hot new notice arrived!"},
     "hi": {"tab_notice": "सूचना", "tab_map": "टूर मार्ग", "today": "आज", "yesterday": "कल", "new_notice_alert": "ताज़ा सूचना आई है!"}
 }
+
+# 세션 초기화 (LANG 정의 후)
+defaults = {
+    "admin": False, "lang": "ko", "edit_city": None, 
+    "tab_selection": LANG["ko"]["tab_notice"], "new_notice": False, "sound_played": False
+}
+for k, v in defaults.items():
+    if k not in st.session_state: st.session_state[k] = v
+
 _ = lambda key: LANG[st.session_state.lang].get(key, key)
 
 # --- 크리스마스 캐롤 ---
@@ -59,7 +64,10 @@ st.markdown('<div class="christmas-title"><div class="cantata">칸타타 투어<
 with st.sidebar:
     lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
     selected = st.selectbox("언어", list(lang_map.keys()), index=list(lang_map.values()).index(st.session_state.lang))
-    if lang_map[selected] != st.session_state.lang: st.session_state.lang = lang_map[selected]; st.rerun()
+    if lang_map[selected] != st.session_state.lang:
+        st.session_state.lang = lang_map[selected]
+        st.session_state.tab_selection = LANG[lang_map[selected]]["tab_notice"]
+        st.rerun()
     st.markdown("---")
     if not st.session_state.admin:
         pw = st.text_input("비밀번호", type="password")
@@ -134,7 +142,6 @@ def render_map():
         st_folium(m, width=900, height=550); return
 
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=9, tiles="CartoDB positron")
-    today_index = next((i for i, c in enumerate(cities) if c.get('perf_date') and datetime.strptime(c['perf_date'], "%Y-%m-%d").date() == today), -1)
 
     for i, c in enumerate(cities):
         is_past = c.get('perf_date') and datetime.strptime(c['perf_date'], "%Y-%m-%d").date() < today
@@ -161,8 +168,10 @@ def render_map():
 
     st_folium(m, width=900, height=550)
 
-# --- 탭 (radio로 변경) ---
-tab_selection = st.radio("탭 선택", [_("tab_notice"), _("tab_map")], index=0 if st.session_state.tab_selection == _("tab_notice") else 1, horizontal=True)
+# --- 탭 (radio) ---
+tab_selection = st.radio("탭 선택", [_("tab_notice"), _("tab_map")], 
+                        index=0 if st.session_state.tab_selection == _("tab_notice") else 1, 
+                        horizontal=True)
 
 # 탭 전환 시 expander 접기
 if tab_selection != st.session_state.tab_selection:
