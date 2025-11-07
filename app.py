@@ -229,7 +229,7 @@ def render_notices():
         if new: title += ' <span class="new-badge">NEW</span>'
 
         with st.expander(title, expanded=False):
-            st.markdown(n["content"])
+            st.markdown(n[" colaboradores"])
             if n.get("image") and os.path.exists(n["image"]): st.image(n["image"], use_container_width=True)
             if n.get("file") and os.path.exists(n["file"]):
                 with open(n["file"], "rb") as f:
@@ -268,7 +268,7 @@ def render_map():
 
     cities = sorted(cities, key=lambda x: x.get("perf_date", "9999-12-31") or "9999-12-31")
 
-    # 수정/추가 폼 (생략 - 기존 유지)
+    # 수정/추가 폼 생략 (기존 유지)
 
     if not cities:
         st.warning("도시 없음")
@@ -279,6 +279,17 @@ def render_map():
 
     m = folium.Map(location=[PUNE_LAT, PUNE_LON], zoom_start=9, tiles="CartoDB positron")
 
+    # 오늘 공연 도시 인덱스 찾기
+    today_index = -1
+    for idx, c in enumerate(cities):
+        try:
+            perf_date_obj = datetime.strptime(c['perf_date'], "%Y-%m-%d").date() if c.get('perf_date') else None
+            if perf_date_obj and perf_date_obj == today:
+                today_index = idx
+                break
+        except:
+            continue
+
     for i, c in enumerate(cities):
         display_date = _("pending") if not c.get("perf_date") else c["perf_date"]
         try:
@@ -286,11 +297,11 @@ def render_map():
         except:
             perf_date_obj = None
 
-        is_past = perf_date_obj and perf_date_obj < today
-        is_today = perf_date_obj and perf_date_obj == today
+        # 이전 도시 (today_index 이전) → 흐림
+        is_past_segment = (today_index != -1 and i < today_index)
 
-        # 아이콘: 과거 → 흐림, 오늘/미래 → 선명
-        icon_opacity = 0.35 if is_past else 1.0
+        # 아이콘 투명도
+        icon_opacity = 0.35 if is_past_segment else 1.0
         icon = folium.Icon(color="red", icon="music", prefix="fa", opacity=icon_opacity)
 
         # 말풍선
@@ -311,11 +322,10 @@ def render_map():
             icon=icon
         ).add_to(m)
 
-        # 연결 라인: 이전 도시가 과거면 흐림
+        # 연결 라인: 이전 도시에서 나가는 라인 → 흐림
         if i < len(cities)-1:
-            next_c = cities[i+1]
-            line_opacity = 0.35 if is_past else 1.0
-            segment_coords = [(c['lat'], c['lon']), (next_c['lat'], next_c['lon'])]
+            line_opacity = 0.35 if is_past_segment else 1.0
+            segment_coords = [(c['lat'], c['lon']), (cities[i+1]['lat'], cities[i+1]['lon'])]
             AntPath(segment_coords, color="#e74c3c", weight=6, opacity=line_opacity, delay=800, dash_array=[20, 30]).add_to(m)
 
     st_folium(m, width=900, height=550, key=f"map_{len(cities)}")
