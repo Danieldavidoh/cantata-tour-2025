@@ -340,17 +340,7 @@ def render_map():
         return
 
     total_dist = 0
-    coords = []
     m = folium.Map(location=[PUNE_LAT, PUNE_LON], zoom_start=9, tiles="CartoDB positron")
-
-    # 구글맵 아이콘
-    google_icon_html = '''
-    <div style="position: relative; width: 30px; height: 40px; margin-left: -15px; margin-top: -40px;">
-        <div style="position: absolute; bottom: 0; left: 0; width: 30px; height: 30px; background: {color}; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 0 6px rgba(0,0,0,0.3);"></div>
-        <div style="position: absolute; top: 6px; left: 6px; width: 18px; height: 18px; background: white; border-radius: 50%; transform: rotate(45deg);"></div>
-        <div style="position: absolute; top: 9px; left: 9px; width: 12px; height: 12px; background: {inner_color}; border-radius: 50%; transform: rotate(45deg);"></div>
-    </div>
-    '''
 
     # 반응형 스크립트
     label_script = """
@@ -375,15 +365,19 @@ def render_map():
         except:
             perf_date_obj = None
 
-        if perf_date_obj and perf_date_obj < today:
-            color = "#999999"; inner = "#666666"
-        elif perf_date_obj and perf_date_obj == today:
-            color = "#000000"; inner = "#ffffff"
-        else:
-            color = "#ea4335" if c.get("indoor") else "#4285f4"
-            inner = "#ffffff"
+        is_past = perf_date_obj and perf_date_obj < today
+        is_today = perf_date_obj and perf_date_obj == today
 
-        icon = folium.DivIcon(html=google_icon_html.format(color=color, inner_color=inner))
+        if is_past:
+            opacity = 0.0  # 투명하게
+            color = "gray"
+        elif is_today:
+            color = "black"
+        else:
+            color = "red" if c.get("indoor") else "blue"
+
+        # 추천 아이콘: 음악 관련 'music' 아이콘 사용 (Font Awesome)
+        icon = folium.Icon(color=color, icon="music", prefix="fa", opacity=opacity if is_past else 1.0)
         folium.Marker([c["lat"], c["lon"]], popup=f"<b>{c['city']}</b><br>{display_date}<br>{c.get('venue','—')}", tooltip=c["city"], icon=icon).add_to(m)
 
         with st.expander(f"{c['city']} | {display_date}"):
@@ -423,7 +417,7 @@ def render_map():
             bearing = degrees(atan2(next_c['lon'] - c['lon'], next_c['lat'] - c['lat']))
             rotate = bearing
 
-            # 평행 텍스트 (말풍선 없이, 라인 위쪽)
+            # 평행 텍스트 (말풍선 없이, 라인 위쪽) - 기존 지우고 새롭게 배치 (이미 평행)
             folium.Marker(
                 [mid_lat, mid_lon],
                 icon=folium.DivIcon(html=f'''
@@ -438,10 +432,10 @@ def render_map():
                 ''')
             ).add_to(m)
 
-        coords.append((c['lat'], c['lon']))
-
-    if len(coords) > 1:
-        AntPath(coords, color="#e74c3c", weight=6, opacity=0.9, delay=800, dash_array=[20, 30]).add_to(m)
+            # 연결 라인: 세그먼트별 AntPath, 과거는 투명
+            segment_coords = [(c['lat'], c['lon']), (next_c['lat'], next_c['lon'])]
+            segment_opacity = 0.0 if is_past else 0.9
+            AntPath(segment_coords, color="#e74c3c", weight=6, opacity=segment_opacity, delay=800, dash_array=[20, 30]).add_to(m)
 
     if len(cities) > 1:
         st.markdown(f"<div style='text-align:center;color:#e74c3c;font-size:1.3em;margin:15px 0'>총 거리: {total_dist:.0f}km</div>", unsafe_allow_html=True)
