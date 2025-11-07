@@ -56,33 +56,42 @@ def play_carol():
         </audio>
         """, unsafe_allow_html=True)
 
-# --- 5. UI (화면 가림 해결) ---
+# --- 5. UI 스타일 + 크리스마스 데코 (z-index 문제 해결 포함) ---
 st.markdown("""
 <style>
+    /* 기본 레이아웃 우선권 확보 */
+    .stApp, .block-container, .main { position: relative !important; z-index: 9999 !important; }
     .main > div { overflow: visible !important; }
+
+    /* 배경 */
     .stApp { overflow: visible !important; background: #000000; color: #ffffff; font-family: 'Playfair Display', serif; }
-    .main-title { text-align: center; margin: 20px 0 40px; line-height: 1.2; z-index: 10; }
+
+    /* 제목 */
+    .main-title { text-align: center; margin: 20px 0 40px; line-height: 1.2; z-index: 10000; position: relative }
     .main-title .cantata { color: #DC143C; font-size: 2.8em; font-weight: 700; text-shadow: 0 0 15px #FFD700; }
     .main-title .year { color: #FFFFFF; font-size: 2.8em; font-weight: 700; text-shadow: 0 0 15px #FFFFFF; }
     .main-title .maharashtra { color: #D3D3D3; font-size: 1.8em; font-style: italic; display: block; margin-top: -10px; }
-    .stButton > button { background: #8B0000 !important; color: #FFFFFF !important; border: 2px solid #FFD700 !important; border-radius: 14px !important; padding: 14px 30px !important; font-weight: 600; font-size: 1.1em; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3); z-index: 10; }
+
+    /* 버튼 */
+    .stButton > button { background: #8B0000 !important; color: #FFFFFF !important; border: 2px solid #FFD700 !important; border-radius: 14px !important; padding: 14px 30px !important; font-weight: 600; font-size: 1.1em; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3); z-index: 10000; }
     .stButton > button:hover { background: #B22222 !important; transform: translateY(-3px); box-shadow: 0 8px 30px rgba(255, 215, 0, 0.5); }
-    .streamlit-expanderHeader { background: #006400 !important; color: #FFFFFF !important; border: 2px solid #FFD700; border-radius: 12px; padding: 14px 18px; font-size: 1.05em; z-index: 5; }
-    .streamlit-expander { background: rgba(0, 100, 0, 0.7) !important; border: 2px solid #FFD700; border-radius: 12px; margin-bottom: 14px; z-index: 5; }
-    .stTextInput > div > div > input,
-    .stTextArea > div > div > textarea,
-    .stSelectbox > div > div > select,
-    .stDateInput > div > div > input {
-        background: #FFFFFF !important; color: #000000 !important; border: 2px solid #DC143C !important; border-radius: 10px; z-index: 5;
-    }
-    .css-1d391kg { background: #000000 !important; border-right: 3px solid #FFD700 !important; z-index: 10; }
-    .christmas-element { position: fixed !important; z-index: 1 !important; pointer-events: none !important; }
-    .star { position: fixed !important; background: #ffffff; border-radius: 50%; animation: twinkle 3s infinite; pointer-events: none !important; z-index: 0 !important; }
-    @keyframes twinkle { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+    /* expander 및 입력 */
+    .streamlit-expanderHeader { background: #006400 !important; color: #FFFFFF !important; border: 2px solid #FFD700; border-radius: 12px; padding: 14px 18px; font-size: 1.05em; z-index: 10000; }
+    .streamlit-expander { background: rgba(0, 100, 0, 0.7) !important; border: 2px solid #FFD700; border-radius: 12px; margin-bottom: 14px; z-index: 10000; }
+    .stTextInput > div > div > input, .stTextArea > div > div > textarea, .stSelectbox > div > div > select, .stDateInput > div > div > input { background: #FFFFFF !important; color: #000000 !important; border: 2px solid #DC143C !important; border-radius: 10px; z-index: 10000; }
+    .css-1d391kg { background: #000000 !important; border-right: 3px solid #FFD700 !important; z-index: 10000; }
+
+    /* 크리스마스 장식: 항상 배경 뒤로, UI와 충돌 방지 */
+    .christmas-element, .star { position: fixed !important; pointer-events: none !important; user-select: none !important; z-index: -1 !important; }
+
+    /* 별 스타일 (작고 은은하게) */
+    .star { background: rgba(255,255,255,0.9); border-radius: 50%; animation: twinkle 3s infinite; }
+    @keyframes twinkle { 0%,100% { opacity: 0.45; } 50% { opacity: 1; } }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 6. 크리스마스 요소 & 별 ---
+# --- 6. 크리스마스 요소 & 별 스크립트 (데코는 배경 뒤에 남음) ---
 st.markdown("""
 <script>
     window.addEventListener('load', () => {
@@ -90,13 +99,14 @@ st.markdown("""
         function createStar() {
             const star = document.createElement('div');
             star.className = 'star';
-            star.style.width = Math.random() * 3 + 'px';
-            star.style.height = star.style.width;
+            const size = Math.random() * 3 + 2;
+            star.style.width = size + 'px';
+            star.style.height = size + 'px';
             star.style.left = Math.random() * 100 + 'vw';
             star.style.top = Math.random() * 100 + 'vh';
             star.style.animationDelay = Math.random() * 3 + 's';
             body.appendChild(star);
-            setTimeout(() => star.remove(), 10000);
+            setTimeout(() => star.remove(), 12000);
         }
         const elements = [
             {html: '🎄', style: 'bottom:10%;left:5%;font-size:4em;animation:float 6s infinite;'},
@@ -123,8 +133,8 @@ st.markdown("""
             @keyframes slide { 0% { transform: translateX(-100vw); } 100% { transform: translateX(100vw); } }
         `;
         document.head.appendChild(style);
-        for(let i=0; i<150; i++) createStar();
-        setInterval(() => { for(let i=0; i<5; i++) createStar(); }, 1000);
+        for(let i=0; i<90; i++) createStar();
+        setInterval(() => { for(let i=0; i<3; i++) createStar(); }, 1500);
     });
 </script>
 """, unsafe_allow_html=True)
@@ -219,6 +229,7 @@ def add_notice(title, content, img=None, file=None):
     play_carol()
     st.rerun()
 
+
 def format_notice_date(d):
     try:
         dt = datetime.strptime(d, "%m/%d %H:%M")
@@ -231,6 +242,7 @@ def format_notice_date(d):
             return d
     except:
         return d
+
 
 def render_notices():
     data = load_json(NOTICE_FILE)
