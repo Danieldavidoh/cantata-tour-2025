@@ -104,7 +104,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 6. 사이드바 ---
+# --- 6. 제목을 제일 위에 배치 (탭보다 위) ---
+st.markdown('# 칸타타 투어 2025 마하라스트라')
+
+# --- 7. 사이드바 ---
 with st.sidebar:
     lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
     sel = st.selectbox("언어", list(lang_map.keys()),
@@ -157,14 +160,14 @@ with st.sidebar:
                         st.session_state.show_pw_form = False
                         st.rerun()
 
-# --- 7. JSON 헬퍼 ---
+# --- 8. JSON 헬퍼 ---
 def load_json(f):
     return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
 
 def save_json(f, d):
     json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
-# --- 8. 초기 도시 ---
+# --- 9. 초기 도시 ---
 DEFAULT_CITIES = [
     {"city": "Mumbai", "venue": "Gateway of India", "seats": "5000", "note": "인도 영화 수도",
      "google_link": "https://goo.gl/maps/abc123", "indoor": False, "date": "11/07 02:01"},
@@ -176,14 +179,14 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE):
     save_json(CITY_FILE, DEFAULT_CITIES)
 
-# --- 9. 하드코딩 좌표 ---
+# --- 10. 하드코딩 좌표 ---
 CITY_COORDS = {
     "Mumbai": (19.0760, 72.8777),
     "Pune": (18.5204, 73.8567),
     "Nagpur": (21.1458, 79.0882)
 }
 
-# --- 10. 공지 기능 ---
+# --- 11. 공지 기능 ---
 def add_notice(title, content, img=None, file=None):
     img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{img.name}") if img else None
     file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.name}") if file else None
@@ -205,7 +208,6 @@ def add_notice(title, content, img=None, file=None):
     data.insert(0, notice)
     save_json(NOTICE_FILE, data)
 
-    # 일반 사용자용 알림 강제 활성화
     st.session_state.new_notice = True
     st.session_state.alert_active = True
     st.session_state.current_alert_id = notice["id"]
@@ -222,7 +224,7 @@ def format_notice_date(d):
         elif dt.date() == today - timedelta(days=1):
             return _(f"yesterday")
         else:
-            return d  # 숫자로 표시
+            return d
     except:
         return d
 
@@ -259,7 +261,6 @@ def render_notices():
                 save_json(NOTICE_FILE, data)
                 st.rerun()
 
-            # 일반 사용자: 열 때 NEW 제거 + 알림 해제
             if not st.session_state.admin and is_new and expanded:
                 if n["id"] not in st.session_state.seen_notices:
                     st.session_state.seen_notices.append(n["id"])
@@ -272,9 +273,8 @@ def render_notices():
             elif not expanded and exp_key in st.session_state.expanded_notices:
                 st.session_state.expanded_notices.remove(exp_key)
 
-    # 알림 팝업 (일반 사용자만 + 강제 표시)
     if not st.session_state.admin and st.session_state.alert_active and st.session_state.current_alert_id:
-        play_carol()  # 사운드 강제 재생
+        play_carol()
         st.markdown(f"""
         <div class="alert-box" id="alert">
             <span>{_("new_notice_alert")}</span>
@@ -289,7 +289,7 @@ def render_notices():
         </script>
         """, unsafe_allow_html=True)
 
-# --- 11. 지도 + 도시 추가/수정 ---
+# --- 12. 지도 + 도시 추가/수정 ---
 def format_date_with_weekday(perf_date):
     if perf_date and perf_date != "9999-12-31":
         dt = datetime.strptime(perf_date, "%Y-%m-%d")
@@ -308,10 +308,9 @@ def render_map():
     cities = sorted(raw_cities, key=lambda x: x.get("perf_date", "9999-12-31"))
     city_names = [c["city"] for c in raw_cities]
 
-    # --- 도시 추가 폼 ---
     if st.session_state.admin:
         if st.button(_(f"add_city"), key="add_city_btn"):
-            st.session_state.adding_city =ite = True
+            st.session_state.adding_city = True
 
         if st.session_state.get("adding_city"):
             st.markdown("### 새 도시 추가")
@@ -353,7 +352,6 @@ def render_map():
                         st.session_state.adding_city = False
                         st.rerun()
 
-    # --- 도시 수정 폼 ---
     if st.session_state.admin and st.session_state.get("edit_city"):
         city_to_edit = next((c for c in raw_cities if c["city"] == st.session_state.edit_city), None)
         if city_to_edit:
@@ -394,7 +392,6 @@ def render_map():
                         st.session_state.edit_city = None
                         st.rerun()
 
-    # --- 지도 ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="CartoDB positron")
 
     for i, c in enumerate(cities):
@@ -402,7 +399,6 @@ def render_map():
                    datetime.strptime(c['perf_date'], "%Y-%m-%d").date() < today)
         color = "red" if not is_past else "gray"
 
-        # 수정: 올바른 좌표 추출
         coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
         indoor_text = _(f"indoor") if c.get("indoor") else _(f"outdoor")
         perf_date_formatted = format_date_with_weekday(c.get("perf_date"))
@@ -429,7 +425,6 @@ def render_map():
         exp_key = f"city_{c['city']}"
         expanded = exp_key in st.session_state.expanded_cities
         with st.expander(f"{c['city']} | {format_date_with_weekday(c.get('perf_date'))}", expanded=expanded):
-            # 수정: 중괄호 이스케이프 문제 해결
             indoor_icon = "🏠" if c.get("indoor") else "🌳"
             st.markdown(f"""
             <div>
@@ -472,7 +467,7 @@ def render_map():
 
     st_folium(m, width=900, height=550, key="tour_map")
 
-# --- 12. 탭 ---
+# --- 13. 탭 (제목 아래에 배치) ---
 tab_selection = st.radio(
     "탭 선택",
     [_(f"tab_notice"), _(f"tab_map")],
@@ -492,10 +487,7 @@ if st.session_state.get("new_notice", False):
     st.session_state.new_notice = False
     st.rerun()
 
-# --- 13. 제목을 맨 위로 (탭 위에) ---
-st.markdown('# 칸타타 투어 2025 마하라스트라')
-
-# --- 14. 렌더링 (탭 아래에 내용) ---
+# --- 14. 렌더링 ---
 if tab_selection == _(f"tab_notice"):
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
