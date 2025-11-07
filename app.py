@@ -77,52 +77,153 @@ def play_carol():
         </audio>
         """, unsafe_allow_html=True)
 
-# --- 5. CSS + 전체화면 ---
+# --- 5. 화이트 크리스마스 조용한 저녁 UI ---
 st.markdown("""
 <style>
+    /* 전체 배경: 조용한 겨울 밤 */
+    .stApp {
+        background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+        background-size: 400% 400%;
+        animation: gradient 20s ease infinite;
+        color: #f0f0f0;
+        font-family: 'Georgia', serif;
+    }
+    @keyframes gradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    /* 제목: 눈처럼 부드럽고 빛나는 효과 */
+    h1 {
+        color: #ffffff !important;
+        text-align: center;
+        font-size: 3.2em !important;
+        text-shadow: 0 0 15px rgba(255, 255, 255, 0.8),
+                     0 0 30px rgba(135, 206, 250, 0.6);
+        letter-spacing: 2px;
+        margin-bottom: 30px;
+    }
+
+    /* 탭 버튼: 눈송이처럼 부드럽고 은은한 빛 */
+    .stButton > button {
+        background: rgba(255, 255, 255, 0.15) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        border-radius: 12px !important;
+        padding: 12px 24px !important;
+        font-weight: 600;
+        font-size: 1.1em;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    .stButton > button:hover {
+        background: rgba(255, 255, 255, 0.3) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(135, 206, 250, 0.4);
+    }
+
+    /* 공지 expander: 눈 덮인 창문처럼 */
+    .streamlit-expanderHeader {
+        background: rgba(255, 255, 255, 0.1) !important;
+        color: #e0e0e0 !important;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 12px 16px;
+        font-size: 1.05em;
+        backdrop-filter: blur(5px);
+    }
+    .streamlit-expander {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        margin-bottom: 12px;
+    }
+
+    /* 입력 폼: 은은한 빛 */
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea,
+    .stSelectbox > div > div > select,
+    .stDateInput > div > div > input {
+        background: rgba(255, 255, 255, 0.1) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        border-radius: 8px;
+    }
+
+    /* 사이드바: 겨울 밤 창문 */
+    .css-1d391kg {
+        background: rgba(20, 30, 60, 0.8);
+        backdrop-filter: blur(10px);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* 알림 박스: 눈송이처럼 반짝이는 */
     .alert-box {
         position: fixed; top: 20px; right: 20px; z-index: 9999;
-        background: linear-gradient(135deg, #ff4757, #ff3742); color: white; padding: 18px 24px;
-        border-radius: 16px; box-shadow: 0 10px 30px rgba(255, 71, 87, 0.5);
-        font-weight: bold; font-size: 17px; display: flex; align-items: center; gap: 14px;
-        animation: slideIn 0.6s ease-out, pulse 1.8s infinite;
-        border: 2px solid #fff;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(135, 206, 250, 0.25));
+        color: #1a1a1a; padding: 16px 22px;
+        border-radius: 16px; box-shadow: 0 10px 30px rgba(135, 206, 250, 0.4);
+        font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 12px;
+        animation: slideIn 0.6s ease-out, snowPulse 2s infinite;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(8px);
     }
-    @keyframes slideIn { from { transform: translateX(150%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
-    .alert-close { cursor: pointer; font-size: 26px; font-weight: bold; }
-    
+    @keyframes snowPulse {
+        0%, 100% { box-shadow: 0 10px 30px rgba(135, 206, 250, 0.4); }
+        50% { box-shadow: 0 15px 40px rgba(135, 206, 250, 0.6); }
+    }
+
+    /* 지도 전체화면 */
+    .fullscreen-map {
+        position: fixed !important;
+        top: 0; left: 0; width: 100vw !important; height: 100vh !important;
+        z-index: 9998; background: #0e1117;
+    }
+
+    /* 도시 정보 라벨 */
     .city-label {
-        color: #e74c3c !important;
-        font-weight: bold;
-        font-size: 1.1em;
+        color: #87CEEB !important;
+        font-weight: 600;
+        font-size: 1.05em;
     }
     .city-icon {
         margin-right: 8px;
         font-size: 1.2em;
+        color: #87CEFA;
     }
-    
-    .fullscreen-map {
-        position: fixed !important;
-        top: 0; left: 0; width: 100vw !important; height: 100vh !important;
-        z-index: 9998; background: white;
+
+    /* 눈송이 배경 애니메이션 */
+    .snowflake {
+        color: #fff;
+        font-size: 1.5em;
+        position: absolute;
+        top: -10px;
+        z-index: 1;
+        user-select: none;
+        animation: fall linear forwards;
+    }
+    @keyframes fall {
+        to { transform: translateY(100vh); }
     }
 </style>
+""", unsafe_allow_html=True)
+
+# --- 눈송이 애니메이션 스크립트 ---
+st.markdown("""
 <script>
-    let mapClicked = false;
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.folium-map')) {
-            if (!mapClicked) {
-                const map = e.target.closest('.folium-map');
-                map.classList.add('fullscreen-map');
-                mapClicked = true;
-            } else {
-                const map = document.querySelector('.fullscreen-map');
-                if (map) map.classList.remove('fullscreen-map');
-                mapClicked = false;
-            }
-        }
-    });
+    function createSnowflake() {
+        const snowflake = document.createElement('div');
+        snowflake.classList.add('snowflake');
+        snowflake.innerText = '❄';
+        snowflake.style.left = Math.random() * 100 + 'vw';
+        snowflake.style.animationDuration = Math.random() * 8 + 7 + 's';
+        snowflake.style.opacity = Math.random() * 0.7 + 0.3;
+        snowflake.style.fontSize = Math.random() * 10 + 10 + 'px';
+        document.body.appendChild(snowflake);
+        setTimeout(() => snowflake.remove(), 15000);
+    }
+    setInterval(createSnowflake, 300);
 </script>
 """, unsafe_allow_html=True)
 
@@ -178,7 +279,7 @@ with st.sidebar:
                         else:
                             st.error(_(f"pw_error"))
                 with col2:
-                    if st.form-submit_button("취소"):
+                    if st.form_submit_button("취소"):
                         st.session_state.show_pw_form = False
                         st.rerun()
 
@@ -256,7 +357,6 @@ def render_notices():
     data = load_json(NOTICE_FILE)
     
     for i, n in enumerate(data):
-        # NEW 아이콘 제거 (모든 모드)
         formatted_date = format_notice_date(n['date'])
         title = f"{formatted_date} | {n['title']}"
         exp_key = f"notice_{n['id']}"
@@ -292,7 +392,7 @@ def render_notices():
         st.markdown(f"""
         <div class="alert-box" id="alert">
             <span>{_("new_notice_alert")}</span>
-            <span class="alert-close" onclick="document.getElementById('alert').remove()">X</span>
+            <span class="alert-close" onclick="document.getElementById('alert').remove()">×</span>
         </div>
         <script>
             setTimeout(() => {{
@@ -322,7 +422,7 @@ def render_map():
     cities = sorted(raw_cities, key=lambda x: x.get("perf_date", "9999-12-31"))
     city_names = [c["city"] for c in raw_cities]
 
-    # --- 도시 추가 폼 (Pune 포함) ---
+    # --- 도시 추가 폼 ---
     if st.session_state.admin:
         if st.button(_(f"add_city"), key="add_city_btn"):
             st.session_state.adding_city = True
@@ -408,7 +508,7 @@ def render_map():
                         st.session_state.edit_city = None
                         st.rerun()
 
-    # --- 지도 (popup + expander에 아이콘 포함) ---
+    # --- 지도 ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="CartoDB positron")
 
     for i, c in enumerate(cities):
@@ -424,7 +524,7 @@ def render_map():
         google_link_html = f'<br><a href="{google_nav}" target="_blank">길 안내 시작</a>' if c.get("google_link") else ""
 
         popup_html = f"""
-        <div style="font-size: 14px; line-height: 1.5;">
+        <div style="font-size: 14px; line-height: 1.5; color: #1a1a1a;">
             <b>도시: {c['city']}</b><br>
             날짜: {perf_date_formatted}<br>
             장소: {c.get('venue','—')}<br>
@@ -443,7 +543,7 @@ def render_map():
             nxt_coords = CITY_COORDS.get(nxt["city"], (18.5204, 73.8567))
             opacity = 0.3 if is_past else 1.0
             AntPath([coords, nxt_coords],
-                    color="#e74c3c", weight=6, opacity=opacity, delay=800, dash_array=[20, 30]).add_to(m)
+                    color="#87CEEB", weight=5, opacity=opacity, delay=800, dash_array=[20, 30]).add_to(m)
 
         exp_key = f"city_{c['city']}"
         expanded = exp_key in st.session_state.expanded_cities
