@@ -407,7 +407,8 @@ def render_map():
                    datetime.strptime(c['perf_date'], "%Y-%m-%d").date() < today)
         color = "red" if not is_past else "gray"
 
-        coords = CITY_COORDS.get(c["city"]), (18.5204, 73.8567))
+        # 수정: 올바른 좌표 추출
+        coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
         indoor_text = _(f"indoor") if c.get("indoor") else _(f"outdoor")
         perf_date_formatted = format_date_with_weekday(c.get("perf_date"))
         popup_html = f"""
@@ -425,7 +426,7 @@ def render_map():
 
         if i < len(cities) - 1:
             nxt = cities[i + 1]
-            nxt_coords = CITY_COORDS.get(nxt["city"]), (18.5204, 73.8567))
+            nxt_coords = CITY_COORDS.get(nxt["city"], (18.5204, 73.8567))
             opacity = 0.3 if is_past else 1.0
             AntPath([coords, nxt_coords],
                     color="#e74c3c", weight=6, opacity=opacity, delay=800, dash_array=[20, 30]).add_to(m)
@@ -433,6 +434,8 @@ def render_map():
         exp_key = f"city_{c['city']}"
         expanded = exp_key in st.session_state.expanded_cities
         with st.expander(f"{c['city']} | {format_date_with_weekday(c.get('perf_date'))}", expanded=expanded):
+            # 수정: 중괄호 이스케이프 문제 해결
+            indoor_icon = "🏠" if c.get("indoor") else "🌳"
             st.markdown(f"""
             <div>
                 <span class="city-icon">📍</span>
@@ -443,7 +446,7 @@ def render_map():
                 <span class="city-label">{_(f'seats')}:</span> {c.get('seats','—')}
             </div>
             <div>
-                <span class="city-icon">{ '🏠' if c.get('indoor') else '🌳' }</span>
+                <span class="city-icon">{indoor_icon}</span>
                 <span class="city-label">유형:</span> {indoor_text}
             </div>
             <div>
