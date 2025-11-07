@@ -7,6 +7,7 @@ import json, os, uuid, base64
 from pytz import timezone
 from streamlit_autorefresh import st_autorefresh
 import requests
+import locale
 
 # --- 1. 기본 설정 ---
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
@@ -27,21 +28,30 @@ LANG = {
         "new_notice_alert": "새 공지가 도착했어요!", "warning": "제목·내용 입력",
         "edit": "수정", "save": "저장", "cancel": "취소", "add_city": "도시 추가",
         "indoor": "실내", "outdoor": "실외", "venue": "장소", "seats": "예상 인원",
-        "note": "특이사항", "google_link": "구글맵 링크", "perf_date": "공연 날짜"
+        "note": "특이사항", "google_link": "구글맵 링크", "perf_date": "공연 날짜",
+        "change_pw": "비밀번호 변경", "current_pw": "현재 비밀번호", "new_pw": "새 비밀번호",
+        "confirm_pw": "새 비밀번호 확인", "pw_changed": "비밀번호 변경 완료!", "pw_mismatch": "비밀번호 불일치",
+        "pw_error": "현재 비밀번호 오류"
     },
     "en": {
         "tab_notice": "Notice", "tab_map": "Tour Route", "today": "Today", "yesterday": "Yesterday",
         "new_notice_alert": "New notice!", "warning": "Enter title & content",
         "edit": "Edit", "save": "Save", "cancel": "Cancel", "add_city": "Add City",
         "indoor": "Indoor", "outdoor": "Outdoor", "venue": "Venue", "seats": "Expected",
-        "note": "Note", "google_link": "Google Maps Link", "perf_date": "Performance Date"
+        "note": "Note", "google_link": "Google Maps Link", "perf_date": "Performance Date",
+        "change_pw": "Change Password", "current_pw": "Current Password", "new_pw": "New Password",
+        "confirm_pw": "Confirm Password", "pw_changed": "Password changed!", "pw_mismatch": "Passwords don't match",
+        "pw_error": "Incorrect current password"
     },
     "hi": {
         "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "today": "आज", "yesterday": "कल",
         "new_notice_alert": "नई सूचना!", "warning": "शीर्षक·सामग्री दर्ज करें",
         "edit": "संपादन", "save": "सहेजें", "cancel": "रद्द करें", "add_city": "शहर जोड़ें",
         "indoor": "इनडोर", "outdoor": "आउटडोर", "venue": "स्थल", "seats": "अपेक्षित",
-        "note": "नोट", "google_link": "गूगल मैप लिंक", "perf_date": "प्रदर्शन तिथि"
+        "note": "नोट", "google_link": "गूगल मैप लिंक", "perf_date": "प्रदर्शन तिथि",
+        "change_pw": "पासवर्ड बदलें", "current_pw": "वर्तमान पासवर्ड", "new_pw": "नया पासवर्ड",
+        "confirm_pw": "पासवर्ड की पुष्टि करें", "pw_changed": "पासवर्ड बदल गया!", "pw_mismatch": "पासवर्ड मेल नहीं खाते",
+        "pw_error": "गलत वर्तमान पासवर्ड"
     }
 }
 
@@ -49,7 +59,8 @@ defaults = {
     "admin": False, "lang": "ko", "edit_city": None, "adding_city": False,
     "tab_selection": "공지", "new_notice": False, "sound_played": False,
     "seen_notices": [], "expanded_notices": [], "expanded_cities": [],
-    "last_tab": None, "alert_active": False, "current_alert_id": None
+    "last_tab": None, "alert_active": False, "current_alert_id": None,
+    "password": "0009"  # 초기 비밀번호
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -57,9 +68,9 @@ for k, v in defaults.items():
 
 _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
 
-# --- 4. 캐롤 사운드 ---
-def play_carol():
-    if os.path.exists("carol.wav") and not st.session_state.get("sound_played", False):
+# --- 4. 캐롤 사운드 (알람 시 강제 재생) ---
+def play_carol(force=False):
+    if os.path.exists("carol.wav") and (force or not st.session_state.get("sound_played", False)):
         st.session_state.sound_played = True
         st.audio("carol.wav", autoplay=True)
 
@@ -96,7 +107,7 @@ with st.sidebar:
     if not st.session_state.admin:
         pw = st.text_input("비밀번호", type="password", key="pw")
         if st.button("로그인", key="login"):
-            if pw == "0009":
+            if pw == st.session_state.password:
                 st.session_state.admin = True
                 st.rerun()
             else:
@@ -106,6 +117,24 @@ with st.sidebar:
         if st.button("로그아웃", key="logout"):
             st.session_state.admin = False
             st.rerun()
+
+        # 비밀번호 변경 폼
+        st.markdown("---")
+        st.subheader(_(f"change_pw"))
+        with st.form("change_pw_form"):
+            current_pw = st.text_input(_(f"current_pw"), type="password")
+            new_pw = st.text_input(_(f"new_pw"), type="password")
+            confirm_pw = st.text_input(_(f"confirm_pw"), type="password")
+            if st.form_submit_button("변경"):
+                if current_pw == "0691":  # 변경에 필요한 비번
+                    if new_pw == confirm_pw and new_pw:
+                        st.session_state.password = new_pw
+                        st.success(_(f"pw_changed"))
+                        st.rerun()
+                    else:
+                        st.error(_(f"pw_mismatch"))
+                else:
+                    st.error(_(f"pw_error"))
 
 # --- 7. JSON 헬퍼 ---
 def load_json(f):
@@ -160,7 +189,7 @@ def add_notice(title, content, img=None, file=None):
     st.session_state.alert_active = True
     st.session_state.current_alert_id = notice["id"]
     st.session_state.sound_played = False
-    play_carol()
+    play_carol(force=True)
     st.rerun()
 
 def format_notice_date(d):
@@ -178,10 +207,7 @@ def format_notice_date(d):
 def render_notices():
     data = load_json(NOTICE_FILE)
     
-    # 관리자: 모든 공지 보임 (NEW 없음)
-    # 일반 사용자: seen_notices 기반으로 NEW 표시
     for i, n in enumerate(data):
-        # NEW 뱃지 로직
         is_new = False
         if st.session_state.admin:
             badge = ''
@@ -210,7 +236,6 @@ def render_notices():
                 save_json(NOTICE_FILE, data)
                 st.rerun()
 
-            # 일반 사용자: 열 때만 seen 처리
             if not st.session_state.admin and is_new and expanded:
                 st.session_state.seen_notices.append(n["id"])
                 if n["id"] == st.session_state.current_alert_id:
@@ -222,7 +247,6 @@ def render_notices():
             elif not expanded and exp_key in st.session_state.expanded_notices:
                 st.session_state.expanded_notices.remove(exp_key)
 
-    # 일반 사용자 전용 알림 팝업
     if not st.session_state.admin and st.session_state.alert_active and st.session_state.current_alert_id:
         st.markdown(f"""
         <div class="alert-box" id="alert">
@@ -239,13 +263,24 @@ def render_notices():
         """, unsafe_allow_html=True)
 
 # --- 11. 지도 + 도시 추가/수정 ---
+def format_date_with_weekday(perf_date):
+    if perf_date and perf_date != "9999-12-31":
+        dt = datetime.strptime(perf_date, "%Y-%m-%d")
+        weekday = dt.strftime("%A")  # 요일 영어
+        if st.session_state.lang == "ko":
+            weekdays = {"Monday": "월요일", "Tuesday": "화요일", "Wednesday": "수요일", "Thursday": "목요일",
+                        "Friday": "금요일", "Saturday": "토요일", "Sunday": "일요일"}
+            weekday = weekdays.get(weekday, weekday)
+        return f"{perf_date} ({weekday})"
+    return "미정"
+
 def render_map():
     st.subheader("경로 보기")
     today = date.today()
     raw_cities = load_json(CITY_FILE)
     cities = sorted(raw_cities, key=lambda x: x.get("perf_date", "9999-12-31"))
 
-    # --- 도시 추가 폼 ---
+    # --- 도시 추가 폼 (드롭다운으로 기존 도시 선택 불가, 새 입력만) ---
     if st.session_state.admin:
         if st.button(_(f"add_city"), key="add_city_btn"):
             st.session_state.adding_city = True
@@ -259,7 +294,8 @@ def render_map():
                 indoor = st.radio("장소 유형", [_(f"indoor"), _(f"outdoor")])
                 note = st.text_area(_(f"note"))
                 google_link = st.text_input(_(f"google_link"))
-                perf_date = st.date_input(_(f"perf_date"), value=None)
+                perf_date_input = st.date_input(_(f"perf_date"), value=None)
+                perf_date = perf_date_input.strftime("%Y-%m-%d") if perf_date_input else None
 
                 col1, col2 = st.columns(2)
                 with col1:
@@ -269,7 +305,7 @@ def render_map():
                                 "city": new_city, "venue": venue, "seats": seats,
                                 "indoor": indoor == _(f"indoor"), "note": note,
                                 "google_link": google_link,
-                                "perf_date": perf_date.strftime("%Y-%m-%d") if perf_date else None,
+                                "perf_date": perf_date,
                                 "date": datetime.now().strftime("%m/%d %H:%M")
                             }
                             raw_cities.append(new_data)
@@ -284,7 +320,7 @@ def render_map():
                         st.session_state.adding_city = False
                         st.rerun()
 
-    # --- 도시 수정 폼 ---
+    # --- 도시 수정 폼 (드롭다운으로 선택) ---
     if st.session_state.admin and st.session_state.get("edit_city"):
         city_to_edit = next((c for c in raw_cities if c["city"] == st.session_state.edit_city), None)
         if city_to_edit:
@@ -298,11 +334,12 @@ def render_map():
                                   index=0 if city_to_edit.get("indoor", False) else 1)
                 note = st.text_area(_(f"note"), value=city_to_edit.get("note", ""))
                 google_link = st.text_input(_(f"google_link"), value=city_to_edit.get("google_link", ""))
-                perf_date = st.date_input(_(f"perf_date"), value=(
+                perf_date_input = st.date_input(_(f"perf_date"), value=(
                     datetime.strptime(city_to_edit["perf_date"], "%Y-%m-%d").date()
                     if city_to_edit.get("perf_date") and city_to_edit["perf_date"] != "9999-12-31"
                     else None
                 ))
+                perf_date = perf_date_input.strftime("%Y-%m-%d") if perf_date_input else None
 
                 col1, col2 = st.columns(2)
                 with col1:
@@ -311,7 +348,7 @@ def render_map():
                             "city": city, "venue": venue, "seats": seats,
                             "indoor": indoor == _(f"indoor"), "note": note,
                             "google_link": google_link,
-                            "perf_date": perf_date.strftime("%Y-%m-%d") if perf_date else None,
+                            "perf_date": perf_date,
                             "date": city_to_edit["date"]
                         }
                         raw_cities = [updated if c["city"] == st.session_state.edit_city else c for c in raw_cities]
@@ -324,7 +361,7 @@ def render_map():
                         st.session_state.edit_city = None
                         st.rerun()
 
-    # --- 지도 (거리 라벨 없음) ---
+    # --- 지도 (팝업에 실내/실외 추가) ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="CartoDB positron")
 
     for i, c in enumerate(cities):
@@ -333,7 +370,14 @@ def render_map():
         color = "red" if not is_past else "gray"
 
         coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
-        popup_html = f"<b>{c['city']}</b><br>{c.get('perf_date','미정')}<br>{c.get('venue','—')}"
+        indoor_text = _(f"indoor") if c.get("indoor") else _(f"outdoor")
+        perf_date_formatted = format_date_with_weekday(c.get("perf_date"))
+        popup_html = f"""
+        <b>{c['city']}</b><br>
+        {perf_date_formatted}<br>
+        {c.get('venue','—')}<br>
+        유형: {indoor_text}
+        """
         folium.Marker(
             coords,
             popup=folium.Popup(popup_html, max_width=280),
@@ -350,10 +394,10 @@ def render_map():
 
         exp_key = f"city_{c['city']}"
         expanded = exp_key in st.session_state.expanded_cities
-        with st.expander(f"{c['city']} | {c.get('perf_date','미정')}", expanded=expanded):
+        with st.expander(f"{c['city']} | {format_date_with_weekday(c.get('perf_date'))}", expanded=expanded):
             st.write(f"**{_(f'venue')}**: {c.get('venue','—')}")
             st.write(f"**{_(f'seats')}**: {c.get('seats','—')}")
-            st.write(f"**유형**: {_(f'indoor') if c.get('indoor') else _(f'outdoor')}")
+            st.write(f"**유형**: {indoor_text}")
             st.write(f"**{_(f'note')}**: {c.get('note','—')}")
             if c.get("google_link"):
                 st.markdown(f"[구글맵 보기]({c['google_link']})")
