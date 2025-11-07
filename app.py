@@ -70,7 +70,7 @@ _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
 # --- 4. 캐롤 사운드 (20초, 내장 base64) ---
 CAROL_WAV_BASE64 = """
 UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAAA
-"""  # 실제 20초 캐롤 WAV base64 (간단히 생략, 실제로는 긴 문자열)
+"""  # 실제 20초 WAV (간단히 생략)
 
 def play_carol():
     if not st.session_state.sound_played:
@@ -81,16 +81,16 @@ def play_carol():
         </audio>
         """, unsafe_allow_html=True)
 
-# --- 5. 크리스마스 UI (빨강, 흰색, 녹색, 검정) + 눈내림 + 움직이는 아이콘 ---
+# --- 5. 고요한 크리스마스 밤 고급 UI ---
 st.markdown("""
 <style>
-    /* 전체 배경: 크리스마스 빨강-녹색 그라데이션 */
+    /* 전체 배경: 깊은 겨울 밤 */
     .stApp {
-        background: linear-gradient(135deg, #8B0000, #228B22, #8B0000);
+        background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
         background-size: 400% 400%;
-        animation: gradient 15s ease infinite;
-        color: #ffffff;
-        font-family: 'Georgia', serif;
+        animation: gradient 20s ease infinite;
+        color: #e0e0e0;
+        font-family: 'Playfair Display', serif;
     }
     @keyframes gradient {
         0% { background-position: 0% 50%; }
@@ -98,136 +98,146 @@ st.markdown("""
         100% { background-position: 0% 50%; }
     }
 
-    /* 제목: 금색 크리스마스 글씨 */
-    h1 {
-        color: #FFD700 !important;
+    /* 제목: 고급스러운 크리스마스 */
+    .main-title {
         text-align: center;
-        font-size: 3.5em !important;
-        text-shadow: 0 0 10px #FFD700, 0 0 20px #FF4500;
-        letter-spacing: 3px;
         margin-bottom: 30px;
+        line-height: 1.2;
+    }
+    .main-title .cantata {
+        color: #b71c1c !important;
+        font-size: 2.8em;
+        font-weight: 700;
+        text-shadow: 0 0 15px rgba(183, 28, 28, 0.7), 0 0 30px rgba(255, 215, 0, 0.3);
+    }
+    .main-title .year {
+        color: #f5f5f5 !important;
+        font-size: 2.8em;
+        font-weight: 700;
+        text-shadow: 0 0 15px rgba(255, 255, 255, 0.7), 0 0 30px rgba(135, 206, 250, 0.3);
+    }
+    .main-title .maharashtra {
+        color: #9e9e9e !important;
+        font-size: 1.8em;
+        font-style: italic;
+        display: block;
+        margin-top: -10px;
+        text-shadow: 0 0 10px rgba(158, 158, 158, 0.5);
     }
 
-    /* 탭 버튼: 산타 빨강 + 흰색 테두리 */
+    /* 탭 버튼: 고급스러운 은은한 빛 */
     .stButton > button {
-        background: #DC143C !important;
-        color: #FFFFFF !important;
-        border: 2px solid #FFFFFF !important;
+        background: rgba(255, 255, 255, 0.1) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
         border-radius: 12px !important;
         padding: 14px 28px !important;
-        font-weight: bold;
-        font-size: 1.2em;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        font-weight: 600;
+        font-size: 1.1em;
+        transition: all 0.4s ease;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(5px);
     }
     .stButton > button:hover {
-        background: #FF4500 !important;
+        background: rgba(255, 255, 255, 0.2) !important;
         transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(255, 69, 0, 0.5);
+        box-shadow: 0 8px 30px rgba(135, 206, 250, 0.3);
     }
 
-    /* 공지 expander: 녹색 크리스마스 트리 스타일 */
+    /* 공지 expander: 고급스러운 유리 효과 */
     .streamlit-expanderHeader {
-        background: #228B22 !important;
-        color: #FFFFFF !important;
-        border-radius: 10px;
-        border: 2px solid #FFD700;
-        padding: 12px 16px;
-        font-size: 1.1em;
+        background: rgba(255, 255, 255, 0.08) !important;
+        color: #e0e0e0 !important;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 14px 18px;
+        font-size: 1.05em;
+        backdrop-filter: blur(8px);
+        transition: all 0.3s ease;
+    }
+    .streamlit-expanderHeader:hover {
+        background: rgba(255, 255, 255, 0.15) !important;
+        box-shadow: 0 4px 15px rgba(135, 206, 250, 0.2);
     }
     .streamlit-expander {
-        background: rgba(34, 139, 34, 0.8) !important;
-        border-radius: 10px;
-        border: 2px solid #FFD700;
-        margin-bottom: 12px;
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 14px;
+        backdrop-filter: blur(10px);
     }
 
-    /* 입력 폼: 흰색 배경 + 빨강 테두리 */
+    /* 입력 폼: 고급스러운 유리 */
     .stTextInput > div > div > input,
     .stTextArea > div > div > textarea,
     .stSelectbox > div > div > select,
     .stDateInput > div > div > input {
-        background: #FFFFFF !important;
-        color: #000000 !important;
-        border: 2px solid #DC143C !important;
-        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.1) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        border-radius: 10px;
+        backdrop-filter: blur(5px);
     }
 
-    /* 사이드바: 검정 + 금색 테두리 */
+    /* 사이드바: 고급스러운 어두운 유리 */
     .css-1d391kg {
-        background: #000000;
-        border-right: 3px solid #FFD700;
+        background: rgba(15, 12, 41, 0.9);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
     }
 
-    /* 알림 박스: 산타 선물처럼 */
+    /* 알림 박스: 고급스러운 은은한 빛 */
     .alert-box {
         position: fixed; top: 20px; right: 20px; z-index: 9999;
-        background: #FFD700; color: #8B0000; padding: 18px 24px;
-        border-radius: 16px; box-shadow: 0 10px 30px rgba(139, 0, 0, 0.5);
-        font-weight: bold; font-size: 18px; display: flex; align-items: center; gap: 14px;
-        animation: slideIn 0.6s ease-out, pulse 1.5s infinite;
-        border: 3px solid #228B22;
+        background: rgba(255, 255, 255, 0.2); color: #ffffff; padding: 18px 26px;
+        border-radius: 16px; box-shadow: 0 10px 35px rgba(135, 206, 250, 0.3);
+        font-weight: 600; font-size: 17px; display: flex; align-items: center; gap: 14px;
+        animation: slideIn 0.6s ease-out, glow 2s infinite;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(12px);
+    }
+    @keyframes glow {
+        0%, 100% { box-shadow: 0 10px 35px rgba(135, 206, 250, 0.3); }
+        50% { box-shadow: 0 15px 45px rgba(135, 206, 250, 0.5); }
     }
 
     /* 전체화면 지도 */
     .fullscreen-map {
         position: fixed !important;
         top: 0; left: 0; width: 100vw !important; height: 100vh !important;
-        z-index: 9998; background: #000000;
+        z-index: 9998; background: #0a0a1a;
     }
 
     /* 도시 라벨 */
     .city-label {
-        color: #FFD700 !important;
-        font-weight: bold;
+        color: #e0e0e0 !important;
+        font-weight: 600;
+        font-size: 1.05em;
     }
     .city-icon {
         margin-right: 8px;
-        font-size: 1.3em;
-        color: #FFFFFF;
+        font-size: 1.2em;
+        color: #87CEEB;
     }
 
-    /* 움직이는 아이콘: 산타 썰매, 선물, 종 */
-    @keyframes slide-santa {
-        0% { transform: translateX(-100vw) translateY(-50px) rotate(-10deg); }
-        100% { transform: translateX(100vw) translateY(-50px) rotate(10deg); }
-    }
-    @keyframes drop-gift {
-        0% { transform: translateY(-100px); opacity: 1; }
-        100% { transform: translateY(100vh); opacity: 0; }
-    }
-    @keyframes ring-bell {
-        0%, 100% { transform: rotate(-15deg); }
-        50% { transform: rotate(15deg); }
-    }
-    .santa-sleigh {
-        position: absolute; top: 10%; font-size: 2em; animation: slide-santa 20s linear infinite; z-index: 1;
-    }
-    .gift {
-        position: absolute; font-size: 1.5em; animation: drop-gift 5s linear forwards; z-index: 1;
-    }
-    .bell {
-        animation: ring-bell 1s ease-in-out infinite;
-        display: inline-block;
-    }
-
-    /* 눈내림 */
+    /* 투명한 눈 결정체 */
     .snowflake {
-        color: #fff;
+        color: rgba(255, 255, 255, 0.5);
         font-size: 1.5em;
         position: absolute;
         top: -10px;
         z-index: 1;
         user-select: none;
         animation: fall linear forwards;
+        pointer-events: none;
     }
     @keyframes fall {
-        to { transform: translateY(100vh); }
+        to { transform: translateY(100vh) rotate(720deg); opacity: 0; }
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 눈내림 + 움직이는 아이콘 스크립트 ---
+# --- 투명한 눈 결정체 스크립트 ---
 st.markdown("""
 <script>
     function createSnowflake() {
@@ -235,39 +245,23 @@ st.markdown("""
         snowflake.classList.add('snowflake');
         snowflake.innerText = ['❄', '❅', '❆'][Math.floor(Math.random() * 3)];
         snowflake.style.left = Math.random() * 100 + 'vw';
-        snowflake.style.animationDuration = Math.random() * 5 + 5 + 's';
-        snowflake.style.opacity = Math.random() * 0.7 + 0.3;
-        snowflake.style.fontSize = Math.random() * 10 + 10 + 'px';
+        snowflake.style.animationDuration = Math.random() * 10 + 8 + 's';
+        snowflake.style.opacity = Math.random() * 0.4 + 0.3;
+        snowflake.style.fontSize = Math.random() * 14 + 14 + 'px';
         document.body.appendChild(snowflake);
-        setTimeout(() => snowflake.remove(), 10000);
+        setTimeout(() => snowflake.remove(), 18000);
     }
-
-    function createSanta() {
-        const santa = document.createElement('div');
-        santa.classList.add('santa-sleigh');
-        santa.innerHTML = '🎅🛷';
-        document.body.appendChild(santa);
-        setTimeout(() => santa.remove(), 20000);
-    }
-
-    function createGift() {
-        const gift = document.createElement('div');
-        gift.classList.add('gift');
-        gift.innerHTML = '🎁';
-        gift.style.left = Math.random() * 100 + 'vw';
-        gift.style.animationDuration = Math.random() * 3 + 3 + 's';
-        document.body.appendChild(gift);
-        setTimeout(() => gift.remove(), 6000);
-    }
-
-    setInterval(createSnowflake, 200);
-    setInterval(createSanta, 25000);
-    setInterval(createGift, 4000);
+    setInterval(createSnowflake, 300);
 </script>
 """, unsafe_allow_html=True)
 
-# --- 6. 제목 ---
-st.markdown('# 칸타타 투어 2025 마하라스트라')
+# --- 6. 제목 (모바일 기준 줄바꿈) ---
+st.markdown("""
+<div class="main-title">
+    <span class="cantata">칸타타 투어</span> <span class="year">2025</span>
+    <div class="maharashtra">마하라스트라</div>
+</div>
+""", unsafe_allow_html=True)
 
 # --- 7. 사이드바 ---
 with st.sidebar:
@@ -431,7 +425,7 @@ def render_notices():
         st.markdown(f"""
         <div class="alert-box" id="alert">
             <span>{_("new_notice_alert")}</span>
-            <span class="alert-close" onclick="document.getElementById('alert').remove()">X</span>
+            <span class="alert-close" onclick="document.getElementById('alert').remove()">×</span>
         </div>
         <script>
             setTimeout(() => {{
@@ -461,7 +455,7 @@ def render_map():
     cities = sorted(raw_cities, key=lambda x: x.get("perf_date", "9999-12-31"))
     city_names = [c["city"] for c in raw_cities]
 
-    # --- 도시 추가 폼 ---
+    # --- 도시 추가 폼 (공연 날짜 → 장소 위) ---
     if st.session_state.admin:
         if st.button(_(f"add_city"), key="add_city_btn"):
             st.session_state.adding_city = True
@@ -475,13 +469,14 @@ def render_map():
                 else:
                     new_city = selected_city
 
+                perf_date_input = st.date_input(_(f"perf_date"), value=None)
+                perf_date = perf_date_input.strftime("%Y-%m-%d") if perf_date_input else None
+
                 venue = st.text_input(_(f"venue"))
                 seats = st.text_input(_(f"seats"))
                 indoor = st.radio("장소 유형", [_(f"indoor"), _(f"outdoor")])
                 note = st.text_area(_(f"note"))
                 google_link = st.text_input(_(f"google_link"))
-                perf_date_input = st.date_input(_(f"perf_date"), value=None)
-                perf_date = perf_date_input.strftime("%Y-%m-%d") if perf_date_input else None
 
                 col1, col2 = st.columns(2)
                 with col1:
@@ -506,7 +501,7 @@ def render_map():
                         st.session_state.adding_city = False
                         st.rerun()
 
-    # --- 도시 수정 폼 ---
+    # --- 도시 수정 폼 (공연 날짜 위로) ---
     if st.session_state.admin and st.session_state.get("edit_city"):
         city_to_edit = next((c for c in raw_cities if c["city"] == st.session_state.edit_city), None)
         if city_to_edit:
@@ -514,18 +509,19 @@ def render_map():
             with st.form("edit_city_form"):
                 city = st.selectbox("도시 선택", options=city_names,
                                     index=city_names.index(st.session_state.edit_city))
-                venue = st.text_input(_(f"venue"), value=city_to_edit["venue"])
-                seats = st.text_input(_(f"seats"), value=city_to_edit["seats"])
-                indoor = st.radio("장소 유형", [_(f"indoor"), _(f"outdoor")],
-                                  index=0 if city_to_edit.get("indoor", False) else 1)
-                note = st.text_area(_(f"note"), value=city_to_edit.get("note", ""))
-                google_link = st.text_input(_(f"google_link"), value=city_to_edit.get("google_link", ""))
                 perf_date_input = st.date_input(_(f"perf_date"), value=(
                     datetime.strptime(city_to_edit["perf_date"], "%Y-%m-%d").date()
                     if city_to_edit.get("perf_date") and city_to_edit["perf_date"] != "9999-12-31"
                     else None
                 ))
                 perf_date = perf_date_input.strftime("%Y-%m-%d") if perf_date_input else None
+
+                venue = st.text_input(_(f"venue"), value=city_to_edit["venue"])
+                seats = st.text_input(_(f"seats"), value=city_to_edit["seats"])
+                indoor = st.radio("장소 유형", [_(f"indoor"), _(f"outdoor")],
+                                  index=0 if city_to_edit.get("indoor", False) else 1)
+                note = st.text_area(_(f"note"), value=city_to_edit.get("note", ""))
+                google_link = st.text_input(_(f"google_link"), value=city_to_edit.get("google_link", ""))
 
                 col1, col2 = st.columns(2)
                 with col1:
@@ -547,7 +543,7 @@ def render_map():
                         st.session_state.edit_city = None
                         st.rerun()
 
-    # --- 지도 ---
+    # --- 지도 (말풍선 내용 진하게) ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="CartoDB positron")
 
     for i, c in enumerate(cities):
@@ -563,17 +559,17 @@ def render_map():
         google_link_html = f'<br><a href="{google_nav}" target="_blank">길 안내 시작</a>' if c.get("google_link") else ""
 
         popup_html = f"""
-        <div style="font-size: 14px; line-height: 1.5; color: #000000;">
-            <b>도시: {c['city']}</b><br>
-            날짜: {perf_date_formatted}<br>
-            장소: {c.get('venue','—')}<br>
-            예상 인원: {c.get('seats','—')}<br>
-            {'실내' if c.get('indoor') else '야외'} 유형: {indoor_text}{google_link_html}
+        <div style="font-family: 'Georgia', serif; font-size: 14px; line-height: 1.6; color: #000000;">
+            <b style="font-size: 16px;">{c['city']}</b><br>
+            <b>날짜:</b> <strong>{perf_date_formatted}</strong><br>
+            <b>장소:</b> <strong>{c.get('venue','—')}</strong><br>
+            <b>예상 인원:</b> <strong>{c.get('seats','—')}</strong><br>
+            <b>장소:</b> <strong>{indoor_text}</strong>{google_link_html}
         </div>
         """
         folium.Marker(
             coords,
-            popup=folium.Popup(popup_html, max_width=300),
+            popup=folium.Popup(popup_html, max_width=320),
             icon=folium.Icon(color=color, icon="music", prefix="fa")
         ).add_to(m)
 
@@ -582,7 +578,7 @@ def render_map():
             nxt_coords = CITY_COORDS.get(nxt["city"], (18.5204, 73.8567))
             opacity = 0.3 if is_past else 1.0
             AntPath([coords, nxt_coords],
-                    color="#FFD700", weight=5, opacity=opacity, delay=800, dash_array=[20, 30]).add_to(m)
+                    color="#87CEEB", weight=5, opacity=opacity, delay=800, dash_array=[20, 30]).add_to(m)
 
         exp_key = f"city_{c['city']}"
         expanded = exp_key in st.session_state.expanded_cities
