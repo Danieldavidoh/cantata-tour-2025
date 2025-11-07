@@ -67,7 +67,7 @@ for k, v in defaults.items():
 
 _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
 
-# --- 4. 캐롤 사운드 (강제 재생 보장) ---
+# --- 4. 캐롤 사운드 ---
 def play_carol():
     if os.path.exists("carol.wav"):
         st.session_state.sound_played = True
@@ -77,7 +77,7 @@ def play_carol():
         </audio>
         """, unsafe_allow_html=True)
 
-# --- 5. CSS + 전체화면 토글 스크립트 ---
+# --- 5. CSS + 전체화면 + NEW 종 애니메이션 ---
 st.markdown("""
 <style>
     .alert-box {
@@ -106,6 +106,24 @@ st.markdown("""
         position: fixed !important;
         top: 0; left: 0; width: 100vw !important; height: 100vh !important;
         z-index: 9998; background: white;
+    }
+    
+    /* NEW 종 아이콘 흔들림 애니메이션 */
+    @keyframes bell-ring {
+        0% { transform: rotate(0deg); }
+        10% { transform: rotate(15deg); }
+        20% { transform: rotate(-10deg); }
+        30% { transform: rotate(10deg); }
+        40% { transform: rotate(-5deg); }
+        50% { transform: rotate(5deg); }
+        60% { transform: rotate(0deg); }
+        100% { transform: rotate(0deg); }
+    }
+    .new-bell {
+        display: inline-block;
+        animation: bell-ring 1.5s ease-in-out infinite;
+        font-size: 1.2em;
+        margin-left: 8px;
     }
 </style>
 <script>
@@ -194,7 +212,7 @@ DEFAULT_CITIES = [
     {"city": "Mumbai", "venue": "Gateway of India", "seats": "5000", "note": "인도 영화 수도",
      "google_link": "https://goo.gl/maps/abc123", "indoor": False, "date": "11/07 02:01"},
     {"city": "Pune", "venue": "Shaniwar Wada", "seats": "3000", "note": "IT 허브",
-     "google_link": "https://goo.gl/maps/def456", "indoor": True, "date": "11/07 02:01"},
+     "google_link": "https://goo.gl/maps/def456", ": True, "date": "11/07 02:01"},
     {"city": "Pune", "venue": "Aga Khan Palace", "seats": "2500", "note": "역사적 장소",
      "google_link": "https://goo.gl/maps/pune2", "indoor": False, "date": "11/08 14:00"},
     {"city": "Nagpur", "venue": "Deekshabhoomi", "seats": "2000", "note": "오렌지 도시",
@@ -248,7 +266,7 @@ def format_notice_date(d):
         elif dt.date() == today - timedelta(days=1):
             return f"{_(f'yesterday')} {dt.strftime('%H:%M')}"
         else:
-            return d  # 11/07 23:50
+            return d
     except:
         return d
 
@@ -256,10 +274,10 @@ def render_notices():
     data = load_json(NOTICE_FILE)
     
     for i, n in enumerate(data):
-        # NEW 아이콘: 일반 사용자만, 안 읽은 것에만
+        # NEW 아이콘: 일반 사용자만, 안 읽은 것에만 + 흔들림
         new_icon = ''
         if not st.session_state.admin and n["id"] not in st.session_state.seen_notices:
-            new_icon = 'NEW'
+            new_icon = '<span class="new-bell">🔔</span>'
 
         formatted_date = format_notice_date(n['date'])
         title = f"{formatted_date} | {n['title']} {new_icon}"
@@ -280,7 +298,6 @@ def render_notices():
                 save_json(NOTICE_FILE, data)
                 st.rerun()
 
-            # 일반 사용자: 열 때만 seen 처리 + NEW 제거
             if not st.session_state.admin and n["id"] not in st.session_state.seen_notices and expanded:
                 st.session_state.seen_notices.append(n["id"])
                 if n["id"] == st.session_state.current_alert_id:
@@ -486,6 +503,7 @@ def render_map():
                     if st.button("삭제", key=f"del_{c['city']}"):
                         raw_cities = [x for x in raw_cities if x["city"] != c["city"]]
                         save_json(CITY_FILE, raw_cities)
+                        st.r: True
                         st.rerun()
 
             if expanded and exp_key not in st.session_state.expanded_cities:
@@ -495,19 +513,21 @@ def render_map():
 
     st_folium(m, width=900, height=550, key="tour_map")
 
-# --- 13. 탭 ---
-tab_selection = st.radio(
-    "탭 선택",
-    [_(f"tab_notice"), _(f"tab_map")],
-    index=0 if st.session_state.tab_selection == _(f"tab_notice") else 1,
-    horizontal=True,
-    key="main_tab"
-)
+# --- 13. 탭 (라디오 대신 버튼으로 "탭 선택" 제거) ---
+col1, col2 = st.columns(2)
+with col1:
+    if st.button(_(f"tab_notice"), use_container_width=True):
+        st.session_state.tab_selection = _(f"tab_notice")
+        st.rerun()
+with col2:
+    if st.button(_(f"tab_map"), use_container_width=True):
+        st.session_state.tab_selection = _(f"tab_map")
+        st.rerun()
 
-if tab_selection != st.session_state.get("last_tab"):
+if st.session_state.tab_selection != st.session_state.get("last_tab"):
     st.session_state.expanded_notices = []
     st.session_state.expanded_cities = []
-    st.session_state.last_tab = tab_selection
+    st.session_state.last_tab = st.session_state.tab_selection
     st.rerun()
 
 if st.session_state.get("new_notice", False):
@@ -516,7 +536,7 @@ if st.session_state.get("new_notice", False):
     st.rerun()
 
 # --- 14. 렌더링 ---
-if tab_selection == _(f"tab_notice"):
+if st.session_state.tab_selection == _(f"tab_notice"):
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
             title = st.text_input("제목")
