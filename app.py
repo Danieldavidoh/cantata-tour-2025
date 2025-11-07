@@ -12,7 +12,7 @@ import requests
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
 if not st.session_state.get("admin", False):
-    st_autorefresh(interval=5000, key="auto_refresh_user")  # 5초로 변경
+    st_autorefresh(interval=5000, key="auto_refresh_user")  # 5초
 
 # --- 2. 파일 ---
 NOTICE_FILE = "notice.json"
@@ -67,7 +67,7 @@ for k, v in defaults.items():
 
 _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
 
-# --- 4. 캐롤 사운드 ---
+# --- 4. 캐롤 사운드 (강제 재생 보장) ---
 def play_carol():
     if os.path.exists("carol.wav"):
         st.session_state.sound_played = True
@@ -102,7 +102,6 @@ st.markdown("""
         font-size: 1.2em;
     }
     
-    /* 전체화면 토글 */
     .fullscreen-map {
         position: fixed !important;
         top: 0; left: 0; width: 100vw !important; height: 100vh !important;
@@ -245,11 +244,11 @@ def format_notice_date(d):
         dt = datetime.strptime(d, "%m/%d %H:%M")
         today = date.today()
         if dt.date() == today:
-            return _(f"today")
+            return f"{_(f'today')} {dt.strftime('%H:%M')}"
         elif dt.date() == today - timedelta(days=1):
-            return _(f"yesterday")
+            return f"{_(f'yesterday')} {dt.strftime('%H:%M')}"
         else:
-            return d
+            return d  # 11/07 23:50
     except:
         return d
 
@@ -260,7 +259,7 @@ def render_notices():
         # NEW 아이콘: 일반 사용자만, 안 읽은 것에만
         new_icon = ''
         if not st.session_state.admin and n["id"] not in st.session_state.seen_notices:
-            new_icon = '🔔'
+            new_icon = 'NEW'
 
         formatted_date = format_notice_date(n['date'])
         title = f"{formatted_date} | {n['title']} {new_icon}"
@@ -281,7 +280,7 @@ def render_notices():
                 save_json(NOTICE_FILE, data)
                 st.rerun()
 
-            # 일반 사용자: 열 때만 seen 처리 + NEW 아이콘 제거
+            # 일반 사용자: 열 때만 seen 처리 + NEW 제거
             if not st.session_state.admin and n["id"] not in st.session_state.seen_notices and expanded:
                 st.session_state.seen_notices.append(n["id"])
                 if n["id"] == st.session_state.current_alert_id:
@@ -298,7 +297,7 @@ def render_notices():
         st.markdown(f"""
         <div class="alert-box" id="alert">
             <span>{_("new_notice_alert")}</span>
-            <span class="alert-close" onclick="document.getElementById('alert').remove()">×</span>
+            <span class="alert-close" onclick="document.getElementById('alert').remove()">X</span>
         </div>
         <script>
             setTimeout(() => {{
@@ -328,7 +327,7 @@ def render_map():
     cities = sorted(raw_cities, key=lambda x: x.get("perf_date", "9999-12-31"))
     city_names = [c["city"] for c in raw_cities]
 
-    # --- 도시 추가 폼 (Pune 포함) ---
+    # --- 도시 추가 폼 ---
     if st.session_state.admin:
         if st.button(_(f"add_city"), key="add_city_btn"):
             st.session_state.adding_city = True
@@ -414,7 +413,7 @@ def render_map():
                         st.session_state.edit_city = None
                         st.rerun()
 
-    # --- 지도 (전체화면 토글 + popup 아이콘) ---
+    # --- 지도 ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="CartoDB positron")
 
     for i, c in enumerate(cities):
