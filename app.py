@@ -75,7 +75,7 @@ def play_carol(force=False):
 
 play_carol()
 
-# --- 5. 알림 CSS ---
+# --- 5. 알림 CSS + 아이콘 스타일 ---
 st.markdown("""
 <style>
     .alert-box {
@@ -89,6 +89,17 @@ st.markdown("""
     @keyframes slideIn { from { transform: translateX(150%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
     .alert-close { cursor: pointer; font-size: 26px; font-weight: bold; }
+    
+    /* 도시 정보 라벨 색상 + 아이콘 */
+    .city-label {
+        color: #e74c3c !important;
+        font-weight: bold;
+        font-size: 1.1em;
+    }
+    .city-icon {
+        margin-right: 8px;
+        font-size: 1.2em;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -193,7 +204,6 @@ def add_notice(title, content, img=None, file=None):
     data.insert(0, notice)
     save_json(NOTICE_FILE, data)
 
-    # 일반 사용자용 알림 강제 활성화
     st.session_state.new_notice = True
     st.session_state.alert_active = True
     st.session_state.current_alert_id = notice["id"]
@@ -210,7 +220,7 @@ def format_notice_date(d):
         elif dt.date() == today - timedelta(days=1):
             return _(f"yesterday")
         else:
-            return d  # 나머지는 그대로 날짜 표시
+            return d
     except:
         return d
 
@@ -218,7 +228,6 @@ def render_notices():
     data = load_json(NOTICE_FILE)
     
     for i, n in enumerate(data):
-        # NEW 뱃지 로직
         is_new = False
         if st.session_state.admin:
             badge = ''
@@ -229,9 +238,7 @@ def render_notices():
             else:
                 badge = ''
 
-        # 날짜 포맷팅
         formatted_date = format_notice_date(n['date'])
-
         title = f"{formatted_date} | {n['title']}{badge}"
         exp_key = f"notice_{n['id']}"
         expanded = exp_key in st.session_state.expanded_notices
@@ -250,20 +257,18 @@ def render_notices():
                 save_json(NOTICE_FILE, data)
                 st.rerun()
 
-            # 일반 사용자: expander 열 때만 seen 처리 + NEW 사라짐
             if not st.session_state.admin and is_new and expanded:
                 if n["id"] not in st.session_state.seen_notices:
                     st.session_state.seen_notices.append(n["id"])
                 if n["id"] == st.session_state.current_alert_id:
                     st.session_state.alert_active = False
-                st.rerun()  # 즉시 NEW 사라지게
+                st.rerun()
 
             if expanded and exp_key not in st.session_state.expanded_notices:
                 st.session_state.expanded_notices.append(exp_key)
             elif not expanded and exp_key in st.session_state.expanded_notices:
                 st.session_state.expanded_notices.remove(exp_key)
 
-    # 알림 팝업 (일반 사용자만)
     if not st.session_state.admin and st.session_state.alert_active and st.session_state.current_alert_id:
         st.markdown(f"""
         <div class="alert-box" id="alert">
@@ -418,10 +423,26 @@ def render_map():
         exp_key = f"city_{c['city']}"
         expanded = exp_key in st.session_state.expanded_cities
         with st.expander(f"{c['city']} | {format_date_with_weekday(c.get('perf_date'))}", expanded=expanded):
-            st.write(f"**{_(f'venue')}**: {c.get('venue','—')}")
-            st.write(f"**{_(f'seats')}**: {c.get('seats','—')}")
-            st.write(f"**유형**: {indoor_text}")
-            st.write(f"**{_(f'note')}**: {c.get('note','—')}")
+            # 아이콘 + 색상 라벨
+            st.markdown(f"""
+            <div>
+                <span class="city-icon">📍</span>
+                <span class="city-label">{_(f'venue')}:</span> {c.get('venue','—')}
+            </div>
+            <div>
+                <span class="city-icon">👥</span>
+                <span class="city-label">{_(f'seats')}:</span> {c.get('seats','—')}
+            </div>
+            <div>
+                <span class="city-icon">{ '🏠' if c.get('indoor') else '🌳' }</span>
+                <span class="city-label">유형:</span> {indoor_text}
+            </div>
+            <div>
+                <span class="city-icon">📝</span>
+                <span class="city-label">{_(f'note')}:</span> {c.get('note','—')}
+            </div>
+            """, unsafe_allow_html=True)
+
             if c.get("google_link"):
                 st.markdown(f"[구글맵 보기]({c['google_link']})")
 
