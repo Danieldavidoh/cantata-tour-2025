@@ -28,7 +28,7 @@ LANG = {
 }
 
 # --- 4. 세션 상태 ---
-defaults = { "admin": False, "lang": "ko", "tab_selection": "공지", "new_notice": False, "sound_played": False, "seen_notices": [], "expanded_notices": [], "expanded_cities": [], "last_tab": None, "alert_active": False, "current_alert_id": None, "password": "0009", "show_pw_form": False, "sidebar_open": False, "notice_open": False, "selected_city": None, "edit_mode": {} }
+defaults = { "admin": False, "lang": "ko", "edit_city": None, "adding_city": False, "tab_selection": "공지", "new_notice": False, "sound_played": False, "seen_notices": [], "expanded_notices": [], "expanded_cities": [], "last_tab": None, "alert_active": False, "current_alert_id": None, "password": "0009", "show_pw_form": False, "sidebar_open": False, "notice_open": False, "edit_mode": {} }
 for k, v in defaults.items():
     if k not in st.session_state: st.session_state[k] = v
 
@@ -185,7 +185,7 @@ if st.session_state.tab_selection == _(f"tab_map"):
     if st.session_state.admin:
         # --- 도시 추가 버튼 ---
         if st.button(_("add_city"), key="add_city_main_btn"):
-            st.session_state.selected_city = None  # 초기화
+            st.session_state.selected_city = None
             st.session_state.adding_city = True
 
         # --- 도시 추가 폼 ---
@@ -209,6 +209,10 @@ if st.session_state.tab_selection == _(f"tab_map"):
                         google_link = st.text_input(_("google_link"))
                         col1, col2, col3 = st.columns(3)
                         with col1:
+                            if st.form_submit_button(_("edit")):
+                                st.session_state.edit_mode = True
+                                st.rerun()
+                        with col2:
                             if st.form_submit_button(_("save")):
                                 new_city = { "city": city_name, "venue": venue, "seats": str(seats), "indoor": indoor == _(f"indoor"), "note": note, "google_link": google_link, "perf_date": str(perf_date), "date": datetime.now().strftime("%m/%d %H:%M") }
                                 data = load_json(CITY_FILE)
@@ -217,13 +221,17 @@ if st.session_state.tab_selection == _(f"tab_map"):
                                 st.session_state.adding_city = False
                                 st.success("도시 추가 완료!")
                                 st.rerun()
-                        with col2:
-                            if st.form_submit_button(_("cancel")):
+                        with col3:
+                            if st.form_submit_button(_("delete")):
+                                data = load_json(CITY_FILE)
+                                data = [d for d in data if d["city"] != city_name]
+                                save_json(CITY_FILE, data)
                                 st.session_state.adding_city = False
+                                st.success("도시 삭제 완료!")
                                 st.rerun()
 
     # --- 도시 목록 + 수정/삭제 ---
-    cities = load_json(CITYFILE)
+    cities = load_json(CITY_FILE)
     for idx, c in enumerate(cities):
         with st.expander(f"{c['city']} | {c.get('perf_date','미정')}"):
             if f"edit_{idx}" not in st.session_state.edit_mode:
@@ -246,15 +254,24 @@ if st.session_state.tab_selection == _(f"tab_map"):
                     new_link = st.text_input("구글맵 링크", value=c["google_link"])
                     col1, col2, col3 = st.columns(3)
                     with col1:
-                        if st.form_submit_button("저장"):
+                        if st.form_submit_button("수정"):
                             cities[idx] = { "city": new_city, "venue": new_venue, "seats": str(new_seats), "indoor": new_indoor == _(f"indoor"), "note": new_note, "google_link": new_link, "perf_date": str(new_date), "date": c["date"] }
                             save_json(CITY_FILE, cities)
                             st.session_state.edit_mode[f"edit_{idx}"] = False
                             st.success("수정 완료!")
                             st.rerun()
                     with col2:
-                        if st.form_submit_button("취소"):
+                        if st.form_submit_button("저장"):
+                            cities[idx] = { "city": new_city, "venue": new_venue, "seats": str(new_seats), "indoor": new_indoor == _(f"indoor"), "note": new_note, "google_link": new_link, "perf_date": str(new_date), "date": c["date"] }
+                            save_json(CITY_FILE, cities)
                             st.session_state.edit_mode[f"edit_{idx}"] = False
+                            st.success("저장 완료!")
+                            st.rerun()
+                    with col3:
+                        if st.form_submit_button("삭제"):
+                            cities.pop(idx)
+                            save_json(CITY_FILE, cities)
+                            st.success("삭제 완료!")
                             st.rerun()
 
     # --- 지도 ---
