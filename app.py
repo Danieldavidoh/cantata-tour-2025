@@ -26,10 +26,7 @@ LANG = {
         "new_notice_alert": "새 공지가 도착했어요!", "warning": "제목·내용 입력",
         "edit": "수정", "save": "저장", "cancel": "취소", "add_city": "도시 추가",
         "indoor": "실내", "outdoor": "실외", "venue": "장소", "seats": "예상 인원",
-        "note": "특이사항", "google_link": "구글맵 링크", "perf_date": "공연 날짜",
-        "change_pw": "비밀번호 변경", "current_pw": "현재 비밀번호", "new_pw": "새 비밀번호",
-        "confirm_pw": "새 비밀번호 확인", "pw_changed": "비밀번호 변경 완료!", "pw_mismatch": "비밀번호 불일치",
-        "pw_error": "현재 비밀번호 오류", "select_city": "도시 선택 (클릭)"
+        "note": "특이사항", "google_link": "구글맵 링크", "perf_date": "공연 날짜"
     }
 }
 
@@ -46,26 +43,100 @@ for k, v in defaults.items():
 
 _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
 
-# --- 4. 전체 페이지 HTML/CSS/JS 삽입 (화면 가림 해결) ---
-st.html("""
+# --- 4. 화면 가림 완전 해결 + 구글맵 타일 ---
+st.markdown("""
 <style>
-    html, body, [data-testid="stAppViewContainer"], .main > div { overflow: visible !important; }
-    .stApp { background: #000000; color: #ffffff; font-family: 'Playfair Display', serif; position: relative; }
-    .main-title { text-align: center; margin: 20px 0 40px; line-height: 1.2; z-index: 20; }
+    /* Streamlit 전체 강제 오버플로우 허용 */
+    html, body, [data-testid="stAppViewContainer"], .main > div, .block-container {
+        overflow: visible !important;
+        position: relative !important;
+    }
+    .stApp {
+        overflow: visible !important;
+        background: #000000;
+        color: #ffffff;
+        font-family: 'Playfair Display', serif;
+    }
+
+    /* 제목 */
+    .main-title {
+        text-align: center;
+        margin: 20px 0 40px;
+        line-height: 1.2;
+        position: relative;
+        z-index: 20;
+    }
     .main-title .cantata { color: #DC143C; font-size: 2.8em; font-weight: 700; text-shadow: 0 0 15px #FFD700; }
     .main-title .year { color: #FFFFFF; font-size: 2.8em; font-weight: 700; text-shadow: 0 0 15px #FFFFFF; }
     .main-title .maharashtra { color: #D3D3D3; font-size: 1.8em; font-style: italic; display: block; margin-top: -10px; }
-    .stButton > button { background: #8B0000 !important; color: #FFFFFF !important; border: 2px solid #FFD700 !important; border-radius: 14px !important; padding: 14px 30px !important; font-weight: 600; font-size: 1.1em; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3); z-index: 20; }
-    .stButton > button:hover { background: #B22222 !important; transform: translateY(-3px); box-shadow: 0 8px 30px rgba(255, 215, 0, 0.5); }
-    .streamlit-expanderHeader { background: #006400 !important; color: #FFFFFF !important; border: 2px solid #FFD700; border-radius: 12px; padding: 14px 18px; font-size: 1.05em; z-index: 15; }
-    .streamlit-expander { background: rgba(0, 100, 0, 0.7) !important; border: 2px solid #FFD700; border-radius: 12px; margin-bottom: 14px; z-index: 15; }
+
+    /* 탭 버튼 */
+    .stButton > button {
+        background: #8B0000 !important;
+        color: #FFFFFF !important;
+        border: 2px solid #FFD700 !important;
+        border-radius: 14px !important;
+        padding: 14px 30px !important;
+        font-weight: 600;
+        font-size: 1.1em;
+        box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);
+        z-index: 20;
+        position: relative;
+    }
+    .stButton > button:hover {
+        background: #B22222 !important;
+        transform: translateY(-3px);
+        box-shadow: 0 8px 30px rgba(255, 215, 0, 0.5);
+    }
+
+    /* 공지 */
+    .streamlit-expanderHeader {
+        background: #006400 !important;
+        color: #FFFFFF !important;
+        border: 2px solid #FFD700;
+        border-radius: 12px;
+        padding: 14px 18px;
+        font-size: 1.05em;
+        z-index: 15;
+        position: relative;
+    }
+    .streamlit-expander {
+        background: rgba(0, 100, 0, 0.7) !important;
+        border: 2px solid #FFD700;
+        border-radius: 12px;
+        margin-bottom: 14px;
+        z-index: 15;
+        position: relative;
+    }
+
+    /* 입력 폼 */
     .stTextInput > div > div > input,
     .stTextArea > div > div > textarea,
     .stSelectbox > div > div > select,
     .stDateInput > div > div > input {
-        background: #FFFFFF !important; color: #000000 !important; border: 2px solid #DC143C !important; border-radius: 10px; z-index: 15;
+        background: #FFFFFF !important;
+        color: #000000 !important;
+        border: 2px solid #DC143C !important;
+        border-radius: 10px;
+        z-index: 15;
+        position: relative;
     }
-    .css-1d391kg { background: #000000 !important; border-right: 3px solid #FFD700 !important; z-index: 20; }
+
+    /* 사이드바 */
+    .css-1d391kg {
+        background: #000000 !important;
+        border-right: 3px solid #FFD700 !important;
+        z-index: 20;
+    }
+
+    /* 구글맵 타일용 */
+    .folium-map {
+        width: 100% !important;
+        height: 600px !important;
+        z-index: 10 !important;
+    }
+
+    /* 눈 결정체 (내용 아래) */
     .snowflake {
         position: fixed !important;
         color: rgba(255, 255, 255, 0.5) !important;
@@ -82,7 +153,7 @@ st.html("""
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const container = document.querySelector('[data-testid="stAppViewContainer"]') || document.body;
+        const container = document.body;
         function createSnow() {
             const snow = document.createElement('div');
             snow.className = 'snowflake';
@@ -97,7 +168,7 @@ st.html("""
         setInterval(createSnow, 300);
     });
 </script>
-""")
+""", unsafe_allow_html=True)
 
 # --- 5. 제목 ---
 st.markdown("""
@@ -153,7 +224,7 @@ coords = {
     "Bhandara City": (21.17, 79.65), "Gadhinglaj (Kolhapur)": (16.23, 74.34), "Kagal (Kolhapur)": (16.57, 74.31)
 }
 
-# --- 9. 초기 도시 (기본 4개) ---
+# --- 9. 초기 도시 ---
 DEFAULT_CITIES = [
     {"city": "Mumbai", "venue": "Gateway of India", "seats": "5000", "indoor": False},
     {"city": "Pune", "venue": "Shaniwar Wada", "seats": "3000", "indoor": True},
@@ -163,7 +234,7 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE):
     save_json(CITY_FILE, DEFAULT_CITIES)
 
-# --- 10. 공지 & 지도 ---
+# --- 10. 공지 & 지도 (구글맵 타일 사용) ---
 def render_notices():
     st.write("공지 내용이 여기에 표시됩니다.")
 
@@ -172,7 +243,22 @@ def render_map():
     raw_cities = load_json(CITY_FILE)
     cities = sorted(raw_cities, key=lambda x: x.get("perf_date", "9999-12-31"))
 
-    m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="CartoDB positron")
+    # 구글맵 타일 사용
+    m = folium.Map(
+        location=[18.5204, 73.8567],
+        zoom_start=7,
+        tiles="https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}",
+        attr="Google",
+        name="Google Maps"
+    )
+    folium.TileLayer(
+        tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        attr="Google",
+        name="Google Satellite",
+        overlay=True,
+        control=True
+    ).add_to(m)
+
     for i, c in enumerate(cities):
         city_name = c["city"]
         coords_tuple = coords.get(city_name, (18.5204, 73.8567))
@@ -199,7 +285,7 @@ def render_map():
             next_coords = coords.get(next_city, (18.5204, 73.8567))
             AntPath([coords_tuple, next_coords], color="#FFD700", weight=5, opacity=0.8).add_to(m)
 
-    st_folium(m, width=900, height=550, key="tour_map")
+    st_folium(m, width=900, height=600, key="google_map")
 
 # --- 11. 탭 ---
 col1, col2 = st.columns(2)
