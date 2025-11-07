@@ -46,7 +46,7 @@ for k, v in defaults.items():
 
 _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
 
-# --- 4. 캐롤 사운드 (옵션) ---
+# --- 4. 캐롤 사운드 ---
 def play_carol():
     if not st.session_state.sound_played:
         st.session_state.sound_played = True
@@ -56,114 +56,37 @@ def play_carol():
         </audio>
         """, unsafe_allow_html=True)
 
-# --- 5. UI (화면 가림 완전 해결) ---
+# --- 5. UI (화면 가림 해결) ---
 st.markdown("""
 <style>
-    /* Streamlit 기본 컨테이너 강제 오버플로우 허용 */
-    .main > div {
-        overflow: visible !important;
-    }
-    .stApp {
-        overflow: visible !important;
-        background: #000000;
-        color: #ffffff;
-        font-family: 'Playfair Display', serif;
-    }
-
-    /* 제목 */
-    .main-title {
-        text-align: center;
-        margin: 20px 0 40px;
-        line-height: 1.2;
-        position: relative;
-        z-index: 10;
-    }
+    .main > div { overflow: visible !important; }
+    .stApp { overflow: visible !important; background: #000000; color: #ffffff; font-family: 'Playfair Display', serif; }
+    .main-title { text-align: center; margin: 20px 0 40px; line-height: 1.2; z-index: 10; }
     .main-title .cantata { color: #DC143C; font-size: 2.8em; font-weight: 700; text-shadow: 0 0 15px #FFD700; }
     .main-title .year { color: #FFFFFF; font-size: 2.8em; font-weight: 700; text-shadow: 0 0 15px #FFFFFF; }
     .main-title .maharashtra { color: #D3D3D3; font-size: 1.8em; font-style: italic; display: block; margin-top: -10px; }
-
-    /* 탭 버튼 */
-    .stButton > button {
-        background: #8B0000 !important;
-        color: #FFFFFF !important;
-        border: 2px solid #FFD700 !important;
-        border-radius: 14px !important;
-        padding: 14px 30px !important;
-        font-weight: 600;
-        font-size: 1.1em;
-        box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);
-        z-index: 10;
-        position: relative;
-    }
-
-    /* 공지 */
-    .streamlit-expanderHeader {
-        background: #006400 !important;
-        color: #FFFFFF !important;
-        border: 2px solid #FFD700;
-        border-radius: 12px;
-        padding: 14px 18px;
-        font-size: 1.05em;
-        position: relative;
-        z-index: 5;
-    }
-    .streamlit-expander {
-        background: rgba(0, 100, 0, 0.7) !important;
-        border: 2px solid #FFD700;
-        border-radius: 12px;
-        margin-bottom: 14px;
-        position: relative;
-        z-index: 5;
-    }
-
-    /* 입력 폼 */
+    .stButton > button { background: #8B0000 !important; color: #FFFFFF !important; border: 2px solid #FFD700 !important; border-radius: 14px !important; padding: 14px 30px !important; font-weight: 600; font-size: 1.1em; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3); z-index: 10; }
+    .stButton > button:hover { background: #B22222 !important; transform: translateY(-3px); box-shadow: 0 8px 30px rgba(255, 215, 0, 0.5); }
+    .streamlit-expanderHeader { background: #006400 !important; color: #FFFFFF !important; border: 2px solid #FFD700; border-radius: 12px; padding: 14px 18px; font-size: 1.05em; z-index: 5; }
+    .streamlit-expander { background: rgba(0, 100, 0, 0.7) !important; border: 2px solid #FFD700; border-radius: 12px; margin-bottom: 14px; z-index: 5; }
     .stTextInput > div > div > input,
     .stTextArea > div > div > textarea,
     .stSelectbox > div > div > select,
     .stDateInput > div > div > input {
-        background: #FFFFFF !important;
-        color: #000000 !important;
-        border: 2px solid #DC143C !important;
-        border-radius: 10px;
-        z-index: 5;
+        background: #FFFFFF !important; color: #000000 !important; border: 2px solid #DC143C !important; border-radius: 10px; z-index: 5;
     }
-
-    /* 사이드바 */
-    .css-1d391kg {
-        background: #000000 !important;
-        border-right: 3px solid #FFD700 !important;
-        z-index: 10;
-    }
-
-    /* 크리스마스 요소 (내용 위) */
-    .christmas-element {
-        position: fixed !important;
-        z-index: 1 !important;
-        pointer-events: none !important;
-        user-select: none !important;
-    }
-
-    /* 별 (배경) */
-    .star {
-        position: fixed !important;
-        background: #ffffff;
-        border-radius: 50%;
-        animation: twinkle 3s infinite;
-        pointer-events: none !important;
-        z-index: 0 !important;
-    }
+    .css-1d391kg { background: #000000 !important; border-right: 3px solid #FFD700 !important; z-index: 10; }
+    .christmas-element { position: fixed !important; z-index: 1 !important; pointer-events: none !important; }
+    .star { position: fixed !important; background: #ffffff; border-radius: 50%; animation: twinkle 3s infinite; pointer-events: none !important; z-index: 0 !important; }
     @keyframes twinkle { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 6. 크리스마스 요소 & 별 (스크롤 방지 + 화면 가림 해결) ---
+# --- 6. 크리스마스 요소 & 별 ---
 st.markdown("""
 <script>
-    // DOM 로드 후 실행
     window.addEventListener('load', () => {
         const body = document.body;
-
-        // 별 생성
         function createStar() {
             const star = document.createElement('div');
             star.className = 'star';
@@ -175,8 +98,6 @@ st.markdown("""
             body.appendChild(star);
             setTimeout(() => star.remove(), 10000);
         }
-
-        // 크리스마스 요소
         const elements = [
             {html: '🎄', style: 'bottom:10%;left:5%;font-size:4em;animation:float 6s infinite;'},
             {html: '🎁', style: 'bottom:15%;right:8%;font-size:2.5em;animation:sway 4s infinite;'},
@@ -193,8 +114,6 @@ st.markdown("""
             el.style.cssText = e.style;
             body.appendChild(el);
         });
-
-        // 애니메이션 정의
         const style = document.createElement('style');
         style.innerHTML = `
             @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
@@ -204,8 +123,6 @@ st.markdown("""
             @keyframes slide { 0% { transform: translateX(-100vw); } 100% { transform: translateX(100vw); } }
         `;
         document.head.appendChild(style);
-
-        // 주기적 별 생성
         for(let i=0; i<150; i++) createStar();
         setInterval(() => { for(let i=0; i<5; i++) createStar(); }, 1000);
     });
@@ -220,10 +137,41 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# --- 8. 나머지 코드 (기존과 동일) ---
-# (공지, 지도, 탭 등은 이전 버전 그대로)
+# --- 8. 사이드바 ---
+with st.sidebar:
+    lang_map = {"한국어": "ko"}
+    sel = st.selectbox("언어", list(lang_map.keys()), index=0)
+    if lang_map[sel] != st.session_state.lang:
+        st.session_state.lang = lang_map[sel]
+        st.rerun()
 
-# --- 9. 초기 도시 ---
+    st.markdown("---")
+    if not st.session_state.admin:
+        pw = st.text_input("비밀번호", type="password", key="pw")
+        if st.button("로그인", key="login"):
+            if pw == st.session_state.password:
+                st.session_state.admin = True
+                st.rerun()
+            else:
+                st.error("비밀번호 오류")
+    else:
+        st.success("관리자 모드")
+        if st.button("로그아웃", key="logout"):
+            st.session_state.admin = False
+            st.rerun()
+
+# --- 9. JSON 헬퍼 ---
+def load_json(f):
+    if os.path.exists(f):
+        with open(f, "r", encoding="utf-8") as file:
+            return json.load(file)
+    return []
+
+def save_json(f, d):
+    with open(f, "w", encoding="utf-8") as file:
+        json.dump(d, file, ensure_ascii=False, indent=2)
+
+# --- 10. 초기 도시 ---
 DEFAULT_CITIES = [
     {"city": "Mumbai", "venue": "Gateway of India", "seats": "5000", "note": "인도 영화 수도",
      "google_link": "https://goo.gl/maps/abc123", "indoor": False, "date": "11/07 02:01"},
@@ -243,15 +191,115 @@ CITY_COORDS = {
     "Nagpur": (21.1458, 79.0882)
 }
 
-# --- 10. 공지 기능 ---
+# --- 11. 공지 기능 ---
 def add_notice(title, content, img=None, file=None):
-    # ... (기존 코드 그대로)
-    pass
+    img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{img.name}") if img else None
+    file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.name}") if file else None
+    if img:
+        with open(img_path, "wb") as f:
+            f.write(img.getbuffer())
+    if file:
+        with open(file_path, "wb") as f:
+            f.write(file.getbuffer())
+    notice = {
+        "id": str(uuid.uuid4()),
+        "title": title,
+        "content": content,
+        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
+        "image": img_path,
+        "file": file_path
+    }
+    data = load_json(NOTICE_FILE)
+    data.insert(0, notice)
+    save_json(NOTICE_FILE, data)
+    st.session_state.new_notice = True
+    st.session_state.alert_active = True
+    st.session_state.current_alert_id = notice["id"]
+    st.session_state.sound_played = False
+    play_carol()
+    st.rerun()
 
-# --- 11. render_notices, render_map 등 ---
-# (기존 코드 복사)
+def format_notice_date(d):
+    try:
+        dt = datetime.strptime(d, "%m/%d %H:%M")
+        today = date.today()
+        if dt.date() == today:
+            return f"{_(f'today')} {dt.strftime('%H:%M')}"
+        elif dt.date() == today - timedelta(days=1):
+            return f"{_(f'yesterday')} {dt.strftime('%H:%M')}"
+        else:
+            return d
+    except:
+        return d
 
-# --- 12. 탭 ---
+def render_notices():
+    data = load_json(NOTICE_FILE)
+    for i, n in enumerate(data):
+        formatted_date = format_notice_date(n['date'])
+        title = f"{formatted_date} | {n['title']}"
+        exp_key = f"notice_{n['id']}"
+        expanded = exp_key in st.session_state.expanded_notices
+        with st.expander(title, expanded=expanded):
+            st.markdown(n["content"])
+            if n.get("image") and os.path.exists(n["image"]):
+                st.image(n["image"], use_column_width=True)
+            if n.get("file") and os.path.exists(n["file"]):
+                b64 = base64.b64encode(open(n["file"], "rb").read()).decode()
+                href = f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">다운로드</a>'
+                st.markdown(href, unsafe_allow_html=True)
+            if st.session_state.admin and st.button("삭제", key=f"del_n_{n['id']}"):
+                data.pop(i)
+                save_json(NOTICE_FILE, data)
+                st.rerun()
+            if not st.session_state.admin and n["id"] not in st.session_state.seen_notices and expanded:
+                st.session_state.seen_notices.append(n["id"])
+                if n["id"] == st.session_state.current_alert_id:
+                    st.session_state.alert_active = False
+                st.rerun()
+            if expanded and exp_key not in st.session_state.expanded_notices:
+                st.session_state.expanded_notices.append(exp_key)
+            elif not expanded and exp_key in st.session_state.expanded_notices:
+                st.session_state.expanded_notices.remove(exp_key)
+    if not st.session_state.admin and st.session_state.alert_active and st.session_state.current_alert_id:
+        play_carol()
+        st.markdown(f"""
+        <div class="alert-box" id="alert">
+            <span>{_("new_notice_alert")}</span>
+            <span class="alert-close" onclick="document.getElementById('alert').remove()">×</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+# --- 12. 지도 ---
+def render_map():
+    m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="CartoDB positron")
+    raw_cities = load_json(CITY_FILE)
+    cities = sorted(raw_cities, key=lambda x: x.get("perf_date", "9999-12-31"))
+    for i, c in enumerate(cities):
+        coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
+        indoor_text = _(f"indoor") if c.get("indoor") else _(f"outdoor")
+        perf_date_formatted = format_date_with_weekday(c.get("perf_date"))
+        google_nav = f"https://www.google.com/maps/dir/?api=1&destination={coords[0]},{coords[1]}&travelmode=driving"
+        popup_html = f"""
+        <div style="font-size: 14px; line-height: 1.6; color: #000000;">
+            <b>{c['city']}</b><br>
+            <b>날짜:</b> <strong>{perf_date_formatted}</strong><br>
+            <b>장소:</b> <strong>{c.get('venue','—')}</strong><br>
+            <b>예상 인원:</b> <strong>{c.get('seats','—')}</strong><br>
+            <b>장소:</b> <strong>{indoor_text}</strong>
+        </div>
+        """
+        folium.Marker(coords, popup=folium.Popup(popup_html, max_width=320), icon=folium.Icon(color="red" if c.get('perf_date') else "gray", icon="music", prefix="fa")).add_to(m)
+    st_folium(m, width=900, height=550, key="tour_map")
+
+def format_date_with_weekday(perf_date):
+    if perf_date and perf_date != "9999-12-31":
+        dt = datetime.strptime(perf_date, "%Y-%m-%d")
+        weekday = dt.strftime("%A")
+        weekdays = {"Monday": "월요일", "Tuesday": "화요일", "Wednesday": "수요일", "Thursday": "목요일", "Friday": "금요일", "Saturday": "토요일", "Sunday": "일요일"}
+        return f"{perf_date} ({weekdays.get(weekday, weekday)})"
+    return "미정"
+
+# --- 13. 탭 ---
 col1, col2 = st.columns(2)
 with col1:
     if st.button(_(f"tab_notice"), use_container_width=True):
@@ -262,8 +310,19 @@ with col2:
         st.session_state.tab_selection = _(f"tab_map")
         st.rerun()
 
-# --- 13. 렌더링 ---
+# --- 14. 렌더링 ---
 if st.session_state.tab_selection == _(f"tab_notice"):
-    # ... 공지 렌더링
+    if st.session_state.admin:
+        with st.form("notice_form", clear_on_submit=True):
+            title = st.text_input("제목")
+            content = st.text_area("내용")
+            img = st.file_uploader("이미지", type=["png", "jpg", "jpeg"])
+            file = st.file_uploader("첨부 파일")
+            if st.form_submit_button("등록"):
+                if title.strip() and content.strip():
+                    add_notice(title, content, img, file)
+                else:
+                    st.warning(_("warning"))
+    render_notices()
 else:
-    # ... 지도 렌더링
+    render_map()
