@@ -7,7 +7,6 @@ import json, os, uuid, base64
 from pytz import timezone
 from streamlit_autorefresh import st_autorefresh
 import requests
-import locale
 
 # --- 1. 기본 설정 ---
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
@@ -31,7 +30,7 @@ LANG = {
         "note": "특이사항", "google_link": "구글맵 링크", "perf_date": "공연 날짜",
         "change_pw": "비밀번호 변경", "current_pw": "현재 비밀번호", "new_pw": "새 비밀번호",
         "confirm_pw": "새 비밀번호 확인", "pw_changed": "비밀번호 변경 완료!", "pw_mismatch": "비밀번호 불일치",
-        "pw_error": "현재 비밀번호 오류"
+        "pw_error": "현재 비밀번호 오류", "select_city": "도시 선택 (클릭)"
     },
     "en": {
         "tab_notice": "Notice", "tab_map": "Tour Route", "today": "Today", "yesterday": "Yesterday",
@@ -41,7 +40,7 @@ LANG = {
         "note": "Note", "google_link": "Google Maps Link", "perf_date": "Performance Date",
         "change_pw": "Change Password", "current_pw": "Current Password", "new_pw": "New Password",
         "confirm_pw": "Confirm Password", "pw_changed": "Password changed!", "pw_mismatch": "Passwords don't match",
-        "pw_error": "Incorrect current password"
+        "pw_error": "Incorrect current password", "select_city": "Select City (Click)"
     },
     "hi": {
         "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "today": "आज", "yesterday": "कल",
@@ -51,7 +50,7 @@ LANG = {
         "note": "नोट", "google_link": "गूगल मैप लिंक", "perf_date": "प्रदर्शन तिथि",
         "change_pw": "पासवर्ड बदलें", "current_pw": "वर्तमान पासवर्ड", "new_pw": "नया पासवर्ड",
         "confirm_pw": "पासवर्ड की पुष्टि करें", "pw_changed": "पासवर्ड बदल गया!", "pw_mismatch": "पासवर्ड मेल नहीं खाते",
-        "pw_error": "गलत वर्तमान पासवर्ड"
+        "pw_error": "गलत वर्तमान पासवर्ड", "select_city": "शहर चुनें (क्लिक)"
     }
 }
 
@@ -60,7 +59,7 @@ defaults = {
     "tab_selection": "공지", "new_notice": False, "sound_played": False,
     "seen_notices": [], "expanded_notices": [], "expanded_cities": [],
     "last_tab": None, "alert_active": False, "current_alert_id": None,
-    "password": "0009"  # 초기 비밀번호
+    "password": "0009", "show_pw_form": False
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -68,7 +67,7 @@ for k, v in defaults.items():
 
 _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
 
-# --- 4. 캐롤 사운드 (알람 시 강제 재생) ---
+# --- 4. 캐롤 사운드 ---
 def play_carol(force=False):
     if os.path.exists("carol.wav") and (force or not st.session_state.get("sound_played", False)):
         st.session_state.sound_played = True
@@ -118,23 +117,35 @@ with st.sidebar:
             st.session_state.admin = False
             st.rerun()
 
-        # 비밀번호 변경 폼
         st.markdown("---")
-        st.subheader(_(f"change_pw"))
-        with st.form("change_pw_form"):
-            current_pw = st.text_input(_(f"current_pw"), type="password")
-            new_pw = st.text_input(_(f"new_pw"), type="password")
-            confirm_pw = st.text_input(_(f"confirm_pw"), type="password")
-            if st.form_submit_button("변경"):
-                if current_pw == "0691":  # 변경에 필요한 비번
-                    if new_pw == confirm_pw and new_pw:
-                        st.session_state.password = new_pw
-                        st.success(_(f"pw_changed"))
+        # 비밀번호 변경 버튼만 표시
+        if st.button(_(f"change_pw"), key="show_pw_btn"):
+            st.session_state.show_pw_form = True
+
+        # 폼은 버튼 클릭 시에만 표시
+        if st.session_state.get("show_pw_form", False):
+            with st.form("change_pw_form"):
+                st.markdown("### 비밀번호 변경")
+                current_pw = st.text_input(_(f"current_pw"), type="password")
+                new_pw = st.text_input(_(f"new_pw"), type="password")
+                confirm_pw = st.text_input(_(f"confirm_pw"), type="password")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.form_submit_button("변경"):
+                        if current_pw == "0691":
+                            if new_pw == confirm_pw and new_pw:
+                                st.session_state.password = new_pw
+                                st.success(_(f"pw_changed"))
+                                st.session_state.show_pw_form = False
+                                st.rerun()
+                            else:
+                                st.error(_(f"pw_mismatch"))
+                        else:
+                            st.error(_(f"pw_error"))
+                with col2:
+                    if st.form_submit_button("취소"):
+                        st.session_state.show_pw_form = False
                         st.rerun()
-                    else:
-                        st.error(_(f"pw_mismatch"))
-                else:
-                    st.error(_(f"pw_error"))
 
 # --- 7. JSON 헬퍼 ---
 def load_json(f):
@@ -184,7 +195,6 @@ def add_notice(title, content, img=None, file=None):
     data.insert(0, notice)
     save_json(NOTICE_FILE, data)
 
-    # 일반 사용자용 알림 강제 활성화
     st.session_state.new_notice = True
     st.session_state.alert_active = True
     st.session_state.current_alert_id = notice["id"]
@@ -266,7 +276,7 @@ def render_notices():
 def format_date_with_weekday(perf_date):
     if perf_date and perf_date != "9999-12-31":
         dt = datetime.strptime(perf_date, "%Y-%m-%d")
-        weekday = dt.strftime("%A")  # 요일 영어
+        weekday = dt.strftime("%A")
         if st.session_state.lang == "ko":
             weekdays = {"Monday": "월요일", "Tuesday": "화요일", "Wednesday": "수요일", "Thursday": "목요일",
                         "Friday": "금요일", "Saturday": "토요일", "Sunday": "일요일"}
@@ -279,8 +289,9 @@ def render_map():
     today = date.today()
     raw_cities = load_json(CITY_FILE)
     cities = sorted(raw_cities, key=lambda x: x.get("perf_date", "9999-12-31"))
+    city_names = [c["city"] for c in raw_cities]
 
-    # --- 도시 추가 폼 (드롭다운으로 기존 도시 선택 불가, 새 입력만) ---
+    # --- 도시 추가 폼 (기존 도시 클릭 선택) ---
     if st.session_state.admin:
         if st.button(_(f"add_city"), key="add_city_btn"):
             st.session_state.adding_city = True
@@ -288,7 +299,12 @@ def render_map():
         if st.session_state.get("adding_city"):
             st.markdown("### 새 도시 추가")
             with st.form("add_city_form"):
-                new_city = st.text_input("도시명 (새로 추가)")
+                selected_city = st.selectbox(_(f"select_city"), options=city_names + ["<새 도시 입력>"])
+                if selected_city == "<새 도시 입력>":
+                    new_city = st.text_input("새 도시명")
+                else:
+                    new_city = selected_city
+
                 venue = st.text_input(_(f"venue"))
                 seats = st.text_input(_(f"seats"))
                 indoor = st.radio("장소 유형", [_(f"indoor"), _(f"outdoor")])
@@ -300,7 +316,7 @@ def render_map():
                 col1, col2 = st.columns(2)
                 with col1:
                     if st.form_submit_button(_(f"save")):
-                        if new_city.strip() and new_city not in [c["city"] for c in raw_cities]:
+                        if new_city and new_city not in city_names:
                             new_data = {
                                 "city": new_city, "venue": venue, "seats": seats,
                                 "indoor": indoor == _(f"indoor"), "note": note,
@@ -320,14 +336,14 @@ def render_map():
                         st.session_state.adding_city = False
                         st.rerun()
 
-    # --- 도시 수정 폼 (드롭다운으로 선택) ---
+    # --- 도시 수정 폼 ---
     if st.session_state.admin and st.session_state.get("edit_city"):
         city_to_edit = next((c for c in raw_cities if c["city"] == st.session_state.edit_city), None)
         if city_to_edit:
             st.markdown("### 도시 정보 수정")
             with st.form("edit_city_form"):
-                city = st.selectbox("도시 선택", options=[c["city"] for c in raw_cities],
-                                    index=[c["city"] for c in raw_cities].index(st.session_state.edit_city))
+                city = st.selectbox("도시 선택", options=city_names,
+                                    index=city_names.index(st.session_state.edit_city))
                 venue = st.text_input(_(f"venue"), value=city_to_edit["venue"])
                 seats = st.text_input(_(f"seats"), value=city_to_edit["seats"])
                 indoor = st.radio("장소 유형", [_(f"indoor"), _(f"outdoor")],
@@ -361,7 +377,7 @@ def render_map():
                         st.session_state.edit_city = None
                         st.rerun()
 
-    # --- 지도 (팝업에 실내/실외 추가) ---
+    # --- 지도 ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="CartoDB positron")
 
     for i, c in enumerate(cities):
