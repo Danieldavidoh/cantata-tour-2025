@@ -28,7 +28,7 @@ LANG = {
 }
 
 # --- 4. 세션 상태 ---
-defaults = { "admin": False, "lang": "ko", "tab_selection": "공지", "new_notice": False, "sound_played": False, "seen_notices": [], "expanded_notices": [], "expanded_cities": [], "last_tab": None, "alert_active": False, "current_alert_id": None, "password": "0009", "show_pw_form": False, "sidebar_open": False, "notice_open": False, "adding_city": False, "edit_mode": {} }
+defaults = { "admin": False, "lang": "ko", "tab_selection": "공지", "new_notice": False, "sound_played": False, "seen_notices": [], "expanded_notices": [], "expanded_cities": [], "last_tab": None, "alert_active": False, "current_alert_id": None, "password": "0009", "show_pw_form": False, "sidebar_open": False, "notice_open": False, "adding_city": False, "selected_city": None }
 for k, v in defaults.items():
     if k not in st.session_state: st.session_state[k] = v
 
@@ -66,7 +66,7 @@ st.markdown("""
     .hamburger { position: fixed; top: 15px; left: 15px; z-index: 10000; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
     .sidebar-mobile { position: fixed; top: 0; left: -300px; width: 280px; height: 100vh; background: rgba(30,30,30,0.95); color: white; padding: 20px; transition: left 0.3s ease; z-index: 9999; overflow-y: auto; }
     .sidebar-mobile.open { left: 0; }
-    .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9998; display: none; }
+    .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9998 itemtype: display: none; }
     .overlay.open { display: block; }
     @media (min-width: 769px) {
         .hamburger, .sidebar-mobile, .overlay { display: none !important; }
@@ -205,16 +205,19 @@ elif st.session_state.tab_selection == _(f"tab_map"):
         if st.button(_("add_city"), key="add_city_btn"):
             st.session_state.adding_city = True
 
-        # --- 도시 추가 폼 ---
+        # --- 도시 추가 폼 (도시 선택 바 + 하위 목록) ---
         if st.session_state.get("adding_city", False):
             with st.container():
                 cities = load_json(CITY_FILE)
-                city_names = [c["city"] for c in cities]
-                selected_city = st.selectbox("도시 선택", city_names + ["새 도시 입력"], key="select_city_add")
+                city_names = [c["city"] for c in cities] + ["새 도시 입력"]
+                selected_city = st.selectbox("도시 선택", city_names, key="select_city_add")
+
                 if selected_city == "새 도시 입력":
-                    st.session_state.adding_city = False
-                    st.rerun()
-                if selected_city:
+                    city_name = st.text_input("새 도시명", key="new_city_name")
+                else:
+                    city_name = selected_city
+
+                if city_name:
                     with st.form("city_form_add"):
                         perf_date = st.date_input(_("perf_date"), key="add_perf_date")
                         venue = st.text_input(_("venue"), key="add_venue")
@@ -225,7 +228,7 @@ elif st.session_state.tab_selection == _(f"tab_map"):
                         col1, col2 = st.columns(2)
                         with col1:
                             if st.form_submit_button(_("save"), key="save_city_btn"):
-                                new_city = { "city": selected_city, "venue": venue, "seats": str(seats), "indoor": indoor == _(f"indoor"), "note": note, "google_link": google_link, "perf_date": str(perf_date), "date": datetime.now().strftime("%m/%d %H:%M") }
+                                new_city = { "city": city_name, "venue": venue, "seats": str(seats), "indoor": indoor == _(f"indoor"), "note": note, "google_link": google_link, "perf_date": str(perf_date), "date": datetime.now().strftime("%m/%d %H:%M") }
                                 data = load_json(CITY_FILE)
                                 data.append(new_city)
                                 save_json(CITY_FILE, data)
@@ -246,7 +249,7 @@ elif st.session_state.tab_selection == _(f"tab_map"):
         is_future = c.get("perf_date", "9999-12-31") >= str(date.today())
         color = "red" if is_future else "gray"
         indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
-        popup_html = f"<div style='font-size:14px; line-height:1.6;'><b>{c['city']}</b><br>{_('perf_date')}: {c.get('perf_date','미정')}<br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br><a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving' target='_blank'>{_('google_link')}</a></div>"
+        popup_html = f"<div style='font-size:14px; line-height:1.6;'><b>{c['city']}</b><br>{_('perf_date')}: {c.get('perf_date','미정')}<br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br><a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving' target='_blank'>🚗 {_('google_link')}</a></div>"
         folium.Marker(coords, popup=folium.Popup(popup_html, max_width=300), icon=folium.Icon(color=color, icon="music", prefix="fa")).add_to(m)
         if i < len(cities) - 1:
             nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
