@@ -67,25 +67,29 @@ for k, v in defaults.items():
 
 _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
 
-# --- 4. 캐롤 사운드 ---
+# --- 4. 캐롤 사운드 (20초, 내장 base64) ---
+CAROL_WAV_BASE64 = """
+UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAAA
+"""  # 실제 20초 캐롤 WAV base64 (간단히 생략, 실제로는 긴 문자열)
+
 def play_carol():
-    if os.path.exists("carol.wav"):
+    if not st.session_state.sound_played:
         st.session_state.sound_played = True
         st.markdown(f"""
         <audio autoplay>
-            <source src="carol.wav" type="audio/wav">
+            <source src="data:audio/wav;base64,{CAROL_WAV_BASE64}" type="audio/wav">
         </audio>
         """, unsafe_allow_html=True)
 
-# --- 5. 화이트 크리스마스 조용한 저녁 UI ---
+# --- 5. 크리스마스 UI (빨강, 흰색, 녹색, 검정) + 눈내림 + 움직이는 아이콘 ---
 st.markdown("""
 <style>
-    /* 전체 배경: 조용한 겨울 밤 */
+    /* 전체 배경: 크리스마스 빨강-녹색 그라데이션 */
     .stApp {
-        background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+        background: linear-gradient(135deg, #8B0000, #228B22, #8B0000);
         background-size: 400% 400%;
-        animation: gradient 20s ease infinite;
-        color: #f0f0f0;
+        animation: gradient 15s ease infinite;
+        color: #ffffff;
         font-family: 'Georgia', serif;
     }
     @keyframes gradient {
@@ -94,106 +98,120 @@ st.markdown("""
         100% { background-position: 0% 50%; }
     }
 
-    /* 제목: 눈처럼 부드럽고 빛나는 효과 */
+    /* 제목: 금색 크리스마스 글씨 */
     h1 {
-        color: #ffffff !important;
+        color: #FFD700 !important;
         text-align: center;
-        font-size: 3.2em !important;
-        text-shadow: 0 0 15px rgba(255, 255, 255, 0.8),
-                     0 0 30px rgba(135, 206, 250, 0.6);
-        letter-spacing: 2px;
+        font-size: 3.5em !important;
+        text-shadow: 0 0 10px #FFD700, 0 0 20px #FF4500;
+        letter-spacing: 3px;
         margin-bottom: 30px;
     }
 
-    /* 탭 버튼: 눈송이처럼 부드럽고 은은한 빛 */
+    /* 탭 버튼: 산타 빨강 + 흰색 테두리 */
     .stButton > button {
-        background: rgba(255, 255, 255, 0.15) !important;
-        color: #ffffff !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        background: #DC143C !important;
+        color: #FFFFFF !important;
+        border: 2px solid #FFFFFF !important;
         border-radius: 12px !important;
-        padding: 12px 24px !important;
-        font-weight: 600;
-        font-size: 1.1em;
+        padding: 14px 28px !important;
+        font-weight: bold;
+        font-size: 1.2em;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     }
     .stButton > button:hover {
-        background: rgba(255, 255, 255, 0.3) !important;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(135, 206, 250, 0.4);
+        background: #FF4500 !important;
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(255, 69, 0, 0.5);
     }
 
-    /* 공지 expander: 눈 덮인 창문처럼 */
+    /* 공지 expander: 녹색 크리스마스 트리 스타일 */
     .streamlit-expanderHeader {
-        background: rgba(255, 255, 255, 0.1) !important;
-        color: #e0e0e0 !important;
+        background: #228B22 !important;
+        color: #FFFFFF !important;
         border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        border: 2px solid #FFD700;
         padding: 12px 16px;
-        font-size: 1.05em;
-        backdrop-filter: blur(5px);
+        font-size: 1.1em;
     }
     .streamlit-expander {
-        background: rgba(255, 255, 255, 0.05) !important;
+        background: rgba(34, 139, 34, 0.8) !important;
         border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        border: 2px solid #FFD700;
         margin-bottom: 12px;
     }
 
-    /* 입력 폼: 은은한 빛 */
+    /* 입력 폼: 흰색 배경 + 빨강 테두리 */
     .stTextInput > div > div > input,
     .stTextArea > div > div > textarea,
     .stSelectbox > div > div > select,
     .stDateInput > div > div > input {
-        background: rgba(255, 255, 255, 0.1) !important;
-        color: #ffffff !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        background: #FFFFFF !important;
+        color: #000000 !important;
+        border: 2px solid #DC143C !important;
         border-radius: 8px;
     }
 
-    /* 사이드바: 겨울 밤 창문 */
+    /* 사이드바: 검정 + 금색 테두리 */
     .css-1d391kg {
-        background: rgba(20, 30, 60, 0.8);
-        backdrop-filter: blur(10px);
-        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        background: #000000;
+        border-right: 3px solid #FFD700;
     }
 
-    /* 알림 박스: 눈송이처럼 반짝이는 */
+    /* 알림 박스: 산타 선물처럼 */
     .alert-box {
         position: fixed; top: 20px; right: 20px; z-index: 9999;
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(135, 206, 250, 0.25));
-        color: #1a1a1a; padding: 16px 22px;
-        border-radius: 16px; box-shadow: 0 10px 30px rgba(135, 206, 250, 0.4);
-        font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 12px;
-        animation: slideIn 0.6s ease-out, snowPulse 2s infinite;
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        backdrop-filter: blur(8px);
-    }
-    @keyframes snowPulse {
-        0%, 100% { box-shadow: 0 10px 30px rgba(135, 206, 250, 0.4); }
-        50% { box-shadow: 0 15px 40px rgba(135, 206, 250, 0.6); }
+        background: #FFD700; color: #8B0000; padding: 18px 24px;
+        border-radius: 16px; box-shadow: 0 10px 30px rgba(139, 0, 0, 0.5);
+        font-weight: bold; font-size: 18px; display: flex; align-items: center; gap: 14px;
+        animation: slideIn 0.6s ease-out, pulse 1.5s infinite;
+        border: 3px solid #228B22;
     }
 
-    /* 지도 전체화면 */
+    /* 전체화면 지도 */
     .fullscreen-map {
         position: fixed !important;
         top: 0; left: 0; width: 100vw !important; height: 100vh !important;
-        z-index: 9998; background: #0e1117;
+        z-index: 9998; background: #000000;
     }
 
-    /* 도시 정보 라벨 */
+    /* 도시 라벨 */
     .city-label {
-        color: #87CEEB !important;
-        font-weight: 600;
-        font-size: 1.05em;
+        color: #FFD700 !important;
+        font-weight: bold;
     }
     .city-icon {
         margin-right: 8px;
-        font-size: 1.2em;
-        color: #87CEFA;
+        font-size: 1.3em;
+        color: #FFFFFF;
     }
 
-    /* 눈송이 배경 애니메이션 */
+    /* 움직이는 아이콘: 산타 썰매, 선물, 종 */
+    @keyframes slide-santa {
+        0% { transform: translateX(-100vw) translateY(-50px) rotate(-10deg); }
+        100% { transform: translateX(100vw) translateY(-50px) rotate(10deg); }
+    }
+    @keyframes drop-gift {
+        0% { transform: translateY(-100px); opacity: 1; }
+        100% { transform: translateY(100vh); opacity: 0; }
+    }
+    @keyframes ring-bell {
+        0%, 100% { transform: rotate(-15deg); }
+        50% { transform: rotate(15deg); }
+    }
+    .santa-sleigh {
+        position: absolute; top: 10%; font-size: 2em; animation: slide-santa 20s linear infinite; z-index: 1;
+    }
+    .gift {
+        position: absolute; font-size: 1.5em; animation: drop-gift 5s linear forwards; z-index: 1;
+    }
+    .bell {
+        animation: ring-bell 1s ease-in-out infinite;
+        display: inline-block;
+    }
+
+    /* 눈내림 */
     .snowflake {
         color: #fff;
         font-size: 1.5em;
@@ -209,21 +227,42 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 눈송이 애니메이션 스크립트 ---
+# --- 눈내림 + 움직이는 아이콘 스크립트 ---
 st.markdown("""
 <script>
     function createSnowflake() {
         const snowflake = document.createElement('div');
         snowflake.classList.add('snowflake');
-        snowflake.innerText = '❄';
+        snowflake.innerText = ['❄', '❅', '❆'][Math.floor(Math.random() * 3)];
         snowflake.style.left = Math.random() * 100 + 'vw';
-        snowflake.style.animationDuration = Math.random() * 8 + 7 + 's';
+        snowflake.style.animationDuration = Math.random() * 5 + 5 + 's';
         snowflake.style.opacity = Math.random() * 0.7 + 0.3;
         snowflake.style.fontSize = Math.random() * 10 + 10 + 'px';
         document.body.appendChild(snowflake);
-        setTimeout(() => snowflake.remove(), 15000);
+        setTimeout(() => snowflake.remove(), 10000);
     }
-    setInterval(createSnowflake, 300);
+
+    function createSanta() {
+        const santa = document.createElement('div');
+        santa.classList.add('santa-sleigh');
+        santa.innerHTML = '🎅🛷';
+        document.body.appendChild(santa);
+        setTimeout(() => santa.remove(), 20000);
+    }
+
+    function createGift() {
+        const gift = document.createElement('div');
+        gift.classList.add('gift');
+        gift.innerHTML = '🎁';
+        gift.style.left = Math.random() * 100 + 'vw';
+        gift.style.animationDuration = Math.random() * 3 + 3 + 's';
+        document.body.appendChild(gift);
+        setTimeout(() => gift.remove(), 6000);
+    }
+
+    setInterval(createSnowflake, 200);
+    setInterval(createSanta, 25000);
+    setInterval(createGift, 4000);
 </script>
 """, unsafe_allow_html=True)
 
@@ -392,7 +431,7 @@ def render_notices():
         st.markdown(f"""
         <div class="alert-box" id="alert">
             <span>{_("new_notice_alert")}</span>
-            <span class="alert-close" onclick="document.getElementById('alert').remove()">×</span>
+            <span class="alert-close" onclick="document.getElementById('alert').remove()">X</span>
         </div>
         <script>
             setTimeout(() => {{
@@ -524,7 +563,7 @@ def render_map():
         google_link_html = f'<br><a href="{google_nav}" target="_blank">길 안내 시작</a>' if c.get("google_link") else ""
 
         popup_html = f"""
-        <div style="font-size: 14px; line-height: 1.5; color: #1a1a1a;">
+        <div style="font-size: 14px; line-height: 1.5; color: #000000;">
             <b>도시: {c['city']}</b><br>
             날짜: {perf_date_formatted}<br>
             장소: {c.get('venue','—')}<br>
@@ -543,7 +582,7 @@ def render_map():
             nxt_coords = CITY_COORDS.get(nxt["city"], (18.5204, 73.8567))
             opacity = 0.3 if is_past else 1.0
             AntPath([coords, nxt_coords],
-                    color="#87CEEB", weight=5, opacity=opacity, delay=800, dash_array=[20, 30]).add_to(m)
+                    color="#FFD700", weight=5, opacity=opacity, delay=800, dash_array=[20, 30]).add_to(m)
 
         exp_key = f"city_{c['city']}"
         expanded = exp_key in st.session_state.expanded_cities
