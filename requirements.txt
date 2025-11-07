@@ -1,4 +1,6 @@
 streamlit
+folium
+streamlit-folium
 streamlit-autorefresh
-requests
 pytz
+requests
