@@ -77,7 +77,7 @@ def play_carol():
         </audio>
         """, unsafe_allow_html=True)
 
-# --- 5. CSS + 전체화면 + NEW 종 애니메이션 ---
+# --- 5. CSS + 전체화면 ---
 st.markdown("""
 <style>
     .alert-box {
@@ -106,24 +106,6 @@ st.markdown("""
         position: fixed !important;
         top: 0; left: 0; width: 100vw !important; height: 100vh !important;
         z-index: 9998; background: white;
-    }
-    
-    /* NEW 종 아이콘 흔들림 애니메이션 */
-    @keyframes bell-ring {
-        0% { transform: rotate(0deg); }
-        10% { transform: rotate(15deg); }
-        20% { transform: rotate(-10deg); }
-        30% { transform: rotate(10deg); }
-        40% { transform: rotate(-5deg); }
-        50% { transform: rotate(5deg); }
-        60% { transform: rotate(0deg); }
-        100% { transform: rotate(0deg); }
-    }
-    .new-bell {
-        display: inline-block;
-        animation: bell-ring 1.5s ease-in-out infinite;
-        font-size: 1.2em;
-        margin-left: 8px;
     }
 </style>
 <script>
@@ -196,7 +178,7 @@ with st.sidebar:
                         else:
                             st.error(_(f"pw_error"))
                 with col2:
-                    if st.form_submit_button("취소"):
+                    if st.form-submit_button("취소"):
                         st.session_state.show_pw_form = False
                         st.rerun()
 
@@ -207,7 +189,7 @@ def load_json(f):
 def save_json(f, d):
     json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
-# --- 9. 초기 도시 (Pune 추가 + 오류 수정) ---
+# --- 9. 초기 도시 (Pune 추가) ---
 DEFAULT_CITIES = [
     {"city": "Mumbai", "venue": "Gateway of India", "seats": "5000", "note": "인도 영화 수도",
      "google_link": "https://goo.gl/maps/abc123", "indoor": False, "date": "11/07 02:01"},
@@ -274,13 +256,9 @@ def render_notices():
     data = load_json(NOTICE_FILE)
     
     for i, n in enumerate(data):
-        # NEW 아이콘: 일반 사용자만, 안 읽은 것에만 + 흔들림
-        new_icon = ''
-        if not st.session_state.admin and n["id"] not in st.session_state.seen_notices:
-            new_icon = '<span class="new-bell">🔔</span>'
-
+        # NEW 아이콘 제거 (모든 모드)
         formatted_date = format_notice_date(n['date'])
-        title = f"{formatted_date} | {n['title']} {new_icon}"
+        title = f"{formatted_date} | {n['title']}"
         exp_key = f"notice_{n['id']}"
         expanded = exp_key in st.session_state.expanded_notices
 
@@ -344,7 +322,7 @@ def render_map():
     cities = sorted(raw_cities, key=lambda x: x.get("perf_date", "9999-12-31"))
     city_names = [c["city"] for c in raw_cities]
 
-    # --- 도시 추가 폼 ---
+    # --- 도시 추가 폼 (Pune 포함) ---
     if st.session_state.admin:
         if st.button(_(f"add_city"), key="add_city_btn"):
             st.session_state.adding_city = True
@@ -430,7 +408,7 @@ def render_map():
                         st.session_state.edit_city = None
                         st.rerun()
 
-    # --- 지도 ---
+    # --- 지도 (popup + expander에 아이콘 포함) ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="CartoDB positron")
 
     for i, c in enumerate(cities):
@@ -512,7 +490,7 @@ def render_map():
 
     st_folium(m, width=900, height=550, key="tour_map")
 
-# --- 13. 탭 (라디오 대신 버튼으로 "탭 선택" 제거) ---
+# --- 13. 탭 (버튼) ---
 col1, col2 = st.columns(2)
 with col1:
     if st.button(_(f"tab_notice"), use_container_width=True):
