@@ -22,25 +22,20 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # --- 3. 다국어 ---
 LANG = {
-    "ko": {
-        "tab_notice": "공지", "tab_map": "투어 경로", "today": "오늘", "yesterday": "어제",
-        "new_notice_alert": "따끈한 공지가 도착했어요!", "warning": "제목과 내용을 입력하세요."
-    },
-    "en": {
-        "tab_notice": "Notice", "tab_map": "Tour Route", "today": "Today", "yesterday": "Yesterday",
-        "new_notice_alert": "Hot new notice arrived!", "warning": "Please enter title and content."
-    },
-    "hi": {
-        "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "today": "आज", "yesterday": "कल",
-        "new_notice_alert": "ताज़ा सूचना आई है!", "warning": "कृपया शीर्षक और सामग्री दर्ज करें।"
-    }
+    "ko": {"tab_notice": "공지", "tab_map": "투어 경로", "today": "오늘", "yesterday": "어제",
+           "new_notice_alert": "🎄 새 공지가 도착했어요! 🎅", "warning": "제목과 내용을 입력하세요.", "close": "닫기"},
+    "en": {"tab_notice": "Notice", "tab_map": "Tour Route", "today": "Today", "yesterday": "Yesterday",
+           "new_notice_alert": "🎄 New notice arrived! 🎅", "warning": "Please enter title and content.", "close": "Close"},
+    "hi": {"tab_notice": "सूचना", "tab_map": "टूर मार्ग", "today": "आज", "yesterday": "कल",
+           "new_notice_alert": "🎄 नई सूचना आई! 🎅", "warning": "कृपया शीर्षक और सामग्री दर्ज करें।", "close": "बंद करें"}
 }
 
 # --- 4. 세션 초기화 ---
 defaults = {
     "admin": False, "lang": "ko", "edit_city": None,
     "tab_selection": "공지", "new_notice": False, "sound_played": False,
-    "seen_notices": [], "expanded_notices": [], "expanded_cities": [], "last_tab": None
+    "seen_notices": [], "expanded_notices": [], "expanded_cities": [], "last_tab": None,
+    "notice_alert_shown": False, "current_alert_id": None
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -48,10 +43,10 @@ for k, v in defaults.items():
 
 _ = lambda key: LANG.get(st.session_state.lang, LANG["ko"]).get(key, key)
 
-# --- 5. 크리스마스 캐롤 (Base64) ---
+# --- 5. 크리스마스 캐롤 ---
 CHRISTMAS_CAROL_WAV = "UklGRu4FAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA..."
 
-# --- 6. 🔥 지옥불 알림 + 최대 볼륨 사운드 ---
+# --- 6. 크리스마스 지옥불 알림 (눈 + 산타 + 벨 + 선물 + 확인 전까지 유지) ---
 st.markdown(f"""
 <style>
 .stApp {{ background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #f0f0f0; }}
@@ -60,72 +55,63 @@ st.markdown(f"""
 .year {{ font-size: 2.8em; color: #ecf0f1; text-shadow: 0 0 8px #ffffff; }}
 .maha {{ font-size: 1.8em; color: #3498db; font-style: italic; text-shadow: 0 0 6px #74b9ff; }}
 
-/* 🔥🔥🔥 지옥불 알림 🔥🔥🔥 */
-.alert-slide {{
+/* 크리스마스 지옥불 알림 */
+.christmas-alert {{
     position: fixed;
     top: 20px;
     right: 10%;
-    transform: translateX(0);
-    background: linear-gradient(45deg, #ff1a1a, #ff6b1a, #ffcc00, #ff1a1a);
+    background: linear-gradient(45deg, #c21500, #ffc500, #ff6b35, #c21500);
     background-size: 400% 400%;
     color: white;
-    padding: 16px 36px;
-    border-radius: 60px;
+    padding: 18px 40px;
+    border-radius: 70px;
     font-weight: 900;
-    font-size: 1.3em;
+    font-size: 1.4em;
     z-index: 99999;
     box-shadow: 
-        0 0 20px rgba(255, 0, 0, 0.9),
-        0 0 40px rgba(255, 100, 0, 0.7),
-        0 0 80px rgba(255, 200, 0, 0.5),
-        0 0 120px rgba(255, 255, 0, 0.3);
+        0 0 30px rgba(255, 255, 255, 0.8),
+        0 0 60px rgba(255, 215, 0, 0.7),
+        0 0 100px rgba(255, 0, 0, 0.5);
     animation: 
         slideRight 7s forwards,
-        pulseBg 1.5s infinite,
-        shake 0.5s infinite alternate,
-        glow 2s infinite alternate;
-    white-space: nowrap;
-    border: 3px solid transparent;
-    text-shadow: 
-        0 0 10px #fff,
-        0 0 20px #ff0,
-        0 0 30px #f00;
-    letter-spacing: 1px;
-    font-family: 'Arial Black', sans-serif;
-    transform-style: preserve-3d;
-    perspective: 1000px;
+        pulseBg 2s infinite,
+        shake 0.6s infinite alternate,
+        snow 3s infinite linear;
+    border: 4px solid #fff;
+    text-shadow: 0 0 15px #000;
+    font-family: 'Comic Sans MS', cursive;
     overflow: visible;
 }}
 
-.alert-slide::before {{
-    content: '';
+.christmas-alert::before {{
+    content: '❄️🎄🎅🔔🎁';
     position: absolute;
-    top: -10px; left: -10px; right: -10px; bottom: -10px;
-    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><defs><radialGradient id="fire"><stop offset="0%" stop-color="%23ff0"/><stop offset="100%" stop-color="%23f00"/></radialGradient></defs><circle cx="50" cy="50" r="40" fill="url(%23fire)" opacity="0.6"><animate attributeName="r" values="30;50;30" dur="1s" repeatCount="indefinite"/></circle></svg>') repeat;
-    background-size: 30px 30px;
-    animation: fireParticles 2s infinite linear;
-    z-index: -1;
-    border-radius: 70px;
-    opacity: 0.8;
+    top: -30px; left: 50%; transform: translateX(-50%);
+    font-size: 2em;
+    animation: bellRing 1s infinite;
 }}
 
-@keyframes slideRight {{
-    0% {{ transform: translateX(200%) rotateY(90deg); opacity: 0; }}
-    15% {{ transform: translateX(0) rotateY(0deg); opacity: 1; }}
-    85% {{ transform: translateX(0) rotateY(0deg); opacity: 1; }}
-    100% {{ transform: translateX(200%) rotateY(-90deg); opacity: 0; }}
+.christmas-alert .close-btn {{
+    position: absolute;
+    top: 8px; right: 12px;
+    background: #c21500;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 28px; height: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1em;
 }}
 
+@keyframes slideRight {{ 0% {{ transform: translateX(200%) rotate(15deg); opacity: 0; }} 15% {{ transform: translateX(0) rotate(0); opacity: 1; }} 85% {{ opacity: 1; }} 100% {{ opacity: 0; }} }}
 @keyframes pulseBg {{ 0%, 100% {{ background-position: 0% 50%; }} 50% {{ background-position: 100% 50%; }} }}
-@keyframes shake {{ 0% {{ transform: translateX(0) rotateY(0); }} 100% {{ transform: translateX(-3px) rotateY(-2deg); }} }}
-@keyframes glow {{ 0% {{ box-shadow: 0 0 20px rgba(255,0,0,0.9), 0 0 40px rgba(255,100,0,0.7); }} 100% {{ box-shadow: 0 0 40px rgba(255,0,0,1), 0 0 80px rgba(255,100,0,0.9), 0 0 120px rgba(255,255,0,0.5); }} }}
-@keyframes fireParticles {{ 0% {{ background-position: 0 0; }} 100% {{ background-position: 100px 100px; }} }}
-@keyframes textFlicker {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.8; }} }}
-
-.alert-slide span {{ animation: textFlicker 0.3s infinite; display: inline-block; }}
+@keyframes shake {{ 0% {{ transform: translateX(0); }} 100% {{ transform: translateX(-4px); }} }}
+@keyframes snow {{ 0% {{ background-position: 0 0; }} 100% {{ background-position: 0 100px; }} }}
+@keyframes bellRing {{ 0%, 100% {{ transform: rotate(0deg); }} 25% {{ transform: rotate(-15deg); }} 75% {{ transform: rotate(15deg); }} }}
 
 @media (max-width: 768px) {{
-    .alert-slide {{ right: 5%; font-size: 1.1em; padding: 12px 24px; }}
+    .christmas-alert {{ right: 5%; font-size: 1.1em; padding: 14px 28px; }}
 }}
 </style>
 
@@ -138,14 +124,13 @@ function playChristmasCarol() {{
         const source = ctx.createMediaElementSource(audio);
         const gainNode = ctx.createGain();
         gainNode.gain.value = 5.0;
-        const compressor = ctx.createDynamicsCompressor();
-        source.connect(gainNode).connect(compressor).connect(ctx.destination);
-        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 500]);
+        source.connect(gainNode).connect(ctx.destination);
+        if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 600]);
         audio.play().catch(() => {{}});
     }} catch(e) {{
         const audio = new Audio('data:audio/wav;base64,{CHRISTMAS_CAROL_WAV}');
         audio.volume = 1.0;
-        if (navigator.vibrate) navigator.vibrate(500);
+        if (navigator.vibrate) navigator.vibrate(600);
         audio.play().catch(() => {{}});
     }}
 }}
@@ -197,7 +182,7 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE):
     save_json(CITY_FILE, DEFAULT_CITIES)
 
-# --- 10. 실시간 거리 ---
+# --- 10. 거리 계산 ---
 def get_real_travel_time(lat1, lon1, lat2, lon2):
     try:
         api_key = st.secrets.get("GOOGLE_API_KEY", "")
@@ -241,15 +226,19 @@ def add_notice(title, content, img=None, file=None):
     save_json(NOTICE_FILE, data)
     st.session_state.seen_notices = []
     st.session_state.new_notice = True
-    st.session_state.expanded_notices = []
+    st.session_state.notice_alert_shown = False
+    st.session_state.current_alert_id = notice["id"]
     st.rerun()
 
 def render_notices():
     data = load_json(NOTICE_FILE)
     has_new = False
+    latest_new_id = None
     for i, n in enumerate(data):
         new = n["id"] not in st.session_state.seen_notices and not st.session_state.admin
-        if new: has_new = True
+        if new:
+            has_new = True
+            if not latest_new_id: latest_new_id = n["id"]
         title = f"{format_notice_date(n['date'])} | {n['title']}" + (' <span class="new-badge">NEW</span>' if new else '')
         exp_key = f"notice_{n['id']}"
         expanded = exp_key in st.session_state.expanded_notices
@@ -271,14 +260,23 @@ def render_notices():
             elif not expanded and exp_key in st.session_state.expanded_notices:
                 st.session_state.expanded_notices.remove(exp_key)
 
-    if has_new and not st.session_state.sound_played:
+    # 새 공지 알림 (확인 전까지 유지)
+    if has_new and (not st.session_state.notice_alert_shown or st.session_state.current_alert_id != latest_new_id):
         st.markdown("<script>playChristmasCarol();</script>", unsafe_allow_html=True)
-        st.session_state.sound_played = True
-        st.markdown(f'<div class="alert-slide"><span>{_("new_notice_alert")}</span></div>', unsafe_allow_html=True)
+        st.session_state.notice_alert_shown = True
+        st.session_state.current_alert_id = latest_new_id
+        alert_html = f'''
+        <div class="christmas-alert">
+            <span>{_("new_notice_alert")}</span>
+            <button class="close-btn" onclick="document.getElementById('alert-container').remove()">×</button>
+        </div>
+        <div id="alert-container"></div>
+        '''
+        st.markdown(alert_html, unsafe_allow_html=True)
     elif not has_new:
-        st.session_state.sound_played = False
+        st.session_state.notice_alert_shown = False
 
-# --- 12. 지도 ---
+# --- 12. 지도 (과거 도시 투명도 0.3 적용) ---
 def render_map():
     st.subheader("경로 보기")
     today = date.today()
@@ -294,7 +292,8 @@ def render_map():
     else:
         for i, c in enumerate(cities):
             is_past = c.get('perf_date') and c['perf_date'] != "9999-12-31" and datetime.strptime(c['perf_date'], "%Y-%m-%d").date() < today
-            icon = folium.Icon(color="red", icon="music", prefix="fa", opacity=0.5 if is_past else 1.0)
+            opacity = 0.3 if is_past else 1.0
+            icon = folium.Icon(color="red", icon="music", prefix="fa", opacity=opacity)
             popup = f"<b>{c['city']}</b><br>{c.get('perf_date','미정')}<br>{c.get('venue','—')}"
             folium.Marker([c["lat"], c["lon"]], popup=folium.Popup(popup, max_width=280), tooltip=c["city"], icon=icon).add_to(m)
 
@@ -305,11 +304,12 @@ def render_map():
                 label_text = f"{dist_km:.0f}km {time_str}".strip()
                 mid_lat, mid_lon = (c['lat'] + next_c['lat']) / 2, (c['lon'] + next_c['lon']) / 2
                 bearing = degrees(atan2(next_c['lon'] - c['lon'], next_c['lat'] - c['lat']))
+                path_opacity = 0.3 if is_past else 1.0
                 folium.Marker([mid_lat, mid_lon], icon=folium.DivIcon(html=f'''
-                    <div style="transform: translate(-50%,-50%) rotate({bearing}deg); opacity: {"0.5" if is_past else "1.0"}; color:#e74c3c; font-weight:bold; font-size:12px;">
+                    <div style="transform: translate(-50%,-50%) rotate({bearing}deg); opacity: {path_opacity}; color:#e74c3c; font-weight:bold; font-size:12px;">
                     {label_text}</div>''')).add_to(m)
                 AntPath([(c['lat'], c['lon']), (next_c['lat'], next_c['lon'])],
-                        color="#e74c3c", weight=6, opacity=0.5 if is_past else 1.0,
+                        color="#e74c3c", weight=6, opacity=path_opacity,
                         delay=800, dash_array=[20,30]).add_to(m)
 
             exp_key = f"city_{c['city']}"
@@ -320,14 +320,14 @@ def render_map():
                     st.write(f"{k}: {c.get(v, '—')}")
                 if c.get("google_link"):
                     st.markdown(f"[구글맵 보기]({c['google_link']})")
-                if st.session_state.admin and not st.session_state.edit_city:
+                if st.session_state.admin:
                     c1, c2 = st.columns(2)
                     with c1:
-                        if st.button("수정", key=f"edit_city_{i}"):
+                        if st.button("수정", key=f"edit_city_{c['city']}_{i}"):  # 고유 key
                             st.session_state.edit_city = c["city"]
                             st.rerun()
                     with c2:
-                        if st.button("삭제", key=f"del_city_{i}"):
+                        if st.button("삭제", key=f"del_city_{c['city']}_{i}"):
                             raw_cities = [x for x in raw_cities if x["city"] != c["city"]]
                             save_json(CITY_FILE, raw_cities)
                             st.rerun()
