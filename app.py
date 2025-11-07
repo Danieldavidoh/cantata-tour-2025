@@ -118,11 +118,9 @@ with st.sidebar:
             st.rerun()
 
         st.markdown("---")
-        # 비밀번호 변경 버튼만 표시
         if st.button(_(f"change_pw"), key="show_pw_btn"):
             st.session_state.show_pw_form = True
 
-        # 폼은 버튼 클릭 시에만 표시
         if st.session_state.get("show_pw_form", False):
             with st.form("change_pw_form"):
                 st.markdown("### 비밀번호 변경")
@@ -195,6 +193,7 @@ def add_notice(title, content, img=None, file=None):
     data.insert(0, notice)
     save_json(NOTICE_FILE, data)
 
+    # 일반 사용자용 알림 강제 활성화
     st.session_state.new_notice = True
     st.session_state.alert_active = True
     st.session_state.current_alert_id = notice["id"]
@@ -210,7 +209,8 @@ def format_notice_date(d):
             return _(f"today")
         elif dt.date() == today - timedelta(days=1):
             return _(f"yesterday")
-        return d
+        else:
+            return d  # 나머지는 그대로 날짜 표시
     except:
         return d
 
@@ -218,6 +218,7 @@ def render_notices():
     data = load_json(NOTICE_FILE)
     
     for i, n in enumerate(data):
+        # NEW 뱃지 로직
         is_new = False
         if st.session_state.admin:
             badge = ''
@@ -228,7 +229,10 @@ def render_notices():
             else:
                 badge = ''
 
-        title = f"{format_notice_date(n['date'])} | {n['title']}{badge}"
+        # 날짜 포맷팅
+        formatted_date = format_notice_date(n['date'])
+
+        title = f"{formatted_date} | {n['title']}{badge}"
         exp_key = f"notice_{n['id']}"
         expanded = exp_key in st.session_state.expanded_notices
 
@@ -246,17 +250,20 @@ def render_notices():
                 save_json(NOTICE_FILE, data)
                 st.rerun()
 
+            # 일반 사용자: expander 열 때만 seen 처리 + NEW 사라짐
             if not st.session_state.admin and is_new and expanded:
-                st.session_state.seen_notices.append(n["id"])
+                if n["id"] not in st.session_state.seen_notices:
+                    st.session_state.seen_notices.append(n["id"])
                 if n["id"] == st.session_state.current_alert_id:
                     st.session_state.alert_active = False
-                    st.rerun()
+                st.rerun()  # 즉시 NEW 사라지게
 
             if expanded and exp_key not in st.session_state.expanded_notices:
                 st.session_state.expanded_notices.append(exp_key)
             elif not expanded and exp_key in st.session_state.expanded_notices:
                 st.session_state.expanded_notices.remove(exp_key)
 
+    # 알림 팝업 (일반 사용자만)
     if not st.session_state.admin and st.session_state.alert_active and st.session_state.current_alert_id:
         st.markdown(f"""
         <div class="alert-box" id="alert">
@@ -291,7 +298,7 @@ def render_map():
     cities = sorted(raw_cities, key=lambda x: x.get("perf_date", "9999-12-31"))
     city_names = [c["city"] for c in raw_cities]
 
-    # --- 도시 추가 폼 (기존 도시 클릭 선택) ---
+    # --- 도시 추가 폼 ---
     if st.session_state.admin:
         if st.button(_(f"add_city"), key="add_city_btn"):
             st.session_state.adding_city = True
