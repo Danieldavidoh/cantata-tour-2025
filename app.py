@@ -121,7 +121,7 @@ with tab_col2:
         st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 공지 (버튼 클릭 시 열림) ---
+# --- 공지 (버튼 클릭 시 바로 아래에 열림) ---
 if st.session_state.notice_open:
     with st.container():
         st.markdown("### 📢 " + _("tab_notice"))
@@ -149,14 +149,14 @@ if st.session_state.notice_open:
 
         data = load_json(NOTICE_FILE)
         for i, n in enumerate(data):
-            with st.expander(f"{n['date']} | {n['title']}"):
-                st.markdown(n["content"])
-                if n.get("image") and os.path.exists(n["image"]): st.image(n["image"], use_column_width=True)
-                if n.get("file") and os.path.exists(n["file"]):
-                    b64 = base64.b64encode(open(n["file"], "rb").read()).decode()
-                    st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">📎 다운로드</a>', unsafe_allow_html=True)
-                if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
-                    data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
+            st.markdown(f"**{n['date']} | {n['title']}**")
+            st.markdown(n["content"])
+            if n.get("image") and os.path.exists(n["image"]): st.image(n["image"], use_column_width=True)
+            if n.get("file") and os.path.exists(n["file"]):
+                b64 = base64.b64encode(open(n["file"], "rb").read()).decode()
+                st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">다운로드</a>', unsafe_allow_html=True)
+            if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
+                data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
 
 # --- 사이드바 (PC) ---
 with st.sidebar:
@@ -179,6 +179,24 @@ with st.sidebar:
         if st.button("로그아웃", key="logout_btn"):
             st.session_state.admin = False
             st.rerun()
+
+        # --- 비밀번호 변경 (관리자 모드 바로 아래) ---
+        st.markdown("---")
+        st.markdown("### " + _("change_pw"))
+        with st.form("change_pw_form"):
+            current_pw = st.text_input(_("current_pw"), type="password")
+            new_pw = st.text_input(_("new_pw"), type="password")
+            confirm_pw = st.text_input(_("confirm_pw"), type="password")
+            if st.form_submit_button("변경"):
+                if current_pw == "0691":
+                    if new_pw == confirm_pw and new_pw:
+                        st.session_state.password = new_pw
+                        st.success(_("pw_changed"))
+                        st.rerun()
+                    else:
+                        st.error(_("pw_mismatch"))
+                else:
+                    st.error(_("pw_error"))
 
 # --- 투어 경로 ---
 if st.session_state.tab_selection == _(f"tab_map"):
@@ -283,7 +301,7 @@ if st.session_state.tab_selection == _(f"tab_map"):
         is_future = c.get("perf_date", "9999-12-31") >= str(date.today())
         color = "red" if is_future else "gray"
         indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
-        popup_html = f"<div style='font-size:14px; line-height:1.6;'><b>{c['city']}</b><br>{_('perf_date')}: {c.get('perf_date','미정')}<br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br><a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving' target='_blank'>🚗 {_('google_link')}</a></div>"
+        popup_html = f"<div style='font-size:14px; line-height:1.6;'><b>{c['city']}</b><br>{_('perf_date')}: {c.get('perf_date','미정')}<br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br><a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving' target='_blank'>{_('google_link')}</a></div>"
         folium.Marker(coords, popup=folium.Popup(popup_html, max_width=300), icon=folium.Icon(color=color, icon="music", prefix="fa")).add_to(m)
         if i < len(cities) - 1:
             nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
