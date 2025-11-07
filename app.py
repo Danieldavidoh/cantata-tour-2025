@@ -268,8 +268,82 @@ def render_map():
 
     cities = sorted(cities, key=lambda x: x.get("perf_date", "9999-12-31") or "9999-12-31")
 
-    # 수정/추가 폼 (기존 코드 유지 - 생략)
+    # =============================
+    # 1. 수정 모드 (항상 표시)
+    # =============================
+    if st.session_state.get("edit_city"):
+        edit_city_name = st.session_state.edit_city
+        edit_city = next((c for c in cities if c["city"] == edit_city_name), None)
+        if edit_city:
+            with st.expander(f"✏️ {edit_city_name} 수정 중", expanded=True):
+                with st.form("edit_city_form", clear_on_submit=True):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown(f"**도시:** {edit_city_name}")
+                        venue = st.text_input(_("venue"), value=edit_city["venue"] or "")
+                        try:
+                            perf_date_val = datetime.strptime(edit_city["perf_date"], "%Y-%m-%d").date() if edit_city["perf_date"] else None
+                        except:
+                            perf_date_val = None
+                        perf_date_input = st.date_input(_("performance_date"), value=perf_date_val)
+                    with col2:
+                        seats_val = int(edit_city["seats"]) if str(edit_city["seats"]).isdigit() else 0
+                        seats = st.number_input(_("seats"), min_value=0, step=50, value=seats_val)
+                        note = st.text_area(_("note"), value=edit_city["note"] or "", height=80)
+                        gmap = st.text_input(_("google_link"), value=edit_city["google_link"] or "")
+                    indoor = st.checkbox(_("indoor"), value=edit_city.get("indoor", True))
 
+                    col_btn = st.columns([1, 1, 3])
+                    with col_btn[0]:
+                        if st.form_submit_button("저장", use_container_width=True):
+                            updated_city = {**edit_city, "venue": venue.strip(), "seats": str(seats), "note": note.strip(), "google_link": gmap.strip(), "indoor": indoor, "perf_date": str(perf_date_input) if perf_date_input else None}
+                            data = load_json(CITY_FILE)
+                            for i, c in enumerate(data):
+                                if c["city"] == edit_city_name:
+                                    data[i] = updated_city
+                                    break
+                            save_json(CITY_FILE, data)
+                            st.session_state.edit_city = None
+                            st.success("수정 완료!")
+                            st.rerun()
+                    with col_btn[1]:
+                        if st.form_submit_button("취소", use_container_width=True):
+                            st.session_state.edit_city = None
+                            st.rerun()
+
+    # =============================
+    # 2. 도시 추가 폼 (항상 표시)
+    # =============================
+    if st.session_state.admin and not st.session_state.get("edit_city"):
+        with st.expander("도시 추가", expanded=True):
+            with st.form("add_city_form", clear_on_submit=True):
+                col1, col2 = st.columns(2)
+                with col1:
+                    major_cities = ["Mumbai", "Pune", "Nagpur"]
+                    selected_city = st.selectbox(_("select_city"), options=major_cities)
+                    venue = st.text_input(_("venue"), placeholder="예: Gateway of India")
+                    perf_date_input = st.date_input(_("performance_date"), value=None)
+                with col2:
+                    seats = st.number_input(_("seats"), min_value=0, step=50, value=500)
+                    note = st.text_area(_("note"), height=80)
+                    gmap = st.text_input(_("google_link"))
+                indoor = st.checkbox(_("indoor"), value=True)
+
+                if st.form_submit_button(_("register"), use_container_width=True):
+                    if not selected_city or not venue.strip():
+                        st.error("필수 입력!")
+                    else:
+                        lat, lon = CITY_COORDS.get(selected_city, (PUNE_LAT, PUNE_LON))
+                        new_city = {"city": selected_city, "venue": venue.strip(), "seats": str(seats), "note": note.strip(), "google_link": gmap.strip(), "indoor": indoor, "lat": lat, "lon": lon, "perf_date": str(perf_date_input) if perf_date_input else None, "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")}
+                        data = load_json(CITY_FILE)
+                        data.append(new_city)
+                        save_json(CITY_FILE, data)
+                        st.success("등록 완료!")
+                        st.rerun()
+
+    # =============================
+    # 3. 지도 렌더링
+    # =============================
     if not cities:
         st.warning("도시 없음")
         m = folium.Map(location=[PUNE_LAT, PUNE_LON], zoom_start=9, tiles="CartoDB positron")
@@ -297,10 +371,9 @@ def render_map():
         except:
             perf_date_obj = None
 
-        # 이전 도시 (today_index 이전) → 흐림
         is_past_segment = (today_index != -1 and i < today_index)
 
-        # 아이콘 투명도
+        # 아이콘
         icon_opacity = 0.35 if is_past_segment else 1.0
         icon = folium.Icon(color="red", icon="music", prefix="fa", opacity=icon_opacity)
 
@@ -322,7 +395,7 @@ def render_map():
             icon=icon
         ).add_to(m)
 
-        # 연결 라인: 이전 도시에서 나가는 라인 → 흐림
+        # 연결 라인
         if i < len(cities)-1:
             line_opacity = 0.35 if is_past_segment else 1.0
             segment_coords = [(c['lat'], c['lon']), (cities[i+1]['lat'], cities[i+1]['lon'])]
