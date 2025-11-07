@@ -311,7 +311,7 @@ def render_map():
     # --- 도시 추가 폼 ---
     if st.session_state.admin:
         if st.button(_(f"add_city"), key="add_city_btn"):
-            st.session_state.adding_city = True
+            st.session_state.adding_city =ite = True
 
         if st.session_state.get("adding_city"):
             st.markdown("### 새 도시 추가")
@@ -492,9 +492,10 @@ if st.session_state.get("new_notice", False):
     st.session_state.new_notice = False
     st.rerun()
 
-# --- 13. 렌더링 (제목을 원래 위치로 복구) ---
+# --- 13. 제목을 맨 위로 (탭 위에) ---
 st.markdown('# 칸타타 투어 2025 마하라스트라')
 
+# --- 14. 렌더링 (탭 아래에 내용) ---
 if tab_selection == _(f"tab_notice"):
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
