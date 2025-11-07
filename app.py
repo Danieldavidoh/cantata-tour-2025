@@ -233,7 +233,7 @@ def render_notices():
     data = load_json(NOTICE_FILE)
     
     for i, n in enumerate(data):
-        # NEW 뱃지: 관리자는 없음, 일반 사용자만 안 읽은 것에만 표시
+        # NEW 뱃지: 일반 사용자만 안 읽은 것에만 표시
         badge = ''
         if not st.session_state.admin and n["id"] not in st.session_state.seen_notices:
             badge = ' NEW'
@@ -391,7 +391,7 @@ def render_map():
                         st.session_state.edit_city = None
                         st.rerun()
 
-    # --- 지도 (말풍선에 예상인원 + 구글맵 링크 추가) ---
+    # --- 지도 (말풍선에 예상인원 + 구글맵 네비 링크) ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="CartoDB positron")
 
     for i, c in enumerate(cities):
@@ -402,7 +402,12 @@ def render_map():
         coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
         indoor_text = _(f"indoor") if c.get("indoor") else _(f"outdoor")
         perf_date_formatted = format_date_with_weekday(c.get("perf_date"))
-        google_link_html = f'<br><a href="{c.get("google_link", "#")}" target="_blank">구글맵 보기</a>' if c.get("google_link") else ""
+
+        # 구글맵 네비게이션 링크 (모바일에서 바로 안내)
+        lat, lon = coords
+        google_nav = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving"
+        google_link_html = f'<br><a href="{google_nav}" target="_blank">🚗 길 안내 시작</a>' if c.get("google_link") else ""
+
         popup_html = f"""
         <b>{c['city']}</b><br>
         {perf_date_formatted}<br>
@@ -448,7 +453,7 @@ def render_map():
             """, unsafe_allow_html=True)
 
             if c.get("google_link"):
-                st.markdown(f"[구글맵 보기]({c['google_link']})")
+                st.markdown(f"[🚗 길 안내 시작]({google_nav})")
 
             if st.session_state.admin:
                 c1, c2 = st.columns(2)
