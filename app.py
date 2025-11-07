@@ -9,40 +9,50 @@ from streamlit_autorefresh import st_autorefresh
 from math import radians, sin, cos, sqrt, asin, atan2, degrees
 import requests
 
-# --- 기본 설정 ---
+# --- 1. 기본 설정 ---
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 if not st.session_state.get("admin", False):
     st_autorefresh(interval=3000, key="auto_refresh_user")
 
-# --- 파일/디렉토리 ---
+# --- 2. 파일/디렉토리 ---
 NOTICE_FILE = "notice.json"
 CITY_FILE = "cities.json"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# --- 다국어 ---
+# --- 3. 다국어 (완전 보완) ---
 LANG = {
-    "ko": {"tab_notice": "공지", "tab_map": "투어 경로", "today": "오늘", "yesterday": "어제", "new_notice_alert": "따끈한 공지가 도착했어요!"},
-    "en": {"tab_notice": "Notice", "tab_map": "Tour Route", "today": "Today", "yesterday": "Yesterday", "new_notice_alert": "Hot new notice arrived!"},
-    "hi": {"tab_notice": "सूचना", "tab_map": "टूर मार्ग", "today": "आज", "yesterday": "कल", "new_notice_alert": "ताज़ा सूचना आई है!"}
+    "ko": {
+        "tab_notice": "공지", "tab_map": "투어 경로", "today": "오늘", "yesterday": "어제",
+        "new_notice_alert": "따끈한 공지가 도착했어요!", "warning": "제목과 내용을 입력하세요."
+    },
+    "en": {
+        "tab_notice": "Notice", "tab_map": "Tour Route", "today": "Today", "yesterday": "Yesterday",
+        "new_notice_alert": "Hot new notice arrived!", "warning": "Please enter title and content."
+    },
+    "hi": {
+        "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "today": "आज", "yesterday": "कल",
+        "new_notice_alert": "ताज़ा सूचना आई है!", "warning": "कृपया शीर्षक और सामग्री दर्ज करें।"
+    }
 }
 
-# --- 세션 초기화 ---
+# --- 4. 세션 초기화 (모든 키 포함) ---
 defaults = {
     "admin": False, "lang": "ko", "edit_city": None,
-    "tab_selection": LANG["ko"]["tab_notice"], "new_notice": False,
-    "sound_played": False, "seen_notices": [], "expanded_notices": [], "expanded_cities": []
+    "tab_selection": "공지", "new_notice": False, "sound_played": False,
+    "seen_notices": [], "expanded_notices": [], "expanded_cities": [], "last_tab": None
 }
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-_ = lambda key: LANG[st.session_state.lang].get(key, key)
+# 안전한 번역 함수
+_ = lambda key: LANG.get(st.session_state.lang, LANG["ko"]).get(key, key)
 
-# --- 크리스마스 사운드 (Base64) ---
+# --- 5. 크리스마스 사운드 ---
 CHRISTMAS_CAROL_WAV = "UklGRu4FAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA..."
 
-# --- 테마 & 알림 CSS ---
+# --- 6. 테마 & CSS ---
 st.markdown(f"""
 <style>
 .stApp {{ background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #f0f0f0; }}
@@ -61,40 +71,45 @@ function playChristmasCarol() {{ const audio = new Audio('data:audio/wav;base64,
 
 st.markdown('<div class="christmas-title"><div class="cantata">칸타타 투어</div><div class="year">2025</div><div class="maha">마하라스트라</div></div>', unsafe_allow_html=True)
 
-# --- 사이드바 ---
+# --- 7. 사이드바 ---
 with st.sidebar:
     lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
     selected = st.selectbox("언어", list(lang_map.keys()), index=list(lang_map.values()).index(st.session_state.lang))
     if lang_map[selected] != st.session_state.lang:
         st.session_state.lang = lang_map[selected]
-        st.session_state.tab_selection = LANG[lang_map[selected]]["tab_notice"]
+        st.session_state.tab_selection = _(f"tab_notice")
         st.rerun()
 
     st.markdown("---")
     if not st.session_state.admin:
-        pw = st.text_input("비밀번호", type="password")
-        if st.button("로그인") and pw == "0009":
-            st.session_state.admin = True
-            st.rerun()
-        elif st.button("로그인"):
-            st.error("비밀번호가 틀렸습니다.")
+        pw = st.text_input("비밀번호", type="password", key="pw_input")
+        if st.button("로그인", key="login_btn"):  # 키 추가 → 중복 오류 완전 해결
+            if pw == "0009":
+                st.session_state.admin = True
+                st.rerun()
+            else:
+                st.error("비밀번호가 틀렸습니다.")
     else:
         st.success("관리자 모드")
-        if st.button("로그아웃"):
+        if st.button("로그아웃", key="logout_btn"):
             st.session_state.admin = False
             st.rerun()
 
-# --- JSON 헬퍼 ---
+# --- 8. JSON 헬퍼 (오류 방지 강화) ---
 def load_json(f):
-    if not os.path.exists(f): return []
-    try: return json.load(open(f, "r", encoding="utf-8"))
-    except: return []
+    if not os.path.exists(f):
+        return []
+    try:
+        with open(f, "r", encoding="utf-8") as fp:
+            return json.load(fp)
+    except:
+        return []
 
 def save_json(f, d):
     with open(f, "w", encoding="utf-8") as fp:
         json.dump(d, fp, ensure_ascii=False, indent=2)
 
-# --- 초기 도시 ---
+# --- 9. 초기 도시 ---
 DEFAULT_CITIES = [
     {"city": "Mumbai", "venue": "Gateway of India", "seats": "5000", "note": "인도 영화 수도", "google_link": "https://goo.gl/maps/abc123", "indoor": False, "lat": 19.0760, "lon": 72.8777, "perf_date": None, "date": "11/07 02:01"},
     {"city": "Pune", "venue": "Shaniwar Wada", "seats": "3000", "note": "IT 허브", "google_link": "https://goo.gl/maps/def456", "indoor": True, "lat": 18.5204, "lon": 73.8567, "perf_date": None, "date": "11/07 02:01"},
@@ -103,36 +118,37 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE):
     save_json(CITY_FILE, DEFAULT_CITIES)
 
-# --- 실시간 이동 시간 (Google Distance Matrix API) ---
+# --- 10. 실시간 이동 시간 (Google API + 폴백) ---
 def get_real_travel_time(lat1, lon1, lat2, lon2):
     try:
-        url = f"https://maps.googleapis.com/maps/api/distancematrix/json"
-        params = {
-            "origins": f"{lat1},{lon1}",
-            "destinations": f"{lat2},{lon2}",
-            "key": st.secrets.get("GOOGLE_API_KEY", ""),  # secrets.toml에 추가 권장
-            "mode": "driving"
-        }
-        res = requests.get(url, params=params, timeout=5).json()
-        if res["rows"][0]["elements"][0]["status"] == "OK":
-            dist = res["rows"][0]["elements"][0]["distance"]["value"] / 1000
-            mins = res["rows"][0]["elements"][0]["duration"]["value"] // 60
-            return dist, mins
-    except: pass
-    # fallback: 직선 거리
+        api_key = st.secrets.get("GOOGLE_API_KEY", "")
+        if api_key:
+            url = "https://maps.googleapis.com/maps/api/distancematrix/json"
+            params = {"origins": f"{lat1},{lon1}", "destinations": f"{lat2},{lon2}", "key": api_key, "mode": "driving"}
+            res = requests.get(url, params=params, timeout=5).json()
+            if res["rows"][0]["elements"][0]["status"] == "OK":
+                dist = res["rows"][0]["elements"][0]["distance"]["value"] / 1000
+                mins = res["rows"][0]["elements"][0]["duration"]["value"] // 60
+                return dist, mins
+    except:
+        pass
+    # 폴백: 직선 거리 + 80km/h 가정
     R = 6371
     dlat = radians(lat2 - lat1)
     dlon = radians(lon2 - lon1)
     a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
     c = 2 * asin(sqrt(a))
-    return R * c, int((R * c) / 80 * 60)  # 80km/h 가정
+    dist = R * c
+    mins = int(dist / 80 * 60)
+    return dist, mins
 
-# --- 공지 기능 ---
+# --- 11. 공지 기능 ---
 def format_notice_date(d):
     try:
         nd = datetime.strptime(d.split()[0], "%m/%d").replace(year=date.today().year).date()
         return _("today") if nd == date.today() else _("yesterday") if nd == date.today() - timedelta(days=1) else d.split()[0]
-    except: return d.split()[0]
+    except:
+        return d.split()[0] if ' ' in d else d
 
 def add_notice(title, content, img=None, file=None):
     img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{img.name}") if img else None
@@ -159,23 +175,26 @@ def render_notices():
         new = n["id"] not in st.session_state.seen_notices and not st.session_state.admin
         if new: has_new = True
         title = f"{format_notice_date(n['date'])} | {n['title']}" + (' <span class="new-badge">NEW</span>' if new else '')
-        expanded = n["id"] in st.session_state.expanded_notices
+        exp_key = f"notice_{n['id']}"
+        expanded = exp_key in st.session_state.expanded_notices
         with st.expander(title, expanded=expanded):
             st.markdown(n["content"])
             if n.get("image") and os.path.exists(n["image"]):
-                st.image(n["image"], use_container_width=True)
+                st.image(n["image"], width="stretch")  # use_container_width 제거
             if n.get("file") and os.path.exists(n["file"]):
                 b64 = base64.b64encode(open(n["file"], "rb").read()).decode()
                 st.markdown(f'<a href="data:file/octet-stream;base64,{b64}" download="{os.path.basename(n["file"])}">파일 다운로드</a>', unsafe_allow_html=True)
-            if st.session_state.admin and st.button("삭제", key=f"del_n{i}"):
+            if st.session_state.admin and st.button("삭제", key=f"del_n_{n['id']}"):
                 data.pop(i)
                 save_json(NOTICE_FILE, data)
                 st.rerun()
             if new and not st.session_state.admin:
                 st.session_state.seen_notices.append(n["id"])
-            # expander 상태 추적
-            if st.session_state.expanded_notices != [n["id"]] if expanded else []:
-                st.session_state.expanded_notices = [n["id"]] if expanded else []
+            # expander 상태 관리
+            if expanded and exp_key not in st.session_state.expanded_notices:
+                st.session_state.expanded_notices.append(exp_key)
+            elif not expanded and exp_key in st.session_state.expanded_notices:
+                st.session_state.expanded_notices.remove(exp_key)
 
     if has_new and not st.session_state.sound_played:
         st.markdown("<script>playChristmasCarol();</script>", unsafe_allow_html=True)
@@ -184,18 +203,17 @@ def render_notices():
     elif not has_new:
         st.session_state.sound_played = False
 
-# --- 지도 ---
+# --- 12. 지도 ---
 def render_map():
     st.subheader("경로 보기")
     today = date.today()
     raw_cities = load_json(CITY_FILE)
     cities = sorted(
         [c | {"perf_date": c.get("perf_date") if c.get("perf_date") not in [None, "9999-12-31"] else "9999-12-31"} for c in raw_cities],
-        key=lambda x: x["perf_date"]
+        key=lambda x: x["perf_date"] if x["perf_date"] != "9999-12-31" else "9999-12-31"
     )
 
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=9, tiles="CartoDB positron")
-
     if not cities:
         folium.Marker([18.5204, 73.8567], popup="시작", icon=folium.Icon(color="green", icon="star", prefix="fa")).add_to(m)
     else:
@@ -213,9 +231,7 @@ def render_map():
                 mid_lat, mid_lon = (c['lat'] + next_c['lat']) / 2, (c['lon'] + next_c['lon']) / 2
                 bearing = degrees(atan2(next_c['lon'] - c['lon'], next_c['lat'] - c['lat']))
                 folium.Marker([mid_lat, mid_lon], icon=folium.DivIcon(html=f'''
-                    <div style="transform: translate(-50%,-50%) rotate({bearing}deg); 
-                                opacity: {"0.5" if is_past else "1.0"}; 
-                                color:#e74c3c; font-weight:bold; font-size:12px;">
+                    <div style="transform: translate(-50%,-50%) rotate({bearing}deg); opacity: {"0.5" if is_past else "1.0"}; color:#e74c3c; font-weight:bold; font-size:12px;">
                     {label_text}</div>''')).add_to(m)
                 AntPath([(c['lat'], c['lon']), (next_c['lat'], next_c['lon'])],
                         color="#e74c3c", weight=6, opacity=0.5 if is_past else 1.0,
@@ -233,46 +249,46 @@ def render_map():
                 if st.session_state.admin and not st.session_state.edit_city:
                     c1, c2 = st.columns(2)
                     with c1:
-                        if st.button("수정", key=f"edit_{i}"):
+                        if st.button("수정", key=f"edit_city_{i}"):
                             st.session_state.edit_city = c["city"]
                             st.rerun()
                     with c2:
                         if st.button("삭제", key=f"del_city_{i}"):
-                            raw_cities.pop(raw_cities.index(c))
+                            raw_cities = [x for x in raw_cities if x["city"] != c["city"]]
                             save_json(CITY_FILE, raw_cities)
                             st.rerun()
-                # 상태 추적
-                new_expanded = st.session_state.expanded_cities + [exp_key] if expanded and exp_key not in st.session_state.expanded_cities else \
-                               [x for x in st.session_state.expanded_cities if x != exp_key]
-                if new_expanded != st.session_state.expanded_cities:
-                    st.session_state.expanded_cities = new_expanded
+                # 상태 업데이트
+                if expanded and exp_key not in st.session_state.expanded_cities:
+                    st.session_state.expanded_cities.append(exp_key)
+                elif not expanded and exp_key in st.session_state.expanded_cities:
+                    st.session_state.expanded_cities.remove(exp_key)
 
-    st_folium(m, width=900, height=550, key="map")
+    st_folium(m, width=900, height=550, key="tour_map")
 
-# --- 탭 선택 ---
+# --- 13. 탭 ---
 tab_selection = st.radio(
     "탭 선택",
-    [_("tab_notice"), _("tab_map")],
-    index=0 if st.session_state.tab_selection == _("tab_notice") else 1,
+    [_(f"tab_notice"), _(f"tab_map")],
+    index=0 if st.session_state.tab_selection == _(f"tab_notice") else 1,
     horizontal=True,
     key="main_tab"
 )
 
-# --- 탭 전환 시 expander 모두 접기 ---
+# 탭 전환 시 모든 expander 접기
 if tab_selection != st.session_state.get("last_tab"):
     st.session_state.expanded_notices = []
     st.session_state.expanded_cities = []
     st.session_state.last_tab = tab_selection
     st.rerun()
 
-# --- 새 공지 알림 → 공지 탭 이동 ---
+# 새 공지 → 공지 탭 이동
 if st.session_state.get("new_notice", False):
-    st.session_state.tab_selection = _("tab_notice")
+    st.session_state.tab_selection = _(f"tab_notice")
     st.session_state.new_notice = False
     st.rerun()
 
-# --- 탭 렌더링 ---
-if tab_selection == _("tab_notice"):
+# --- 14. 탭 렌더링 ---
+if tab_selection == _(f"tab_notice"):
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
             title = st.text_input("제목")
@@ -283,7 +299,7 @@ if tab_selection == _("tab_notice"):
                 if title.strip() and content.strip():
                     add_notice(title, content, img, file)
                 else:
-                    st.warning("제목과 내용을 입력하세요.")
+                    st.warning(_("warning"))
     render_notices()
 else:
     render_map()
