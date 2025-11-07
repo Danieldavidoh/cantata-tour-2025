@@ -1,5 +1,5 @@
 import streamlit as st
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
@@ -67,13 +67,15 @@ for k, v in defaults.items():
 
 _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
 
-# --- 4. 캐롤 사운드 ---
-def play_carol(force=False):
-    if os.path.exists("carol.wav") and (force or not st.session_state.get("sound_played", False)):
+# --- 4. 캐롤 사운드 (강제 재생 보장) ---
+def play_carol():
+    if os.path.exists("carol.wav"):
         st.session_state.sound_played = True
-        st.audio("carol.wav", autoplay=True)
-
-play_carol()
+        st.markdown(f"""
+        <audio autoplay>
+            <source src="carol.wav" type="audio/wav">
+        </audio>
+        """, unsafe_allow_html=True)
 
 # --- 5. 알림 CSS + 아이콘 스타일 ---
 st.markdown("""
@@ -90,7 +92,6 @@ st.markdown("""
     @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
     .alert-close { cursor: pointer; font-size: 26px; font-weight: bold; }
     
-    /* 도시 정보 라벨 색상 + 아이콘 */
     .city-label {
         color: #e74c3c !important;
         font-weight: bold;
@@ -99,6 +100,11 @@ st.markdown("""
     .city-icon {
         margin-right: 8px;
         font-size: 1.2em;
+    }
+    
+    /* 탭 아래로 내리기 */
+    .main-title {
+        margin-top: 40px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -204,11 +210,12 @@ def add_notice(title, content, img=None, file=None):
     data.insert(0, notice)
     save_json(NOTICE_FILE, data)
 
+    # 일반 사용자용 알림 강제 활성화
     st.session_state.new_notice = True
     st.session_state.alert_active = True
     st.session_state.current_alert_id = notice["id"]
     st.session_state.sound_played = False
-    play_carol(force=True)
+    play_carol()
     st.rerun()
 
 def format_notice_date(d):
@@ -220,7 +227,7 @@ def format_notice_date(d):
         elif dt.date() == today - timedelta(days=1):
             return _(f"yesterday")
         else:
-            return d
+            return d  # 숫자로 표시
     except:
         return d
 
@@ -257,6 +264,7 @@ def render_notices():
                 save_json(NOTICE_FILE, data)
                 st.rerun()
 
+            # 일반 사용자: 열 때 NEW 제거 + 알림 해제
             if not st.session_state.admin and is_new and expanded:
                 if n["id"] not in st.session_state.seen_notices:
                     st.session_state.seen_notices.append(n["id"])
@@ -269,7 +277,9 @@ def render_notices():
             elif not expanded and exp_key in st.session_state.expanded_notices:
                 st.session_state.expanded_notices.remove(exp_key)
 
+    # 알림 팝업 (일반 사용자만 + 강제 표시)
     if not st.session_state.admin and st.session_state.alert_active and st.session_state.current_alert_id:
+        play_carol()  # 사운드 강제 재생
         st.markdown(f"""
         <div class="alert-box" id="alert">
             <span>{_("new_notice_alert")}</span>
@@ -397,7 +407,7 @@ def render_map():
                    datetime.strptime(c['perf_date'], "%Y-%m-%d").date() < today)
         color = "red" if not is_past else "gray"
 
-        coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
+        coords = CITY_COORDS.get(c["city"]), (18.5204, 73.8567))
         indoor_text = _(f"indoor") if c.get("indoor") else _(f"outdoor")
         perf_date_formatted = format_date_with_weekday(c.get("perf_date"))
         popup_html = f"""
@@ -415,7 +425,7 @@ def render_map():
 
         if i < len(cities) - 1:
             nxt = cities[i + 1]
-            nxt_coords = CITY_COORDS.get(nxt["city"], (18.5204, 73.8567))
+            nxt_coords = CITY_COORDS.get(nxt["city"]), (18.5204, 73.8567))
             opacity = 0.3 if is_past else 1.0
             AntPath([coords, nxt_coords],
                     color="#e74c3c", weight=6, opacity=opacity, delay=800, dash_array=[20, 30]).add_to(m)
@@ -423,7 +433,6 @@ def render_map():
         exp_key = f"city_{c['city']}"
         expanded = exp_key in st.session_state.expanded_cities
         with st.expander(f"{c['city']} | {format_date_with_weekday(c.get('perf_date'))}", expanded=expanded):
-            # 아이콘 + 색상 라벨
             st.markdown(f"""
             <div>
                 <span class="city-icon">📍</span>
@@ -485,8 +494,8 @@ if st.session_state.get("new_notice", False):
     st.session_state.new_notice = False
     st.rerun()
 
-# --- 13. 렌더링 ---
-st.markdown('# 칸타타 투어 2025 마하라스트라', unsafe_allow_html=True)
+# --- 13. 렌더링 (제목 아래로 내림) ---
+st.markdown('<div class="main-title"># 칸타타 투어 2025 마하라스트라</div>', unsafe_allow_html=True)
 
 if tab_selection == _(f"tab_notice"):
     if st.session_state.admin:
