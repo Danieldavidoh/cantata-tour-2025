@@ -23,25 +23,16 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # --- 3. 다국어 ---
 LANG = {
-    "ko": {
-        "tab_notice": "공지", "tab_map": "투어 경로",
-        "today": "오늘", "yesterday": "어제",
-        "new_notice_alert": "새 공지가 도착했어요!", "warning": "제목·내용 입력"
-    },
-    "en": {
-        "tab_notice": "Notice", "tab_map": "Tour Route",
-        "today": "Today", "yesterday": "Yesterday",
-        "new_notice_alert": "New notice!", "warning": "Enter title & content"
-    },
-    "hi": {
-        "tab_notice": "सूचना", "tab_map": "टूर मार्ग",
-        "today": "आज", "yesterday": "कल",
-        "new_notice_alert": "नई सूचना!", "warning": "शीर्षक·सामग्री दर्ज करें"
-    }
+    "ko": {"tab_notice": "공지", "tab_map": "투어 경로", "today": "오늘", "yesterday": "어제",
+           "new_notice_alert": "새 공지가 도착했어요!", "warning": "제목·내용 입력", "edit": "수정", "save": "저장"},
+    "en": {"tab_notice": "Notice", "tab_map": "Tour Route", "today": "Today", "yesterday": "Yesterday",
+           "new_notice_alert": "New notice!", "warning": "Enter title & content", "edit": "Edit", "save": "Save"},
+    "hi": {"tab_notice": "सूचना", "tab_map": "टूर मार्ग", "today": "आज", "yesterday": "कल",
+           "new_notice_alert": "नई सूचना!", "warning": "शीर्षक·सामग्री दर्ज करें", "edit": "संपादन", "save": "सहेजें"}
 }
 
 defaults = {
-    "admin": False, "lang": "ko", "edit_city": None,
+    "admin": False, "lang": "ko", "edit_city": None, "editing_city": False,
     "tab_selection": "공지", "new_notice": False, "sound_played": False,
     "seen_notices": [], "expanded_notices": [], "expanded_cities": [],
     "last_tab": None, "alert_active": False, "current_alert_id": None
@@ -52,22 +43,29 @@ for k, v in defaults.items():
 
 _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
 
-# --- 4. 크리스마스 캐롤 (base64 제거 → 실제 파일 사용 권장, 없으면 무음) ---
-# CHRISTMAS_CAROL_WAV = "UklGRu4FAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA..."
-# → 실제 .wav 파일이 있다면 아래처럼 사용
-# st.audio("carol.wav", autoplay=True)
+# --- 4. 크리스마스 캐롤 사운드 ---
+def play_carol():
+    if os.path.exists("carol.wav") and not st.session_state.sound_played:
+        st.session_state.sound_played = True
+        st.audio("carol.wav", autoplay=True)
 
-# --- 5. 알림 CSS + JS (중괄호 이스케이프 제거, 유효한 JS) ---
+# 페이지 로드 시 사운드 재생 (한 번만)
+play_carol()
+
+# --- 5. 알림 CSS + JS ---
 st.markdown("""
 <style>
     .alert-box {
         position: fixed; top: 20px; right: 20px; z-index: 9999;
-        background: #e74c3c; color: white; padding: 16px; border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: bold;
-        display: flex; align-items: center; gap: 12px; animation: slideIn 0.5s;
+        background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 16px 20px;
+        border-radius: 12px; box-shadow: 0 8px 20px rgba(231, 76, 60, 0.4);
+        font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 12px;
+        animation: slideIn 0.6s ease-out, pulse 1.5s infinite;
     }
-    @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-    .alert-close { cursor: pointer; font-size: 20px; }
+    @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    .alert-close { cursor: pointer; font-size: 24px; font-weight: bold; }
+    .city-form { background: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #ddd; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -131,9 +129,8 @@ def get_real_travel_time(lat1, lon1, lat2, lon2):
                 d = r["rows"][0]["elements"][0]["distance"]["value"] / 1000
                 m = r["rows"][0]["elements"][0]["duration"]["value"] // 60
                 return d, m
-    except:
-        pass
-    # Haversine fallback
+    except Exception as e:
+        st.warning(f"거리 API 오류: {e}")
     R = 6371
     dlat = radians(lat2 - lat1)
     dlon = radians(lon2 - lon1)
@@ -166,6 +163,8 @@ def add_notice(title, content, img=None, file=None):
         st.session_state.new_notice = True
         st.session_state.alert_active = True
         st.session_state.current_alert_id = notice["id"]
+        st.session_state.sound_played = False  # 새 공지 → 사운드 재생
+        play_carol()
         st.rerun()
 
 def format_notice_date(d):
@@ -182,14 +181,6 @@ def format_notice_date(d):
 
 def render_notices():
     data = load_json(NOTICE_FILE)
-    has_new = False
-    latest_id = None
-    if not st.session_state.admin:
-        for n in data:
-            if n["id"] not in st.session_state.seen_notices:
-                has_new = True
-                latest_id = n["id"]
-
     for i, n in enumerate(data):
         badge = ' NEW' if (not st.session_state.admin and n["id"] not in st.session_state.seen_notices) else ''
         title = f"{format_notice_date(n['date'])} | {n['title']}{badge}"
@@ -223,7 +214,6 @@ def render_notices():
                 st.session_state.alert_active = False
                 st.rerun()
 
-    # 알림 박스
     if not st.session_state.admin and st.session_state.alert_active and st.session_state.current_alert_id:
         st.markdown(f"""
         <div class="alert-box" id="alert">
@@ -232,7 +222,7 @@ def render_notices():
         </div>
         """, unsafe_allow_html=True)
 
-# --- 11. 지도 ---
+# --- 11. 지도 + 도시 수정 폼 ---
 def render_map():
     st.subheader("경로 보기")
     today = date.today()
@@ -242,83 +232,109 @@ def render_map():
         for c in raw_cities
     ], key=lambda x: x["perf_date"] if x["perf_date"] != "9999-12-31" else "9999-12-31")
 
+    # --- 도시 수정 폼 ---
+    if st.session_state.admin and st.session_state.edit_city:
+        city_to_edit = next((c for c in raw_cities if c["city"] == st.session_state.edit_city), None)
+        if city_to_edit:
+            st.markdown("### 도시 정보 수정")
+            with st.form("edit_city_form", clear_on_submit=True):
+                col1, col2 = st.columns(2)
+                with col1:
+                    city = st.text_input("도시명", value=city_to_edit["city"])
+                    venue = st.text_input("장소", value=city_to_edit["venue"])
+                    seats = st.text_input("예상 인원", value=city_to_edit["seats"])
+                    indoor = st.checkbox("실내", value=city_to_edit.get("indoor", False))
+                with col2:
+                    note = st.text_area("특이사항", value=city_to_edit.get("note", ""))
+                    google_link = st.text_input("구글맵 링크", value=city_to_edit.get("google_link", ""))
+                    perf_date = st.date_input("공연 날짜", value=(
+                        datetime.strptime(city_to_edit["perf_date"], "%Y-%m-%d").date()
+                        if city_to_edit["perf_date"] and city_to_edit["perf_date"] != "9999-12-31"
+                        else None
+                    ))
+
+                lat = st.number_input("위도", value=city_to_edit["lat"], format="%.6f")
+                lon = st.number_input("경도", value=city_to_edit["lon"], format="%.6f")
+
+                if st.form_submit_button("저장"):
+                    updated = {
+                        "city": city, "venue": venue, "seats": seats, "note": note,
+                        "google_link": google_link, "indoor": indoor,
+                        "lat": lat, "lon": lon,
+                        "perf_date": perf_date.strftime("%Y-%m-%d") if perf_date else None,
+                        "date": city_to_edit["date"]
+                    }
+                    raw_cities = [updated if c["city"] == st.session_state.edit_city else c for c in raw_cities]
+                    save_json(CITY_FILE, raw_cities)
+                    st.session_state.edit_city = None
+                    st.success("수정 완료!")
+                    st.rerun()
+
+            if st.button("취소"):
+                st.session_state.edit_city = None
+                st.rerun()
+
+    # --- 지도 렌더링 ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=9, tiles="CartoDB positron")
 
-    if not cities:
-        folium.Marker([18.5204, 73.8567], popup="시작",
-                      icon=folium.Icon(color="green", icon="star", prefix="fa")).add_to(m)
-    else:
-        for i, c in enumerate(cities):
-            is_past = (c.get('perf_date') and c['perf_date'] != "9999-12-31" and
-                       datetime.strptime(c['perf_date'], "%Y-%m-%d").date() < today)
-            opacity = 0.3 if is_past else 1.0
+    for i, c in enumerate(cities):
+        is_past = (c.get('perf_date') and c['perf_date'] != "9999-12-31" and
+                   datetime.strptime(c['perf_date'], "%Y-%m-%d").date() < today)
+        opacity = 0.3 if is_past else 1.0
 
-            popup_html = f"""
-            <b>{c['city']}</b><br>
-            {c.get('perf_date', '미정')}<br>
-            {c.get('venue', '—')}
-            """
-            folium.Marker(
-                [c["lat"], c["lon"]],
-                popup=folium.Popup(popup_html, max_width=280),
-                tooltip=c["city"],
-                icon=folium.Icon(color="red", icon="music", prefix="fa")
-            ).add_to(m)
+        popup_html = f"<b>{c['city']}</b><br>{c.get('perf_date','미정')}<br>{c.get('venue','—')}"
+        folium.Marker(
+            [c["lat"], c["lon"]], popup=folium.Popup(popup_html, max_width=280),
+            tooltip=c["city"], icon=folium.Icon(color="red" if not is_past else "gray", icon="music", prefix="fa")
+        ).add_to(m)
 
-            if i < len(cities) - 1:
-                nxt = cities[i + 1]
-                dist, mins = get_real_travel_time(c['lat'], c['lon'], nxt['lat'], nxt['lon'])
-                label = f"{dist:.0f}km → {mins//60}h {mins%60}m"
-                mid_lat = (c['lat'] + nxt['lat']) / 2
-                mid_lon = (c['lon'] + nxt['lon']) / 2
-                bearing = degrees(atan2(nxt['lon'] - c['lon'], nxt['lat'] - c['lat']))
-                bearing = (bearing + 360) % 360
-                if 90 < bearing < 270:
-                    bearing = (bearing + 180) % 360
+        if i < len(cities) - 1:
+            nxt = cities[i + 1]
+            dist, mins = get_real_travel_time(c['lat'], c['lon'], nxt['lat'], nxt['lon'])
+            label = f"{dist:.0f}km → {mins//60}h {mins%60}m"
+            mid_lat = (c['lat'] + nxt['lat']) / 2
+            mid_lon = (c['lon'] + nxt['lon']) / 2
+            bearing = degrees(atan2(nxt['lon'] - c['lon'], nxt['lat'] - c['lat']))
+            bearing = (bearing + 360) % 360
+            if 90 < bearing < 270:
+                bearing = (bearing + 180) % 360
 
-                path_op = 0.3 if is_past else 1.0
-                folium.Marker(
-                    [mid_lat, mid_lon],
-                    icon=folium.DivIcon(html=f"""
-                    <div style="font-size:10pt; background:white; padding:2px 6px;
-                                border-radius:4px; border:1px solid #ccc; white-space:nowrap;">
-                        {label}
-                    </div>
-                    """)
-                ).add_to(m)
+            path_op = 0.3 if is_past else 1.0
+            folium.Marker([mid_lat, mid_lon], icon=folium.DivIcon(html=f"""
+                <div style="font-size:10pt; background:white; padding:2px 6px; border-radius:4px; border:1px solid #ccc;">
+                    {label}
+                </div>
+            """)).add_to(m)
 
-                AntPath(
-                    [(c['lat'], c['lon']), (nxt['lat'], nxt['lon'])],
-                    color="#e74c3c", weight=6, opacity=path_op,
-                    delay=800, dash_array=[20, 30]
-                ).add_to(m)
+            AntPath([(c['lat'], c['lon']), (nxt['lat'], nxt['lon'])],
+                    color="#e74c3c", weight=6, opacity=path_op, delay=800, dash_array=[20, 30]).add_to(m)
 
-            exp_key = f"city_{c['city']}"
-            expanded = exp_key in st.session_state.expanded_cities
-            with st.expander(f"{c['city']} | {c.get('perf_date','미정')}", expanded=expanded):
-                info = {"등록일": "date", "공연 날짜": "perf_date", "장소": "venue",
-                        "예상 인원": "seats", "특이사항": "note"}
-                for k, v in info.items():
-                    st.write(f"{k}: {c.get(v, '—')}")
-                if c.get("google_link"):
-                    st.markdown(f"[구글맵 보기]({c['google_link']})")
+        # 도시 정보 + 수정/삭제
+        exp_key = f"city_{c['city']}"
+        expanded = exp_key in st.session_state.expanded_cities
+        with st.expander(f"{c['city']} | {c.get('perf_date','미정')}", expanded=expanded):
+            for k, v in {"등록일": "date", "공연 날짜": "perf_date", "장소": "venue",
+                         "예상 인원": "seats", "특이사항": "note"}.items():
+                st.write(f"**{k}**: {c.get(v, '—')}")
+            if c.get("google_link"):
+                st.markdown(f"[구글맵 보기]({c['google_link']})")
 
-                if st.session_state.admin:
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        if st.button("수정", key=f"edit_{c['city']}_{i}"):
-                            st.session_state.edit_city = c["city"]
-                            st.rerun()
-                    with c2:
-                        if st.button("삭제", key=f"del_{c['city']}_{i}"):
-                            raw_cities = [x for x in raw_cities if x["city"] != c["city"]]
-                            save_json(CITY_FILE, raw_cities)
-                            st.rerun()
+            if st.session_state.admin:
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button(_(f"edit"), key=f"edit_{c['city']}_{i}"):
+                        st.session_state.edit_city = c["city"]
+                        st.rerun()
+                with c2:
+                    if st.button("삭제", key=f"del_{c['city']}_{i}"):
+                        raw_cities = [x for x in raw_cities if x["city"] != c["city"]]
+                        save_json(CITY_FILE, raw_cities)
+                        st.rerun()
 
-                if expanded and exp_key not in st.session_state.expanded_cities:
-                    st.session_state.expanded_cities.append(exp_key)
-                elif not expanded and exp_key in st.session_state.expanded_cities:
-                    st.session_state.expanded_cities.remove(exp_key)
+            if expanded and exp_key not in st.session_state.expanded_cities:
+                st.session_state.expanded_cities.append(exp_key)
+            elif not expanded and exp_key in st.session_state.expanded_cities:
+                st.session_state.expanded_cities.remove(exp_key)
 
     st_folium(m, width=900, height=550, key="tour_map")
 
