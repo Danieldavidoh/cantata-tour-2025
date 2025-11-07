@@ -23,11 +23,11 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # --- 3. 다국어 ---
 LANG = {
     "ko": {"tab_notice": "공지", "tab_map": "투어 경로", "today": "오늘", "yesterday": "어제",
-           "new_notice_alert": "🎄 새 공지가 도착했어요! 🎅", "warning": "제목과 내용을 입력하세요.", "close": "닫기"},
+           "new_notice_alert": "새 공지가 도착했어요!", "warning": "제목과 내용을 입력하세요.", "close": "닫기"},
     "en": {"tab_notice": "Notice", "tab_map": "Tour Route", "today": "Today", "yesterday": "Yesterday",
-           "new_notice_alert": "🎄 New notice arrived! 🎅", "warning": "Please enter title and content.", "close": "Close"},
+           "new_notice_alert": "New notice arrived!", "warning": "Please enter title and content.", "close": "Close"},
     "hi": {"tab_notice": "सूचना", "tab_map": "टूर मार्ग", "today": "आज", "yesterday": "कल",
-           "new_notice_alert": "🎄 नई सूचना आई! 🎅", "warning": "कृपया शीर्षक और सामग्री दर्ज करें।", "close": "बंद करें"}
+           "new_notice_alert": "नई सूचना आई!", "warning": "कृपया शीर्षक और सामग्री दर्ज करें।", "close": "बंद करें"}
 }
 
 # --- 4. 세션 초기화 ---
@@ -46,7 +46,7 @@ _ = lambda key: LANG.get(st.session_state.lang, LANG["ko"]).get(key, key)
 # --- 5. 크리스마스 캐롤 ---
 CHRISTMAS_CAROL_WAV = "UklGRu4FAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA..."
 
-# --- 6. 크리스마스 알림 (제목 아래 고정 + 새 공지 열 때까지 유지) ---
+# --- 6. 알림 CSS (제목 아래 고정) ---
 st.markdown(f"""
 <style>
 .stApp {{ background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #f0f0f0; }}
@@ -55,10 +55,10 @@ st.markdown(f"""
 .year {{ font-size: 2.8em; color: #ecf0f1; text-shadow: 0 0 8px #ffffff; }}
 .maha {{ font-size: 1.8em; color: #3498db; font-style: italic; text-shadow: 0 0 6px #74b9ff; }}
 
-/* 알림: 제목 아래 고정 */
+/* 알림 고정 */
 .christmas-alert {{
     position: fixed;
-    top: 140px;           /* 제목 아래 */
+    top: 140px;
     right: 10%;
     background: linear-gradient(45deg, #c21500, #ffc500, #ff6b35);
     background-size: 400% 400%;
@@ -77,7 +77,7 @@ st.markdown(f"""
 }}
 
 .christmas-alert::before {{
-    content: '❄️🎄🎅🔔🎁';
+    content: '';
     position: absolute;
     top: -35px; left: 50%; transform: translateX(-50%);
     font-size: 2em;
@@ -255,7 +255,7 @@ def render_notices():
                 st.session_state.alert_active = False
                 st.rerun()
 
-    # 알림 유지 (새 공지 열릴 때까지)
+    # 알림 유지
     if st.session_state.alert_active and st.session_state.current_alert_id:
         st.markdown("<script>playChristmasCarol();</script>", unsafe_allow_html=True)
         alert_html = f'''
@@ -266,7 +266,7 @@ def render_notices():
         '''
         st.markdown(alert_html, unsafe_allow_html=True)
 
-# --- 12. 지도 (거리/시간 한 줄로 연결선 위에) ---
+# --- 12. 지도 (라벨 270° 회전 + 수정 모드 완벽 진입) ---
 def render_map():
     st.subheader("경로 보기")
     today = date.today()
@@ -295,10 +295,11 @@ def render_map():
                 mid_lat, mid_lon = (c['lat'] + next_c['lat']) / 2, (c['lon'] + next_c['lon']) / 2
                 bearing = degrees(atan2(next_c['lon'] - c['lon'], next_c['lat'] - c['lat']))
                 path_opacity = 0.3 if is_past else 1.0
-                # 한 줄로 나란히
+                # 270도 추가 회전 → 수직 정렬
+                rotated_bearing = bearing + 270
                 folium.Marker([mid_lat, mid_lon], icon=folium.DivIcon(html=f'''
                     <div style="
-                        transform: translate(-50%,-50%) rotate({bearing}deg);
+                        transform: translate(-50%,-50%) rotate({rotated_bearing}deg);
                         background: rgba(231, 76, 60, {path_opacity});
                         color: white;
                         padding: 2px 6px;
@@ -313,6 +314,7 @@ def render_map():
                         color="#e74c3c", weight=6, opacity=path_opacity,
                         delay=800, dash_array=[20,30]).add_to(m)
 
+            # 도시 expander + 수정 모드 완벽 진입
             exp_key = f"city_{c['city']}"
             expanded = exp_key in st.session_state.expanded_cities
             with st.expander(f"{c['city']} | {c.get('perf_date','미정')}", expanded=expanded):
@@ -326,7 +328,7 @@ def render_map():
                     with c1:
                         if st.button("수정", key=f"edit_city_{c['city']}_{i}"):
                             st.session_state.edit_city = c["city"]
-                            st.rerun()
+                            st.rerun()  # 즉시 리런 → 수정 모드 진입 보장
                     with c2:
                         if st.button("삭제", key=f"del_city_{c['city']}_{i}"):
                             raw_cities = [x for x in raw_cities if x["city"] != c["city"]]
