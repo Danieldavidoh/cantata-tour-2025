@@ -20,7 +20,7 @@ CITY_FILE = "cities.json"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# --- 3. 다국어 (완전 보완) ---
+# --- 3. 다국어 ---
 LANG = {
     "ko": {
         "tab_notice": "공지", "tab_map": "투어 경로", "today": "오늘", "yesterday": "어제",
@@ -36,7 +36,7 @@ LANG = {
     }
 }
 
-# --- 4. 세션 초기화 (모든 키 포함) ---
+# --- 4. 세션 초기화 ---
 defaults = {
     "admin": False, "lang": "ko", "edit_city": None,
     "tab_selection": "공지", "new_notice": False, "sound_played": False,
@@ -46,13 +46,12 @@ for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-# 안전한 번역 함수
 _ = lambda key: LANG.get(st.session_state.lang, LANG["ko"]).get(key, key)
 
-# --- 5. 크리스마스 사운드 ---
+# --- 5. 크리스마스 캐롤 (Base64) ---
 CHRISTMAS_CAROL_WAV = "UklGRu4FAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA..."
 
-# --- 6. 테마 & CSS ---
+# --- 6. 🔥 지옥불 알림 + 최대 볼륨 사운드 ---
 st.markdown(f"""
 <style>
 .stApp {{ background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #f0f0f0; }}
@@ -60,12 +59,96 @@ st.markdown(f"""
 .cantata {{ font-size: 3em; color: #e74c3c; text-shadow: 0 0 10px #ff6b6b; }}
 .year {{ font-size: 2.8em; color: #ecf0f1; text-shadow: 0 0 8px #ffffff; }}
 .maha {{ font-size: 1.8em; color: #3498db; font-style: italic; text-shadow: 0 0 6px #74b9ff; }}
-.alert-slide {{ position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #e74c3c; color: white; padding: 12px 30px; border-radius: 50px; font-weight: bold; font-size: 1.1em; z-index: 10000; animation: slide 4s forwards; box-shadow: 0 0 15px rgba(231, 76, 60, 0.8); }}
-@keyframes slide {{ 0% {{ transform: translateX(-50%) translateY(-100px); opacity: 0; }} 10%, 90% {{ transform: translateX(-50%) translateY(0); opacity: 1; }} 100% {{ transform: translateX(-50%) translateY(-100px); opacity: 0; }} }}
-.new-badge {{ background: #e74c3c; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em; margin-left: 5px; }}
+
+/* 🔥🔥🔥 지옥불 알림 🔥🔥🔥 */
+.alert-slide {{
+    position: fixed;
+    top: 20px;
+    right: 10%;
+    transform: translateX(0);
+    background: linear-gradient(45deg, #ff1a1a, #ff6b1a, #ffcc00, #ff1a1a);
+    background-size: 400% 400%;
+    color: white;
+    padding: 16px 36px;
+    border-radius: 60px;
+    font-weight: 900;
+    font-size: 1.3em;
+    z-index: 99999;
+    box-shadow: 
+        0 0 20px rgba(255, 0, 0, 0.9),
+        0 0 40px rgba(255, 100, 0, 0.7),
+        0 0 80px rgba(255, 200, 0, 0.5),
+        0 0 120px rgba(255, 255, 0, 0.3);
+    animation: 
+        slideRight 7s forwards,
+        pulseBg 1.5s infinite,
+        shake 0.5s infinite alternate,
+        glow 2s infinite alternate;
+    white-space: nowrap;
+    border: 3px solid transparent;
+    text-shadow: 
+        0 0 10px #fff,
+        0 0 20px #ff0,
+        0 0 30px #f00;
+    letter-spacing: 1px;
+    font-family: 'Arial Black', sans-serif;
+    transform-style: preserve-3d;
+    perspective: 1000px;
+    overflow: visible;
+}}
+
+.alert-slide::before {{
+    content: '';
+    position: absolute;
+    top: -10px; left: -10px; right: -10px; bottom: -10px;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><defs><radialGradient id="fire"><stop offset="0%" stop-color="%23ff0"/><stop offset="100%" stop-color="%23f00"/></radialGradient></defs><circle cx="50" cy="50" r="40" fill="url(%23fire)" opacity="0.6"><animate attributeName="r" values="30;50;30" dur="1s" repeatCount="indefinite"/></circle></svg>') repeat;
+    background-size: 30px 30px;
+    animation: fireParticles 2s infinite linear;
+    z-index: -1;
+    border-radius: 70px;
+    opacity: 0.8;
+}}
+
+@keyframes slideRight {{
+    0% {{ transform: translateX(200%) rotateY(90deg); opacity: 0; }}
+    15% {{ transform: translateX(0) rotateY(0deg); opacity: 1; }}
+    85% {{ transform: translateX(0) rotateY(0deg); opacity: 1; }}
+    100% {{ transform: translateX(200%) rotateY(-90deg); opacity: 0; }}
+}}
+
+@keyframes pulseBg {{ 0%, 100% {{ background-position: 0% 50%; }} 50% {{ background-position: 100% 50%; }} }}
+@keyframes shake {{ 0% {{ transform: translateX(0) rotateY(0); }} 100% {{ transform: translateX(-3px) rotateY(-2deg); }} }}
+@keyframes glow {{ 0% {{ box-shadow: 0 0 20px rgba(255,0,0,0.9), 0 0 40px rgba(255,100,0,0.7); }} 100% {{ box-shadow: 0 0 40px rgba(255,0,0,1), 0 0 80px rgba(255,100,0,0.9), 0 0 120px rgba(255,255,0,0.5); }} }}
+@keyframes fireParticles {{ 0% {{ background-position: 0 0; }} 100% {{ background-position: 100px 100px; }} }}
+@keyframes textFlicker {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.8; }} }}
+
+.alert-slide span {{ animation: textFlicker 0.3s infinite; display: inline-block; }}
+
+@media (max-width: 768px) {{
+    .alert-slide {{ right: 5%; font-size: 1.1em; padding: 12px 24px; }}
+}}
 </style>
+
 <script>
-function playChristmasCarol() {{ const audio = new Audio('data:audio/wav;base64,{CHRISTMAS_CAROL_WAV}'); audio.play().catch(() => {{}}); }}
+function playChristmasCarol() {{
+    try {{
+        const audio = new Audio('data:audio/wav;base64,{CHRISTMAS_CAROL_WAV}');
+        audio.volume = 1.0;
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = ctx.createMediaElementSource(audio);
+        const gainNode = ctx.createGain();
+        gainNode.gain.value = 5.0;
+        const compressor = ctx.createDynamicsCompressor();
+        source.connect(gainNode).connect(compressor).connect(ctx.destination);
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 500]);
+        audio.play().catch(() => {{}});
+    }} catch(e) {{
+        const audio = new Audio('data:audio/wav;base64,{CHRISTMAS_CAROL_WAV}');
+        audio.volume = 1.0;
+        if (navigator.vibrate) navigator.vibrate(500);
+        audio.play().catch(() => {{}});
+    }}
+}}
 </script>
 """, unsafe_allow_html=True)
 
@@ -83,7 +166,7 @@ with st.sidebar:
     st.markdown("---")
     if not st.session_state.admin:
         pw = st.text_input("비밀번호", type="password", key="pw_input")
-        if st.button("로그인", key="login_btn"):  # 키 추가 → 중복 오류 완전 해결
+        if st.button("로그인", key="login_btn"):
             if pw == "0009":
                 st.session_state.admin = True
                 st.rerun()
@@ -95,15 +178,11 @@ with st.sidebar:
             st.session_state.admin = False
             st.rerun()
 
-# --- 8. JSON 헬퍼 (오류 방지 강화) ---
+# --- 8. JSON 헬퍼 ---
 def load_json(f):
-    if not os.path.exists(f):
-        return []
-    try:
-        with open(f, "r", encoding="utf-8") as fp:
-            return json.load(fp)
-    except:
-        return []
+    if not os.path.exists(f): return []
+    try: return json.load(open(f, "r", encoding="utf-8"))
+    except: return []
 
 def save_json(f, d):
     with open(f, "w", encoding="utf-8") as fp:
@@ -118,7 +197,7 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE):
     save_json(CITY_FILE, DEFAULT_CITIES)
 
-# --- 10. 실시간 이동 시간 (Google API + 폴백) ---
+# --- 10. 실시간 거리 ---
 def get_real_travel_time(lat1, lon1, lat2, lon2):
     try:
         api_key = st.secrets.get("GOOGLE_API_KEY", "")
@@ -130,9 +209,7 @@ def get_real_travel_time(lat1, lon1, lat2, lon2):
                 dist = res["rows"][0]["elements"][0]["distance"]["value"] / 1000
                 mins = res["rows"][0]["elements"][0]["duration"]["value"] // 60
                 return dist, mins
-    except:
-        pass
-    # 폴백: 직선 거리 + 80km/h 가정
+    except: pass
     R = 6371
     dlat = radians(lat2 - lat1)
     dlon = radians(lon2 - lon1)
@@ -147,8 +224,7 @@ def format_notice_date(d):
     try:
         nd = datetime.strptime(d.split()[0], "%m/%d").replace(year=date.today().year).date()
         return _("today") if nd == date.today() else _("yesterday") if nd == date.today() - timedelta(days=1) else d.split()[0]
-    except:
-        return d.split()[0] if ' ' in d else d
+    except: return d.split()[0] if ' ' in d else d
 
 def add_notice(title, content, img=None, file=None):
     img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{img.name}") if img else None
@@ -180,7 +256,7 @@ def render_notices():
         with st.expander(title, expanded=expanded):
             st.markdown(n["content"])
             if n.get("image") and os.path.exists(n["image"]):
-                st.image(n["image"], width="stretch")  # use_container_width 제거
+                st.image(n["image"], width="stretch")
             if n.get("file") and os.path.exists(n["file"]):
                 b64 = base64.b64encode(open(n["file"], "rb").read()).decode()
                 st.markdown(f'<a href="data:file/octet-stream;base64,{b64}" download="{os.path.basename(n["file"])}">파일 다운로드</a>', unsafe_allow_html=True)
@@ -190,7 +266,6 @@ def render_notices():
                 st.rerun()
             if new and not st.session_state.admin:
                 st.session_state.seen_notices.append(n["id"])
-            # expander 상태 관리
             if expanded and exp_key not in st.session_state.expanded_notices:
                 st.session_state.expanded_notices.append(exp_key)
             elif not expanded and exp_key in st.session_state.expanded_notices:
@@ -199,7 +274,7 @@ def render_notices():
     if has_new and not st.session_state.sound_played:
         st.markdown("<script>playChristmasCarol();</script>", unsafe_allow_html=True)
         st.session_state.sound_played = True
-        st.markdown(f'<div class="alert-slide">{_("new_notice_alert")}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="alert-slide"><span>{_("new_notice_alert")}</span></div>', unsafe_allow_html=True)
     elif not has_new:
         st.session_state.sound_played = False
 
@@ -237,7 +312,6 @@ def render_map():
                         color="#e74c3c", weight=6, opacity=0.5 if is_past else 1.0,
                         delay=800, dash_array=[20,30]).add_to(m)
 
-            # 도시 expander
             exp_key = f"city_{c['city']}"
             expanded = exp_key in st.session_state.expanded_cities
             with st.expander(f"{c['city']} | {c.get('perf_date','미정')}", expanded=expanded):
@@ -257,7 +331,6 @@ def render_map():
                             raw_cities = [x for x in raw_cities if x["city"] != c["city"]]
                             save_json(CITY_FILE, raw_cities)
                             st.rerun()
-                # 상태 업데이트
                 if expanded and exp_key not in st.session_state.expanded_cities:
                     st.session_state.expanded_cities.append(exp_key)
                 elif not expanded and exp_key in st.session_state.expanded_cities:
@@ -274,20 +347,18 @@ tab_selection = st.radio(
     key="main_tab"
 )
 
-# 탭 전환 시 모든 expander 접기
 if tab_selection != st.session_state.get("last_tab"):
     st.session_state.expanded_notices = []
     st.session_state.expanded_cities = []
     st.session_state.last_tab = tab_selection
     st.rerun()
 
-# 새 공지 → 공지 탭 이동
 if st.session_state.get("new_notice", False):
     st.session_state.tab_selection = _(f"tab_notice")
     st.session_state.new_notice = False
     st.rerun()
 
-# --- 14. 탭 렌더링 ---
+# --- 14. 렌더링 ---
 if tab_selection == _(f"tab_notice"):
     if st.session_state.admin:
         with st.form("notice_form", clear_on_submit=True):
