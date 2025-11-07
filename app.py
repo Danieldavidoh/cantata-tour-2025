@@ -366,18 +366,13 @@ def render_map():
             perf_date_obj = None
 
         is_past = perf_date_obj and perf_date_obj < today
-        is_today = perf_date_obj and perf_date_obj == today
 
-        if is_past:
-            opacity = 0.0  # 투명하게
-            color = "gray"
-        elif is_today:
-            color = "black"
-        else:
-            color = "red" if c.get("indoor") else "blue"
+        # 모든 활성 아이콘은 빨간색 (실내/실외 구분 없이), 오늘 포함
+        icon_color = "red"
+        marker_opacity = 0.35 if is_past else 1.0  # 지난 도시는 65% 투명도 (35% 불투명)
 
         # 추천 아이콘: 음악 관련 'music' 아이콘 사용 (Font Awesome)
-        icon = folium.Icon(color=color, icon="music", prefix="fa", opacity=opacity if is_past else 1.0)
+        icon = folium.Icon(color=icon_color, icon="music", prefix="fa", opacity=marker_opacity)
         folium.Marker([c["lat"], c["lon"]], popup=f"<b>{c['city']}</b><br>{display_date}<br>{c.get('venue','—')}", tooltip=c["city"], icon=icon).add_to(m)
 
         with st.expander(f"{c['city']} | {display_date}"):
@@ -417,7 +412,7 @@ def render_map():
             bearing = degrees(atan2(next_c['lon'] - c['lon'], next_c['lat'] - c['lat']))
             rotate = bearing
 
-            # 평행 텍스트 (말풍선 없이, 라인 위쪽) - 기존 지우고 새롭게 배치 (이미 평행)
+            # 평행 텍스트 (말풍선 없이, 라인 위쪽)
             folium.Marker(
                 [mid_lat, mid_lon],
                 icon=folium.DivIcon(html=f'''
@@ -426,15 +421,16 @@ def render_map():
                         white-space: nowrap; text-shadow: 0 0 4px white;
                         transform: translate(-50%, -50%) rotate({rotate}deg);
                         transform-origin: center; pointer-events: none;
+                        opacity: {0.35 if is_past else 1.0};
                     ">
                         {label_text}
                     </div>
                 ''')
             ).add_to(m)
 
-            # 연결 라인: 세그먼트별 AntPath, 과거는 투명
+            # 연결 라인: 세그먼트별 AntPath, 과거는 흐리게
             segment_coords = [(c['lat'], c['lon']), (next_c['lat'], next_c['lon'])]
-            segment_opacity = 0.0 if is_past else 0.9
+            segment_opacity = 0.35 if is_past else 0.9
             AntPath(segment_coords, color="#e74c3c", weight=6, opacity=segment_opacity, delay=800, dash_array=[20, 30]).add_to(m)
 
     if len(cities) > 1:
