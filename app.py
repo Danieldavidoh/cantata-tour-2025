@@ -208,6 +208,7 @@ def add_notice(title, content, img=None, file=None):
     data.insert(0, notice)
     save_json(NOTICE_FILE, data)
 
+    # 일반 사용자용 알림 강제 활성화
     st.session_state.new_notice = True
     st.session_state.alert_active = True
     st.session_state.current_alert_id = notice["id"]
@@ -232,15 +233,10 @@ def render_notices():
     data = load_json(NOTICE_FILE)
     
     for i, n in enumerate(data):
-        is_new = False
-        if st.session_state.admin:
-            badge = ''
-        else:
-            if n["id"] not in st.session_state.seen_notices:
-                is_new = True
-                badge = ' NEW'
-            else:
-                badge = ''
+        # NEW 뱃지: 관리자는 없음, 일반 사용자만 안 읽은 것에만 표시
+        badge = ''
+        if not st.session_state.admin and n["id"] not in st.session_state.seen_notices:
+            badge = ' NEW'
 
         formatted_date = format_notice_date(n['date'])
         title = f"{formatted_date} | {n['title']}{badge}"
@@ -261,9 +257,9 @@ def render_notices():
                 save_json(NOTICE_FILE, data)
                 st.rerun()
 
-            if not st.session_state.admin and is_new and expanded:
-                if n["id"] not in st.session_state.seen_notices:
-                    st.session_state.seen_notices.append(n["id"])
+            # 일반 사용자: 열 때만 seen 처리 + NEW 제거
+            if not st.session_state.admin and n["id"] not in st.session_state.seen_notices and expanded:
+                st.session_state.seen_notices.append(n["id"])
                 if n["id"] == st.session_state.current_alert_id:
                     st.session_state.alert_active = False
                 st.rerun()
@@ -273,6 +269,7 @@ def render_notices():
             elif not expanded and exp_key in st.session_state.expanded_notices:
                 st.session_state.expanded_notices.remove(exp_key)
 
+    # 알림 팝업 + 사운드 (일반 사용자만)
     if not st.session_state.admin and st.session_state.alert_active and st.session_state.current_alert_id:
         play_carol()
         st.markdown(f"""
@@ -308,6 +305,7 @@ def render_map():
     cities = sorted(raw_cities, key=lambda x: x.get("perf_date", "9999-12-31"))
     city_names = [c["city"] for c in raw_cities]
 
+    # --- 도시 추가 폼 ---
     if st.session_state.admin:
         if st.button(_(f"add_city"), key="add_city_btn"):
             st.session_state.adding_city = True
@@ -352,6 +350,7 @@ def render_map():
                         st.session_state.adding_city = False
                         st.rerun()
 
+    # --- 도시 수정 폼 ---
     if st.session_state.admin and st.session_state.get("edit_city"):
         city_to_edit = next((c for c in raw_cities if c["city"] == st.session_state.edit_city), None)
         if city_to_edit:
@@ -392,6 +391,7 @@ def render_map():
                         st.session_state.edit_city = None
                         st.rerun()
 
+    # --- 지도 (말풍선에 예상인원 + 구글맵 링크 추가) ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="CartoDB positron")
 
     for i, c in enumerate(cities):
@@ -402,15 +402,17 @@ def render_map():
         coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
         indoor_text = _(f"indoor") if c.get("indoor") else _(f"outdoor")
         perf_date_formatted = format_date_with_weekday(c.get("perf_date"))
+        google_link_html = f'<br><a href="{c.get("google_link", "#")}" target="_blank">구글맵 보기</a>' if c.get("google_link") else ""
         popup_html = f"""
         <b>{c['city']}</b><br>
         {perf_date_formatted}<br>
         {c.get('venue','—')}<br>
-        유형: {indoor_text}
+        예상 인원: {c.get('seats','—')}<br>
+        유형: {indoor_text}{google_link_html}
         """
         folium.Marker(
             coords,
-            popup=folium.Popup(popup_html, max_width=280),
+            popup=folium.Popup(popup_html, max_width=300),
             tooltip=c["city"],
             icon=folium.Icon(color=color, icon="music", prefix="fa")
         ).add_to(m)
@@ -467,7 +469,7 @@ def render_map():
 
     st_folium(m, width=900, height=550, key="tour_map")
 
-# --- 13. 탭 (제목 아래에 배치) ---
+# --- 13. 탭 ---
 tab_selection = st.radio(
     "탭 선택",
     [_(f"tab_notice"), _(f"tab_map")],
