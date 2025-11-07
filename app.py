@@ -39,7 +39,7 @@ _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
 # --- 4. 크리스마스 캐롤 ---
 CHRISTMAS_CAROL_WAV = "UklGRu4FAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA..."
 
-# --- 5. 알림 CSS ({{ → {{{{ 로 이스케이프) ---
+# --- 5. 알림 CSS + JS ({{ → {{{{ 로 완전 이스케이프) ---
 st.markdown(f"""
 <style>
 .stApp{{background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);color:#f0f0f0}}
@@ -66,7 +66,7 @@ function playChristmasCarol(){{
     const src=ctx.createMediaElementSource(audio);
     const gain=ctx.createGain();gain.gain.value=5;
     src.connect(gain).connect(ctx.destination);
-    audio.play().catch(()=>{});
+    audio.play().catch(() => {{{{}}});  // ← 완전 이스케이프
 }}
 </script>
 """, unsafe_allow_html=True)
@@ -168,7 +168,7 @@ def render_notices():
         st.markdown("<script>playChristmasCarol();</script>", unsafe_allow_html=True)
         st.markdown(f'<div class="christmas-alert"><span>{_("new_notice_alert")}</span><button class="close-btn" onclick="this.parentElement.remove()">×</button></div>', unsafe_allow_html=True)
 
-# --- 11. 지도 (거리 라벨 평행 + 90° 초과 방지 + 검정 진한 글씨) ---
+# --- 11. 지도 (거리 라벨 평행 + 90° 초과 방지) ---
 def render_map():
     st.subheader("경로 보기")
     today = date.today()
