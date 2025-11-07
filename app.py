@@ -121,6 +121,7 @@ st.markdown(f"""
 .new-badge {{ background: #e74c3c; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7em; margin-left: 5px; }}
 .popup-content {{ max-width: 280px; text-align: center; color: #e74c3c; line-height: 1.6; padding: 10px; }}
 .popup-content b {{ font-size: 1.3em; }}
+.parallel-text {{ color: #e74c3c; font-weight: bold; font-size: 12px; white-space: nowrap; text-shadow: 0 0 4px white; transform-origin: center; pointer-events: none; }}
 </style>
 <script>
 function createSnowflake() {{
@@ -268,9 +269,7 @@ def render_map():
 
     cities = sorted(cities, key=lambda x: x.get("perf_date", "9999-12-31") or "9999-12-31")
 
-    # =============================
-    # 1. 수정 모드 (항상 표시)
-    # =============================
+    # 1. 수정 모드
     if st.session_state.get("edit_city"):
         edit_city_name = st.session_state.edit_city
         edit_city = next((c for c in cities if c["city"] == edit_city_name), None)
@@ -311,9 +310,7 @@ def render_map():
                             st.session_state.edit_city = None
                             st.rerun()
 
-    # =============================
-    # 2. 도시 추가 폼 (항상 표시)
-    # =============================
+    # 2. 도시 추가 폼
     if st.session_state.admin and not st.session_state.get("edit_city"):
         with st.expander("도시 추가", expanded=True):
             with st.form("add_city_form", clear_on_submit=True):
@@ -341,9 +338,6 @@ def render_map():
                         st.success("등록 완료!")
                         st.rerun()
 
-    # =============================
-    # 3. 지도 렌더링
-    # =============================
     if not cities:
         st.warning("도시 없음")
         m = folium.Map(location=[PUNE_LAT, PUNE_LON], zoom_start=9, tiles="CartoDB positron")
@@ -364,6 +358,22 @@ def render_map():
         except:
             continue
 
+    # 줌 반응 스크립트 (라벨 가시성)
+    label_script = """
+    <script>
+    const map = window.parent.document.getElementsByClassName('folium-map')[0].firstChild;
+    const labels = document.getElementsByClassName('parallel-text');
+    function updateLabels() {
+        const zoom = map.getZoom();
+        for (let i = 0; i < labels.length; i++) {
+            labels[i].style.display = zoom >= 10 ? 'block' : 'none';
+        }
+    }
+    map.on('zoomend', updateLabels);
+    updateLabels();
+    </script>
+    """
+
     for i, c in enumerate(cities):
         display_date = _("pending") if not c.get("perf_date") else c["perf_date"]
         try:
@@ -373,8 +383,8 @@ def render_map():
 
         is_past_segment = (today_index != -1 and i < today_index)
 
-        # 아이콘
-        icon_opacity = 0.35 if is_past_segment else 1.0
+        # 아이콘: 이전 도시 50% 더 흐림 (원래 1.0 → 0.5)
+        icon_opacity = 0.5 if is_past_segment else 1.0
         icon = folium.Icon(color="red", icon="music", prefix="fa", opacity=icon_opacity)
 
         # 말풍선
@@ -395,10 +405,38 @@ def render_map():
             icon=icon
         ).add_to(m)
 
-        # 연결 라인
+        # 연결 라인 + 라벨
         if i < len(cities)-1:
-            line_opacity = 0.35 if is_past_segment else 1.0
-            segment_coords = [(c['lat'], c['lon']), (cities[i+1]['lat'], cities[i+1]['lon'])]
+            next_c = cities[i+1]
+            dist_km, mins = get_real_travel_time(c['lat'], c['lon'], next_c['lat'], next_c['lon'])
+            hours = mins // 60
+            mins_remain = mins % 60
+            time_str = _( "est_time").format(hours=hours, mins=mins_remain) if hours or mins_remain else ""
+            label_text = f"{dist_km:.0f}km {time_str}".strip()
+
+            mid_lat = (c['lat'] + next_c['lat']) / 2
+            mid_lon = (c['lon'] + next_c['lon']) / 2
+
+            bearing = degrees(atan2(next_c['lon'] - c['lon'], next_c['lat'] - c['lat']))
+            rotate = bearing
+
+            # 라벨 (항상 표시, 줌에 따라 가시성 제어)
+            label_opacity = 0.5 if is_past_segment else 1.0
+            folium.Marker(
+                [mid_lat, mid_lon],
+                icon=folium.DivIcon(html=f'''
+                    <div class="parallel-text" style="
+                        transform: translate(-50%, -50%) rotate({rotate}deg);
+                        opacity: {label_opacity};
+                    ">
+                        {label_text}
+                    </div>
+                ''')
+            ).add_to(m)
+
+            # 라인: 이전 구간 50% 더 흐림
+            line_opacity = 0.5 if is_past_segment else 1.0
+            segment_coords = [(c['lat'], c['lon']), (next_c['lat'], next_c['lon'])]
             AntPath(segment_coords, color="#e74c3c", weight=6, opacity=line_opacity, delay=800, dash_array=[20, 30]).add_to(m)
 
         # 도시 정보 expander
@@ -423,7 +461,9 @@ def render_map():
                         save_json(CITY_FILE, cities)
                         st.rerun()
 
-    st_folium(m, width=900, height=550, key=f"map_{len(cities)}")
+    map_html = st_folium(m, width=900, height=550, key=f"map_{len(cities)}")
+    if map_html:
+        st.components.v1.html(label_script, height=0)
 
 # --- 14. 탭 ---
 tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
