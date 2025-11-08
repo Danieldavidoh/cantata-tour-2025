@@ -54,7 +54,7 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS: 아이콘만 버튼 + 지도 Pune 중심 + 스크롤 방지 ---
+# --- 7. CSS: 아이콘 작게 + 한 줄 + 크기 다양 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -67,42 +67,47 @@ st.markdown("""
     /* 햄버거 */
     .hamburger { position:fixed; top:15px; left:15px; z-index:10000; background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%; width:50px; height:50px; font-size:24px; cursor:pointer; box-shadow:0 0 10px rgba(0,0,0,.3); }
 
-    /* 크리스마스 장식 */
+    /* 크리스마스 장식: 제목보다 작게 + 한 줄 + 크기 다양 */
     .christmas-decoration {
         position: fixed; top: 12vh; left: 0; width: 100%; z-index: 999;
-        display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; pointer-events: none;
+        display: flex; justify-content: center; gap: 12px; flex-wrap: nowrap; overflow-x: hidden;
+        white-space: nowrap; pointer-events: none;
     }
-    .christmas-decoration i { font-size: 3em; color: #fff; text-shadow: 0 0 12px rgba(255,255,255,0.7); animation: float 3s ease-in-out infinite; opacity: 0.95; }
-    .christmas-decoration i:nth-child(1) { font-size: 3.8em; animation-delay: 0s; }
-    .christmas-decoration i:nth-child(2) { font-size: 3.1em; animation-delay: 0.5s; }
-    .christmas-decoration i:nth-child(3) { font-size: 3.5em; animation-delay: 1s; }
-    .christmas-decoration i:nth-child(4) { font-size: 2.9em; animation-delay: 1.5s; }
-    .christmas-decoration i:nth-child(5) { font-size: 3.3em; animation-delay: 2s; }
-    .christmas-decoration i:nth-child(6) { font-size: 3.0em; animation-delay: 2.5s; }
-    .christmas-decoration i:nth-child(7) { font-size: 3.6em; animation-delay: 3s; }
-    @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-12px) rotate(6deg); } }
+    .christmas-decoration i {
+        color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6);
+        animation: float 3s ease-in-out infinite; opacity: 0.95;
+    }
+    /* 각각 다른 크기 (작게: 1.8em ~ 2.5em) */
+    .christmas-decoration i:nth-child(1) { font-size: 2.1em; animation-delay: 0s; }
+    .christmas-decoration i:nth-child(2) { font-size: 1.9em; animation-delay: 0.4s; }
+    .christmas-decoration i:nth-child(3) { font-size: 2.4em; animation-delay: 0.8s; }
+    .christmas-decoration i:nth-child(4) { font-size: 2.0em; animation-delay: 1.2s; }
+    .christmas-decoration i:nth-child(5) { font-size: 2.5em; animation-delay: 1.6s; }
+    .christmas-decoration i:nth-child(6) { font-size: 1.8em; animation-delay: 2.0s; }
+    .christmas-decoration i:nth-child(7) { font-size: 2.3em; animation-delay: 2.4s; }
+    @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-8px) rotate(5deg); } }
 
     /* 제목 */
-    .fixed-title { position: fixed; top: 24vh; left: 0; width: 100%; z-index: 1000; text-align: center; }
+    .fixed-title { position: fixed; top: 22vh; left: 0; width: 100%; z-index: 1000; text-align: center; }
     .main-title { font-size: 2.8em !important; font-weight: bold; text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; line-height: 1.2; }
 
-    /* 버튼 라인: 아이콘만, 좌우 정렬 */
+    /* 버튼 라인: 아이콘만, 좌우 */
     .button-row {
-        position: fixed; top: 36vh; left: 0; width: 100%; z-index: 1000;
+        position: fixed; top: 34vh; left: 0; width: 100%; z-index: 1000;
         display: flex; justify-content: space-between; padding: 0 30px; box-sizing: border-box;
     }
     .icon-btn {
         background: rgba(255,255,255,0.96); color: #c62828; border: none; border-radius: 50%;
         width: 70px; height: 70px; font-size: 1.8em; cursor: pointer;
         box-shadow: 0 6px 20px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center;
-        transition: all 0.3s ease; flex-grow: 0; flex-shrink: 0;
+        transition: all 0.3s ease;
     }
     .icon-btn:hover { background: #d32f2f; color: white; transform: scale(1.1); }
 
-    /* 콘텐츠: 지도 바로 아래 */
+    /* 콘텐츠 */
     .content-area {
-        position: relative; margin-top: 50vh !important; visibility: hidden; opacity: 0;
-        transition: all 0.5s ease; overflow-y: auto; height: 50vh; padding: 15px;
+        position: relative; margin-top: 48vh !important; visibility: hidden; opacity: 0;
+        transition: all 0.5s ease; overflow-y: auto; height: 52vh; padding: 15px;
     }
     .content-area.show { visibility: visible; opacity: 1; }
 
@@ -120,7 +125,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 크리스마스 장식 ---
+# --- 크리스마스 장식: 한 줄 + 작게 + 크기 다양 ---
 st.markdown('''
 <div class="christmas-decoration">
     <i class="fas fa-gift"></i>
@@ -147,7 +152,7 @@ title_html = f'<span style="color:red;">{_("title_cantata")}</span> <span style=
 st.markdown(f'<h1 class="main-title">{title_html}</h1>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 버튼 라인: 아이콘만 (공지: 확성기, 투어: 경로) ---
+# --- 버튼 라인: 아이콘만 ---
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col_left, col_right = st.columns([1, 1])
 with col_left:
@@ -170,9 +175,8 @@ st.markdown(f'<div class="{content_class}">', unsafe_allow_html=True)
 
 # === [투어 경로] 클릭 시: 지도 바로 아래 ===
 if st.session_state.map_open:
-    # --- 지도: 항상 Pune 중심 ---
     cities = load_json(CITY_FILE)
-    m = folium.Map(location=[18.5204, 73.8567], zoom_start=10, tiles="OpenStreetMap")  # Pune 중심 + 확대
+    m = folium.Map(location=[18.5204, 73.8567], zoom_start=10, tiles="OpenStreetMap")  # Pune 중심
     for i, c in enumerate(cities):
         coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
         lat, lon = coords
@@ -186,7 +190,6 @@ if st.session_state.map_open:
             AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
     st_folium(m, width=900, height=550, key="tour_map")
 
-    # --- 관리자: 도시 추가 (지도 아래) ---
     if st.session_state.admin:
         if st.button(_("add_city")):
             st.session_state.adding_city = True
@@ -219,7 +222,7 @@ if st.session_state.map_open:
                                 st.session_state.adding_city = False
                                 st.rerun()
 
-# === [공지] 클릭 시: 공지 아래에 표시 ===
+# === [공지] 클릭 시 ===
 if st.session_state.notice_open:
     if st.session_state.admin:
         with st.expander("공지 작성"):
@@ -278,7 +281,7 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-# --- PC  사이드바 ---
+# --- PC 사이드바 ---
 with st.sidebar:
     lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
     sel = st.selectbox("언어", list(lang_map.keys()), index=list(lang_map.values()).index(st.session_state.lang))
