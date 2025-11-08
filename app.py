@@ -54,7 +54,7 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS: 버튼 작게 + 고정 + 지도 고정 ---
+# --- 7. CSS: 제목 아래 + 아이콘 잘림 방지 + 버튼만 남김 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -67,11 +67,11 @@ st.markdown("""
     /* 햄버거 */
     .hamburger { position:fixed; top:15px; left:15px; z-index:10000; background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%; width:50px; height:50px; font-size:24px; cursor:pointer; box-shadow:0 0 10px rgba(0,0,0,.3); }
 
-    /* 크리스마스 장식: 고정 */
+    /* 크리스마스 장식: 상단 여유 + 잘림 방지 */
     .christmas-decoration {
-        position: fixed; top: 12vh; left: 0; width: 100%; z-index: 999;
-        display: flex; justify-content: center; gap: 12px; flex-wrap: nowrap; overflow-x: hidden;
-        white-space: nowrap; pointer-events: none;
+        position: fixed; top: 8vh; left: 0; width: 100%; z-index: 999;
+        display: flex; justify-content: center; gap: 12px; flex-wrap: nowrap;
+        overflow: visible !important; pointer-events: none; padding-top: 20px;
     }
     .christmas-decoration i {
         color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6);
@@ -84,13 +84,16 @@ st.markdown("""
     .christmas-decoration i:nth-child(5) { font-size: 2.5em; animation-delay: 1.6s; }
     .christmas-decoration i:nth-child(6) { font-size: 1.8em; animation-delay: 2.0s; }
     .christmas-decoration i:nth-child(7) { font-size: 2.3em; animation-delay: 2.4s; }
-    @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-8px) rotate(5deg); } }
+    @keyframes float { 
+        0%, 100% { transform: translateY(0) rotate(0deg); } 
+        50% { transform: translateY(-6px) rotate(4deg); } 
+    }
 
-    /* 제목 */
-    .fixed-title { position: fixed; top: 22vh; left: 0; width: 100%; z-index: 1000; text-align: center; }
+    /* 제목: 아이콘 바로 아래 */
+    .fixed-title { position: fixed; top: 18vh; left: 0; width: 100%; z-index: 1000; text-align: center; }
     .main-title { font-size: 2.8em !important; font-weight: bold; text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; line-height: 1.2; }
 
-    /* 버튼: 작게 + 절대 위치 (공지 왼쪽, 투어 오른쪽) */
+    /* 버튼: 작게, 위치 유지 */
     .btn-notice {
         position: fixed; top: 34vh; left: 20px; z-index: 1000;
         background: rgba(255,255,255,0.96); color: #c62828; border: none;
@@ -109,7 +112,7 @@ st.markdown("""
     }
     .btn-map:hover { background: #d32f2f; color: white; transform: scale(1.05); }
 
-    /* 지도: 고정 위치 (버튼 바로 아래) */
+    /* 지도: 고정 */
     .fixed-map {
         position: fixed; top: 44vh; left: 0; width: 100%; height: 56vh; z-index: 900;
         visibility: hidden; opacity: 0; transition: all 0.5s ease;
@@ -130,7 +133,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 크리스마스 장식 (고정) ---
+# --- 크리스마스 장식 (잘림 방지) ---
 st.markdown('''
 <div class="christmas-decoration">
     <i class="fas fa-gift"></i>
@@ -151,31 +154,40 @@ for i in range(26):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 ---
+# --- 제목 (아이콘 아래) ---
 st.markdown('<div class="fixed-title">', unsafe_allow_html=True)
 title_html = f'<span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span>'
 st.markdown(f'<h1 class="main-title">{title_html}</h1>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 공지 버튼 (왼쪽, 작게) ---
-if st.button(_("tab_notice"), key="btn_notice"):
+# --- 공지 버튼 (왼쪽) ---
+st.markdown(f'<button class="btn-notice">{_("tab_notice")}</button>', unsafe_allow_html=True)
+if st.session_state.get("notice_open", False):
     st.session_state.notice_open = True
-    st.session_state.map_open = False
-    st.rerun()
-st.markdown(f'<button class="btn-notice" onclick="window.location.href=\'?notice_open=True&map_open=False\'">{_("tab_notice")}</button>', unsafe_allow_html=True)
+else:
+    if "btn_notice" not in st.session_state:
+        st.session_state.btn_notice = False
+    if st.button("", key="hidden_notice_trigger"):
+        st.session_state.notice_open = True
+        st.session_state.map_open = False
+        st.rerun()
 
-# --- 투어 경로 버튼 (오른쪽, 작게) ---
-if st.button(_("tab_map"), key="btn_map"):
+# --- 투어 경로 버튼 (오른쪽) ---
+st.markdown(f'<button class="btn-map">{_("tab_map")}</button>', unsafe_allow_html=True)
+if st.session_state.get("map_open", False):
     st.session_state.map_open = True
-    st.session_state.notice_open = False
-    st.rerun()
-st.markdown(f'<button class="btn-map" onclick="window.location.href=\'?map_open=True&notice_open=False\'">{_("tab_map")}</button>', unsafe_allow_html=True)
+else:
+    if "btn_map" not in st.session_state:
+        st.session_state.btn_map = False
+    if st.button("", key="hidden_map_trigger"):
+        st.session_state.map_open = True
+        st.session_state.notice_open = False
+        st.rerun()
 
-# --- 지도: 고정 위치 (버튼 바로 아래) ---
+# --- 지도 (고정) ---
 map_class = "fixed-map"
 if st.session_state.map_open:
     map_class += " show"
-
 st.markdown(f'<div class="{map_class}">', unsafe_allow_html=True)
 if st.session_state.map_open:
     cities = load_json(CITY_FILE)
@@ -194,7 +206,7 @@ if st.session_state.map_open:
     st_folium(m, width=900, height=550, key="tour_map_fixed")
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 공지 내용 (지도 아래에 표시) ---
+# --- 공지 내용 (지도 아래) ---
 if st.session_state.notice_open:
     st.markdown('<div style="position:fixed; top:44vh; left:0; width:100%; height:56vh; overflow-y:auto; padding:15px; background:rgba(255,255,255,0.9); z-index:800;">', unsafe_allow_html=True)
     if st.session_state.admin:
