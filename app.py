@@ -123,17 +123,17 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-# --- 탭 (투어 경로 왼쪽, 공지 오른쪽) ---
+# --- 탭 (공지 왼쪽, 투어 경로 오른쪽) ---
 st.markdown('<div class="content-area">', unsafe_allow_html=True)
 st.markdown('<div class="tab-container">', unsafe_allow_html=True)
 tab_col1, tab_col2 = st.columns(2)
 with tab_col1:
-    if st.button(_(f"tab_map"), use_container_width=True, key="tab_map_btn"):
-        st.session_state.tab_selection = _(f"tab_map")
-        st.rerun()
-with tab_col2:
     if st.button(_(f"tab_notice"), use_container_width=True, key="tab_notice_btn"):
         st.session_state.tab_selection = _(f"tab_notice")
+        st.rerun()
+with tab_col2:
+    if st.button(_(f"tab_map"), use_container_width=True, key="tab_map_btn"):
+        st.session_state.tab_selection = _(f"tab_map")
         st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -203,7 +203,6 @@ if st.session_state.tab_selection == _(f"tab_notice"):
                     else:
                         st.warning(_("warning"))
 
-    # --- 공지 제목 바만 표시 ---
     data = load_json(NOTICE_FILE)
     for i, n in enumerate(data):
         with st.expander(f"{n['date']} | {n['title']}", expanded=False):
