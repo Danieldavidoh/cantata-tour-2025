@@ -82,7 +82,7 @@ CITY_COORDS = {
     "Nagpur": (21.1458, 79.0882)
 }
 
-# --- 7. CSS: 크리스마스 아이콘 + 제목 + 버튼 완전 밀착 ---
+# --- 7. CSS: 제목 3배 위로 + 아이콘 밀착 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -93,12 +93,13 @@ st.markdown("""
         background-attachment: fixed;
         padding-top: 0 !important;
         margin: 0 !important;
+        overflow-x: hidden;
     }
 
-    /* 크리스마스 아이콘 */
+    /* 크리스마스 아이콘 - 위로 올리기 */
     .christmas-decoration {
         position: absolute;
-        top: 2vh;
+        top: -6vh !important;
         left: 0;
         width: 100%;
         z-index: 999;
@@ -127,7 +128,7 @@ st.markdown("""
         50% {transform: translateY(-6px) rotate(4deg);}
     }
 
-    /* 제목 - 완전 밀착 */
+    /* 제목 - 3배 위로 이동 (2.8em × 3 = 8.4em) */
     .main-title {
         font-size: 2.8em !important;
         font-weight: bold;
@@ -137,10 +138,11 @@ st.markdown("""
         padding: 0 !important;
         line-height: 1.1;
         position: relative;
-        z-index: 10;
+        z-index: 20;
+        margin-top: -8.4em !important;   /* 3배 위로 */
     }
 
-    /* 버튼 라인 - 제목 바로 아래 딱 붙음 */
+    /* 버튼 라인 - 제목 아래 딱 붙음 */
     .button-row {
         display: flex;
         justify-content: center;
@@ -229,7 +231,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 크리스마스 아이콘 ---
+# --- 크리스마스 아이콘 (위로 올림) ---
 st.markdown('''
 <div class="christmas-decoration">
     <i class="fas fa-gift"></i>
@@ -250,11 +252,11 @@ for i in range(52):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 (완전 밀착) ---
+# --- 제목 (3배 위로 이동) ---
 title_html = f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>'
 st.markdown(title_html, unsafe_allow_html=True)
 
-# --- 버튼 라인 (제목 바로 아래 딱!) ---
+# --- 버튼 라인 ---
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col1, col2 = st.columns([1, 1])
 with col1:
@@ -314,7 +316,7 @@ if st.session_state.notice_open:
                 save_json(NOTICE_FILE, data)
                 st.rerun()
 
-# --- 지도: 전체화면 + 닫기 버튼 (기본 숨김) ---
+# --- 지도: 전체화면 + 닫기 버튼 ---
 if st.session_state.map_open:
     st.markdown(
         """
@@ -355,7 +357,6 @@ if st.session_state.map_open:
                     opacity=0.3 if not is_future else 1.0).add_to(m)
 
     st_folium(m, width=1200, height=800, key="tour_map_full", returned_objects=[])
-    st.experimental_set_query_params(map_open=False)
 
 # --- 모바일 햄버거 메뉴 ---
 st.markdown(f'''
