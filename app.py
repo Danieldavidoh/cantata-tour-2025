@@ -58,25 +58,23 @@ CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpu
 # --- 7. CSS: 제목 최상단 시작 + 모든 위 공간 제거 ---
 st.markdown("""
 <style>
-    [data-testid="stAppViewContainer"] { 
-        background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; 
-        padding-top: 0 !important; margin: 0 !important; 
+    [data-testid="stAppViewContainer"] {
+        background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed;
+        padding-top: 0 !important; margin: 0 !important;
     }
-
     /* 제목 - 최상단 딱 붙음 */
     .main-title {
         font-size: 2.8em !important; font-weight: bold; text-align: center;
-        text-shadow: 0 3px 8px rgba(0,0,0,0.6); 
+        text-shadow: 0 3px 8px rgba(0,0,0,0.6);
         margin: 0 !important; padding: 0 !important; line-height: 1.2;
-        margin-top: 0 !important;      /* 위 공간 0 */
-        margin-bottom: 0 !important;   /* 아래 버튼과 간격 0 */
+        margin-top: 0 !important; /* 위 공간 0 */
+        margin-bottom: 0 !important; /* 아래 버튼과 간격 0 */
     }
-
     /* 버튼 라인 - 제목 바로 아래 딱 붙음 */
     .button-row {
-        display: flex; justify-content: center; gap: 20px; 
+        display: flex; justify-content: center; gap: 20px;
         margin: 0 !important; padding: 0 15px !important;
-        margin-top: 0 !important;  /* 제목과 간격 0 */
+        margin-top: 0 !important; /* 제목과 간격 0 */
     }
     .tab-btn {
         background: rgba(255,255,255,0.96); color: #c62828; border: none;
@@ -85,7 +83,6 @@ st.markdown("""
         transition: all 0.3s ease; flex: 1; max-width: 200px;
     }
     .tab-btn:hover { background: #d32f2f; color: white; transform: translateY(-2px); }
-
     /* 전체화면 지도 */
     .map-fullscreen {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -99,7 +96,6 @@ st.markdown("""
         cursor: pointer; z-index: 10000; border: none; font-size: 1.1em;
     }
     .close-map-btn:hover { opacity: 1; transform: scale(1.05); }
-
     /* 모바일 햄버거 */
     .hamburger { position:fixed; top:15px; left:15px; z-index:10000; background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%; width:50px; height:50px; font-size:24px; cursor:pointer; box-shadow:0 0 10px rgba(0,0,0,.3); }
     .sidebar-mobile { position:fixed; top:0; left:-300px; width:280px; height:100vh; background:rgba(30,30,30,.95); color:#fff; padding:20px; transition:left .3s; z-index:9999; overflow-y:auto; }
@@ -164,7 +160,7 @@ if st.session_state.notice_open:
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
 
-# --- 지도: 전체화면 + 60% 투명 닫기 버튼 ---
+# --- 지도: 전체화면 + 60% 투명 닫기 버튼 (오류 해결) ---
 if st.session_state.map_open:
     st.markdown(
         """
@@ -188,7 +184,9 @@ if st.session_state.map_open:
         if i < len(cities) - 1:
             nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
             AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
-    st_folium(m, width=1200, height=800, key="tour_map_full", returned_objects=[])
+    
+    # 오류 해결: returned_objects 제거
+    st_folium(m, width=1200, height=800, key="tour_map_full")
 
 # --- 모바일 햄버거 메뉴 ---
 st.markdown(f'''
