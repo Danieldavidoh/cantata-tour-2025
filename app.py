@@ -54,7 +54,7 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS: 공지/경로 버튼 텍스트 + 지도 바로 아래 ---
+# --- 7. CSS: 버튼 작게 + 고정 + 지도 고정 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -67,7 +67,7 @@ st.markdown("""
     /* 햄버거 */
     .hamburger { position:fixed; top:15px; left:15px; z-index:10000; background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%; width:50px; height:50px; font-size:24px; cursor:pointer; box-shadow:0 0 10px rgba(0,0,0,.3); }
 
-    /* 크리스마스 장식: 한 줄 + 작게 */
+    /* 크리스마스 장식: 고정 */
     .christmas-decoration {
         position: fixed; top: 12vh; left: 0; width: 100%; z-index: 999;
         display: flex; justify-content: center; gap: 12px; flex-wrap: nowrap; overflow-x: hidden;
@@ -90,25 +90,31 @@ st.markdown("""
     .fixed-title { position: fixed; top: 22vh; left: 0; width: 100%; z-index: 1000; text-align: center; }
     .main-title { font-size: 2.8em !important; font-weight: bold; text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; line-height: 1.2; }
 
-    /* 버튼 라인: "공지" + "투어 경로" 텍스트, 같은 줄 */
-    .button-row {
-        position: fixed; top: 34vh; left: 0; width: 100%; z-index: 1000;
-        display: flex; justify-content: center; gap: 30px; padding: 0 20px; box-sizing: border-box;
-    }
-    .tab-btn {
+    /* 버튼: 작게 + 절대 위치 (공지 왼쪽, 투어 오른쪽) */
+    .btn-notice {
+        position: fixed; top: 34vh; left: 20px; z-index: 1000;
         background: rgba(255,255,255,0.96); color: #c62828; border: none;
-        border-radius: 50px; padding: 12px 28px; font-weight: bold;
-        font-size: 1.1em; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.22);
-        transition: all 0.3s ease; min-width: 120px; text-align: center;
+        border-radius: 20px; padding: 8px 16px; font-weight: bold;
+        font-size: 1em; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
     }
-    .tab-btn:hover { background: #d32f2f; color: white; transform: translateY(-2px); }
+    .btn-notice:hover { background: #d32f2f; color: white; transform: scale(1.05); }
 
-    /* 콘텐츠: 지도 바로 아래 (margin-top: 0) */
-    .content-area {
-        position: relative; margin-top: 44vh !important; visibility: hidden; opacity: 0;
-        transition: all 0.5s ease; overflow-y: auto; height: 56vh; padding: 10px 15px;
+    .btn-map {
+        position: fixed; top: 34vh; right: 20px; z-index: 1000;
+        background: rgba(255,255,255,0.96); color: #c62828; border: none;
+        border-radius: 20px; padding: 8px 16px; font-weight: bold;
+        font-size: 1em; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
     }
-    .content-area.show { visibility: visible; opacity: 1; }
+    .btn-map:hover { background: #d32f2f; color: white; transform: scale(1.05); }
+
+    /* 지도: 고정 위치 (버튼 바로 아래) */
+    .fixed-map {
+        position: fixed; top: 44vh; left: 0; width: 100%; height: 56vh; z-index: 900;
+        visibility: hidden; opacity: 0; transition: all 0.5s ease;
+    }
+    .fixed-map.show { visibility: visible; opacity: 1; }
 
     /* 눈송이 */
     .snowflake { position:fixed; top:-15px; color:#fff; font-size:1.1em; pointer-events:none; animation:fall linear infinite; opacity:0.3; z-index:1; }
@@ -124,7 +130,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 크리스마스 장식 ---
+# --- 크리스마스 장식 (고정) ---
 st.markdown('''
 <div class="christmas-decoration">
     <i class="fas fa-gift"></i>
@@ -151,31 +157,29 @@ title_html = f'<span style="color:red;">{_("title_cantata")}</span> <span style=
 st.markdown(f'<h1 class="main-title">{title_html}</h1>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 버튼 라인: "공지" + "투어 경로" 같은 줄 ---
-st.markdown('<div class="button-row">', unsafe_allow_html=True)
-col1, col2 = st.columns([1, 1])
-with col1:
-    if st.button(_("tab_notice"), key="btn_notice", use_container_width=True):
-        st.session_state.notice_open = True
-        st.session_state.map_open = False
-        st.rerun()
-with col2:
-    if st.button(_("tab_map"), key="btn_map", use_container_width=True):
-        st.session_state.map_open = True
-        st.session_state.notice_open = False
-        st.rerun()
-st.markdown('</div>', unsafe_allow_html=True)
+# --- 공지 버튼 (왼쪽, 작게) ---
+if st.button(_("tab_notice"), key="btn_notice"):
+    st.session_state.notice_open = True
+    st.session_state.map_open = False
+    st.rerun()
+st.markdown(f'<button class="btn-notice" onclick="window.location.href=\'?notice_open=True&map_open=False\'">{_("tab_notice")}</button>', unsafe_allow_html=True)
 
-# --- 콘텐츠 영역: 지도 바로 아래 ---
-content_class = "content-area"
-if st.session_state.notice_open or st.session_state.map_open:
-    content_class += " show"
-st.markdown(f'<div class="{content_class}">', unsafe_allow_html=True)
+# --- 투어 경로 버튼 (오른쪽, 작게) ---
+if st.button(_("tab_map"), key="btn_map"):
+    st.session_state.map_open = True
+    st.session_state.notice_open = False
+    st.rerun()
+st.markdown(f'<button class="btn-map" onclick="window.location.href=\'?map_open=True&notice_open=False\'">{_("tab_map")}</button>', unsafe_allow_html=True)
 
-# === [투어 경로] 클릭 시: 지도 바로 아래 ===
+# --- 지도: 고정 위치 (버튼 바로 아래) ---
+map_class = "fixed-map"
+if st.session_state.map_open:
+    map_class += " show"
+
+st.markdown(f'<div class="{map_class}">', unsafe_allow_html=True)
 if st.session_state.map_open:
     cities = load_json(CITY_FILE)
-    m = folium.Map(location=[18.5204, 73.8567], zoom_start=10, tiles="OpenStreetMap")  # Pune 중심
+    m = folium.Map(location=[18.5204, 73.8567], zoom_start=10, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
         coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
         lat, lon = coords
@@ -187,42 +191,12 @@ if st.session_state.map_open:
         if i < len(cities) - 1:
             nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
             AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
-    st_folium(m, width=900, height=550, key="tour_map")
+    st_folium(m, width=900, height=550, key="tour_map_fixed")
+st.markdown('</div>', unsafe_allow_html=True)
 
-    if st.session_state.admin:
-        if st.button(_("add_city")):
-            st.session_state.adding_city = True
-        if st.session_state.get("adding_city", False):
-            with st.container():
-                city_name = st.text_input(" ", placeholder="새 도시 입력", key="new_city_name", label_visibility="collapsed")
-                if city_name:
-                    with st.form("city_form_add"):
-                        perf_date = st.date_input(_("perf_date"), key="add_perf_date")
-                        venue = st.text_input(_("venue"), key="add_venue")
-                        seats = st.number_input(_("seats"), min_value=0, value=500, step=50, key="add_seats")
-                        indoor = st.radio("실내/실외", [_(f"indoor"), _(f"outdoor")], key="add_indoor")
-                        google_link = st.text_input(_("google_link"), key="add_link")
-                        note = st.text_area(_("note"), key="add_note")
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            if st.form_submit_button(_("save")):
-                                new_city = { "city": city_name, "venue": venue, "seats": str(seats),
-                                            "indoor": indoor == _(f"indoor"), "note": note,
-                                            "google_link": google_link, "perf_date": str(perf_date),
-                                            "date": datetime.now().strftime("%m/%d %H:%M") }
-                                data = load_json(CITY_FILE)
-                                data.append(new_city)
-                                save_json(CITY_FILE, data)
-                                st.session_state.adding_city = False
-                                st.success("도시 추가 완료!")
-                                st.rerun()
-                        with col2:
-                            if st.form_submit_button(_("cancel")):
-                                st.session_state.adding_city = False
-                                st.rerun()
-
-# === [공지] 클릭 시 ===
+# --- 공지 내용 (지도 아래에 표시) ---
 if st.session_state.notice_open:
+    st.markdown('<div style="position:fixed; top:44vh; left:0; width:100%; height:56vh; overflow-y:auto; padding:15px; background:rgba(255,255,255,0.9); z-index:800;">', unsafe_allow_html=True)
     if st.session_state.admin:
         with st.expander("공지 작성"):
             with st.form("notice_form", clear_on_submit=True):
@@ -257,8 +231,7 @@ if st.session_state.notice_open:
                 st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">다운로드</a>', unsafe_allow_html=True)
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
-
-st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 모바일 햄버거 메뉴 ---
 st.markdown(f'''
