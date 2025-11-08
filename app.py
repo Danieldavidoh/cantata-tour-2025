@@ -54,15 +54,18 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS: 버튼 같은 줄 + 제목 아래 + 아이콘 보임 ---
+# --- 7. CSS: 크리스마스 아이콘 복구 + 제목 아래 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-    [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding-top: 0 !important; margin: 0 !important; }
-    
-    /* 크리스마스 아이콘: 항상 보임 */
+    [data-testid="stAppViewContainer"] { 
+        background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; 
+        padding-top: 0 !important; margin: 0 !important; 
+    }
+
+    /* 크리스마스 아이콘: 항상 최상단 보임 */
     .christmas-decoration {
-        position: absolute; top: 8vh; left: 0; width: 100%; z-index: 999;
+        position: fixed; top: 2vh; left: 0; width: 100%; z-index: 1001;
         display: flex; justify-content: center; gap: 12px; flex-wrap: nowrap; pointer-events: none;
     }
     .christmas-decoration i {
@@ -78,15 +81,15 @@ st.markdown("""
     .christmas-decoration i:nth-child(7) { font-size: 2.3em; animation-delay: 2.4s; }
     @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-6px) rotate(4deg); } }
 
-    /* 제목 */
+    /* 제목: 아이콘 바로 아래 */
     .main-title {
         font-size: 2.8em !important; font-weight: bold; text-align: center;
-        text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 20px 0 10px 0 !important; line-height: 1.2;
+        text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 12vh 0 10px 0 !important; line-height: 1.2; z-index: 1000;
     }
 
-    /* 버튼 라인: 제목 바로 아래, 같은 줄 평행 */
+    /* 버튼 라인 */
     .button-row {
-        display: flex; justify-content: center; gap: 20px; margin: 0 0 20px 0; padding: 0 15px;
+        display: flex; justify-content: center; gap: 20px; margin: 0 0 20px 0; padding: 0 15px; z-index: 1000;
     }
     .tab-btn {
         background: rgba(255,255,255,0.96); color: #c62828; border: none;
@@ -111,7 +114,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 크리스마스 아이콘 (항상 보임) ---
+# --- 크리스마스 아이콘 (복구 + 항상 보임) ---
 st.markdown('''
 <div class="christmas-decoration">
     <i class="fas fa-gift"></i>
@@ -124,7 +127,7 @@ st.markdown('''
 </div>
 ''', unsafe_allow_html=True)
 
-# --- 눈송이 (52개) ---
+# --- 눈송이 ---
 for i in range(52):
     left = random.randint(0, 100)
     duration = random.randint(10, 20)
@@ -132,11 +135,11 @@ for i in range(52):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 ---
+# --- 제목 (아이콘 아래) ---
 title_html = f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>'
 st.markdown(title_html, unsafe_allow_html=True)
 
-# --- 버튼 라인: 공지 + 투어 경로 (같은 줄) ---
+# --- 버튼 라인 ---
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col1, col2 = st.columns([1, 1])
 with col1:
