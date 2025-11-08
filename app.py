@@ -1,4 +1,3 @@
-# app.py (수정본)
 import json, os, uuid, base64, random
 import streamlit as st
 from datetime import datetime, date
@@ -9,9 +8,6 @@ from pytz import timezone
 from streamlit_autorefresh import st_autorefresh
 import pandas as pd
 
-# =============================================
-# 기본 설정
-# =============================================
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 if not st.session_state.get("admin", False):
     st_autorefresh(interval=5000, key="auto_refresh_user")
@@ -19,12 +15,9 @@ if not st.session_state.get("admin", False):
 NOTICE_FILE = "notice.json"
 CITY_FILE = "cities.json"
 UPLOAD_DIR = "uploads"
-CSV_FILE = "cities.csv"
+CSV_FILE = "마하라스트라 도시목록.csv"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# =============================================
-# 다국어(간소화)
-# =============================================
 LANG = {
     "ko": {"title_cantata": "칸타타 투어", "title_year": "2025", "title_region": "마하라스트라",
            "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
@@ -42,20 +35,26 @@ LANG = {
            "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट",
            "add_city": "शहर जोड़ें", "city": "शहर", "import_cities": "CSV से सभी शहर आयात करें", "import_success": "शहर सफलतापूर्वक आयात किए गए!"}
 }
+
 defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False}
 for k, v in defaults.items():
     if k not in st.session_state: st.session_state[k] = v
 _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
 
-# =============================================
-# JSON 헬퍼
-# =============================================
 def load_json(f): return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
 def save_json(f, d): json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
-# =============================================
-# 기본 도시 데이터
-# =============================================
+# --- CSV에서 도시 + 좌표 자동 로드 ---
+def load_city_coords():
+    if not os.path.exists(CSV_FILE):
+        return {}
+    df = pd.read_csv(CSV_FILE)
+    df = df.dropna(subset=['city', 'latitude', 'longitude'])
+    return {row['city']: (row['latitude'], row['longitude']) for _, row in df.iterrows()}
+
+CITY_COORDS = load_city_coords()
+
+# --- 기본 도시 ---
 DEFAULT_CITIES = [
     {"city": "Mumbai", "venue": "Gateway of India", "seats": "5000", "note": "인도 영화 수도", "google_link": "https://goo.gl/maps/abc123", "indoor": False, "date": "11/07 02:01", "perf_date": "2025-11-10"},
     {"city": "Pune", "venue": "Shaniwar Wada", "seats": "3000", "note": "IT 허브", "google_link": "https://goo.gl/maps/def456", "indoor": True, "date": "11/07 02:01", "perf_date": "2025-11-12"},
@@ -64,36 +63,27 @@ DEFAULT_CITIES = [
 ]
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 
-# CSV -> JSON 일괄 추가 함수 (안전성 강화)
+# --- CSV 도시 일괄 추가 ---
 def import_cities_from_csv():
-    if not os.path.exists(CSV_FILE):
-        st.error(f"{CSV_FILE} 파일이 없습니다.")
-        return 0
-    try:
-        df = pd.read_csv(CSV_FILE)
-    except Exception as e:
-        st.error(f"CSV 파일을 읽는 중 오류: {e}")
-        return 0
-    if 'city' not in df.columns:
-        st.error("CSV에 'city' 열이 없습니다.")
-        return 0
-    new_cities = df['city'].dropna().astype(str).str.strip().unique().tolist()
+    if not os.path.exists(CSV_FILE): return st.error(f"{CSV_FILE} 파일이 없습니다.")
+    df = pd.read_csv(CSV_FILE)
+    new_cities = df.dropna(subset=['city'])['city'].astype(str).str.strip().unique().tolist()
     current_cities = load_json(CITY_FILE)
-    current_names = {c.get('city','').strip() for c in current_cities}
+    current_names = {c['city'] for c in current_cities}
     added = 0
     for city_name in new_cities:
-        if not city_name: continue
         if city_name not in current_names:
-            current_cities.append({"city": city_name, "venue": "", "seats": "", "note": "", "google_link": "", "indoor": False,
-                        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"), "perf_date": ""})
+            lat, lon = CITY_COORDS.get(city_name, (18.5204, 73.8567))
+            current_cities.append({
+                "city": city_name, "venue": "", "seats": "", "note": "", "google_link": "",
+                "indoor": False, "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
+                "perf_date": "", "lat": lat, "lon": lon
+            })
             current_names.add(city_name)
             added += 1
     save_json(CITY_FILE, current_cities)
-    return added
+    st.success(f"{added}개 도시가 추가되었습니다!")
 
-# =============================================
-# 스타일 (원래 CSS 유지)
-# =============================================
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -101,6 +91,14 @@ st.markdown("""
     .header-container { text-align: center; margin: 0 !important; padding: 0 !important; }
     .christmas-decoration { display: flex; justify-content: center; gap: 12px; margin: 0 !important; padding: 0 !important; margin-bottom: 0 !important; }
     .christmas-decoration i { color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6); animation: float 3s ease-in-out infinite; opacity: 0.95; }
+    .christmas-decoration i:nth-child(1) { font-size: 2.1em; animation-delay: 0s; }
+    .christmas-decoration i:nth-child(2) { font-size: 1.9em; animation-delay: 0.4s; }
+    .christmas-decoration i:nth-child(3) { font-size: 2.4em; animation-delay: 0.8s; }
+    .christmas-decoration i:nth-child(4) { font-size: 2.0em; animation-delay: 1.2s; }
+    .christmas-decoration i:nth-child(5) { font-size: 2.5em; animation-delay: 1.6s; }
+    .christmas-decoration i:nth-child(6) { font-size: 1.8em; animation-delay: 2.0s; }
+    .christmas-decoration i:nth-child(7) { font-size: 2.3em; animation-delay: 2.4s; }
+    @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-6px) rotate(4deg); } }
     .main-title { font-size: 2.8em !important; font-weight: bold; text-align: center; text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; padding: 0 !important; line-height: 1.2; margin-top: 0 !important; margin-bottom: 0 !important; }
     .button-row { display: flex; justify-content: center; gap: 20px; margin: 0 !important; padding: 0 15px !important; margin-top: 0 !important; }
     .tab-btn { background: rgba(255,255,255,0.96); color: #c62828; border: none; border-radius: 20px; padding: 10px 20px; font-weight: bold; font-size: 1.1em; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.3s ease; flex: 1; max-width: 200px; }
@@ -117,7 +115,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 눈송이
 for i in range(52):
     left = random.randint(0, 100)
     duration = random.randint(10, 20)
@@ -125,7 +122,6 @@ for i in range(52):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# 헤더
 st.markdown('<div class="header-container">', unsafe_allow_html=True)
 st.markdown('''
 <div class="christmas-decoration">
@@ -142,7 +138,6 @@ title_html = f'<h1 class="main-title"><span style="color:red;">{_("title_cantata
 st.markdown(title_html, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# 탭 버튼
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 with col1:
@@ -157,7 +152,6 @@ with col2:
         st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
 
-# 공지
 if st.session_state.notice_open:
     if st.session_state.admin:
         with st.expander("공지 작성"):
@@ -191,45 +185,19 @@ if st.session_state.notice_open:
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
 
-# 지도 및 관리자 도시 추가/관리
 if st.session_state.map_open:
-    # CSV import 버튼 (관리자 전용)
     if st.session_state.admin and os.path.exists(CSV_FILE):
         if st.button(_("import_cities"), key="import_csv_cities"):
-            added = import_cities_from_csv()
-            st.success(f"{added}개 도시가 추가되었습니다!") if added else None
+            import_cities_from_csv()
             st.rerun()
-
-    # load cities (always reload fresh)
     cities = load_json(CITY_FILE)
+    city_names = sorted({c['city'] for c in cities})
 
-    # Build city name list combining JSON and CSV (if present) to ensure imported names show up immediately
-    city_names = []
-    # From JSON file
-    for c in cities:
-        name = (c.get('city') or "").strip()
-        if name and name not in city_names:
-            city_names.append(name)
-    # Also include city names present in CSV (if provided)
-    if os.path.exists(CSV_FILE):
-        try:
-            df_csv = pd.read_csv(CSV_FILE)
-            if 'city' in df_csv.columns:
-                for name in df_csv['city'].dropna().astype(str).str.strip().unique().tolist():
-                    if name and name not in city_names:
-                        city_names.append(name)
-        except Exception:
-            pass
-    city_names = sorted(city_names)
-
-    # 관리자 전용: 도시 추가 폼
     if st.session_state.admin:
         st.header(_("add_city"))
         with st.form("city_form", clear_on_submit=True):
-            # 선택박스 (기존 도시) + 직접입력 필드 (신규 도시)
             selected_city = st.selectbox(_("city"), options=[""] + city_names, index=0)
-            manual_city = st.text_input("직접 입력 (새 도시가 있다면 여기에 입력)", value="")
-            perf_date = st.date_input(_("perf_date"), value=date.today())
+            perf_date = st.date_input(_("perf_date"), value=None)
             venue = st.text_input(_("venue"))
             note = st.text_input(_("note"))
             google_link = st.text_input(_("google_link"))
@@ -242,42 +210,31 @@ if st.session_state.map_open:
                 seats = st.number_input(_("seats"), min_value=0, max_value=10000, value=500, step=50, format="%d")
 
             if st.form_submit_button("추가"):
-                # prefer manual city if provided, else selected
-                city_to_add = manual_city.strip() if manual_city.strip() else (selected_city.strip() if selected_city else "")
-                if not city_to_add:
-                    st.warning("도시를 선택하거나 직접 입력하세요.")
-                elif not venue.strip():
-                    st.warning("공연 장소를 입력하세요.")
+                if selected_city and venue:
+                    lat, lon = CITY_COORDS.get(selected_city, (18.5204, 73.8567))
+                    new_city = {
+                        "city": selected_city,
+                        "venue": venue,
+                        "seats": str(seats),
+                        "note": note,
+                        "google_link": google_link,
+                        "indoor": indoor,
+                        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
+                        "perf_date": str(perf_date) if perf_date else "",
+                        "lat": lat, "lon": lon
+                    }
+                    cities.append(new_city)
+                    save_json(CITY_FILE, cities)
+                    st.success("도시 추가 완료!")
+                    st.rerun()
                 else:
-                    # reload current cities to avoid race condition
-                    current = load_json(CITY_FILE)
-                    current_names = {c.get('city','').strip() for c in current}
-                    if city_to_add in current_names:
-                        st.warning("이미 등록된 도시입니다.")
-                    else:
-                        new_city = {
-                            "city": city_to_add,
-                            "venue": venue.strip(),
-                            "seats": str(seats),
-                            "note": note.strip(),
-                            "google_link": google_link.strip(),
-                            "indoor": indoor,
-                            "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
-                            "perf_date": perf_date.isoformat() if perf_date else ""
-                        }
-                        current.append(new_city)
-                        save_json(CITY_FILE, current)
-                        st.success("도시 추가 완료!")
-                        st.rerun()
+                    st.warning("도시와 공연 장소를 입력하세요.")
 
-    # 지도 생성 (기본 좌표 매핑)
-    CITY_COORDS = {
-        "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882),
-    }
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
-        coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
-        lat, lon = coords
+        lat = c.get("lat", CITY_COORDS.get(c["city"], (18.5204, 73.8567))[0])
+        lon = c.get("lon", CITY_COORDS.get(c["city"], (18.5204, 73.8567))[1])
+        coords = (lat, lon)
         is_future = c.get("perf_date", "9999-12-31") >= str(date.today())
         color = "red" if is_future else "gray"
         indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
@@ -285,11 +242,10 @@ if st.session_state.map_open:
         folium.Marker(coords, popup=folium.Popup(popup_html, max_width=300), icon=folium.Icon(color=color, icon="music", prefix="fa")).add_to(m)
         if i < len(cities) - 1:
             nxt_city = cities[i+1]["city"]
-            nxt_coords = CITY_COORDS.get(nxt_city, (18.5204, 73.8567))
-            AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
+            nxt_lat, nxt_lon = CITY_COORDS.get(nxt_city, (18.5204, 73.8567))
+            AntPath([coords, (nxt_lat, nxt_lon)], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
     st_folium(m, width=900, height=550, key="tour_map")
 
-    # 관리자: 도시 목록 및 삭제
     if st.session_state.admin:
         st.subheader("도시 목록 관리")
         for i, c in enumerate(cities):
@@ -298,13 +254,10 @@ if st.session_state.map_open:
                 st.write(f"{c['city']} - {c['venue']} ({c.get('perf_date', '미정')})")
             with cols[1]:
                 if st.button(_("delete"), key=f"del_c_{i}"):
-                    current = load_json(CITY_FILE)
-                    # 안전하게 삭제: index 기반이 아니라 city match 기반으로 삭제
-                    current = [item for item in current if not (item.get('city') == c.get('city') and item.get('venue') == c.get('venue'))]
-                    save_json(CITY_FILE, current)
+                    cities.pop(i)
+                    save_json(CITY_FILE, cities)
                     st.rerun()
 
-# 모바일 햄버거 & 사이드바 (원본 유지)
 st.markdown(f'''
 <button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">☰</button>
 <div class="overlay" onclick="document.querySelector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
@@ -324,7 +277,6 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-# PC 사이드바 (언어 및 로그인)
 with st.sidebar:
     lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
     sel = st.selectbox("언어", list(lang_map.keys()), index=list(lang_map.values()).index(st.session_state.lang))
