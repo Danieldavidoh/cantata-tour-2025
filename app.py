@@ -55,14 +55,40 @@ def play_carol():
         st.session_state.sound_played = True
         st.markdown("<audio autoplay><source src='carol.wav' type='audio/wav'></audio>", unsafe_allow_html=True)
 
-# --- 8. CSS + 제목 상단 1/3 (모바일) ---
+# --- 8. CSS + 제목 최상단 (여백 0) ---
 st.markdown("""
 <style>
-    [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding-top: 0 !important; }
-    .title-container { height: 33vh; display: flex; align-items: center; justify-content: center; position: relative; z-index: 10; }
-    .main-title { font-size: 2.8em !important; font-weight: bold; text-shadow: 0 2px 5px rgba(0,0,0,0.3); margin: 0; text-align: center; }
-    .tab-button { background: rgba(255,255,255,0.95); padding: 12px; border-radius: 15px; margin: 10px 0; text-align: center; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.1); font-weight: bold; }
-    .content-area { margin-top: 20px; }
+    [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding: 0 !important; margin: 0 !important; }
+    .fixed-title { 
+        position: fixed; 
+        top: 5px; 
+        left: 0; 
+        width: 100%; 
+        z-index: 1000; 
+        text-align: center; 
+        padding: 0; 
+        margin: 0; 
+        background: transparent; 
+    }
+    .main-title { 
+        font-size: 2.6em !important; 
+        font-weight: bold; 
+        text-shadow: 0 2px 5px rgba(0,0,0,0.5); 
+        margin: 0 !important; 
+        line-height: 1.2; 
+    }
+    .content-area { margin-top: 70px !important; padding: 0 10px; }
+    .tab-button { 
+        background: rgba(255,255,255,0.95); 
+        padding: 14px; 
+        border-radius: 15px; 
+        margin: 8px 0; 
+        text-align: center; 
+        cursor: pointer; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+        font-weight: bold; 
+        font-size: 1.1em; 
+    }
     .snowflake { position: fixed; top: -15px; color: white; font-size: 1.1em; pointer-events: none; animation: fall linear infinite; opacity: 0.3 !important; text-shadow: 0 0 4px rgba(255,255,255,0.6); z-index: 1; }
     @keyframes fall { 0% { transform: translateY(0) rotate(0deg); } 100% { transform: translateY(120vh) rotate(360deg); } }
     .hamburger { position: fixed; top: 15px; left: 15px; z-index: 10000; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
@@ -86,8 +112,8 @@ for i in range(26):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 (상단 1/3) ---
-st.markdown('<div class="title-container">', unsafe_allow_html=True)
+# --- 제목 (최상단, 여백 0) ---
+st.markdown('<div class="fixed-title">', unsafe_allow_html=True)
 title_html = f'<span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span>'
 st.markdown(f'<h1 class="main-title">{title_html}</h1>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
@@ -112,10 +138,13 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
+# --- 내용 시작 (제목 아래 바로) ---
+st.markdown('<div class="content-area">', unsafe_allow_html=True)
+
 # --- 공지 버튼 (토글) ---
 if st.button(_(f"tab_notice"), key="notice_toggle_btn", use_container_width=True):
     st.session_state.notice_open = not st.session_state.notice_open
-    st.session_state.map_open = False  # 공지 열리면 투어 경로 닫기
+    st.session_state.map_open = False
 
 if st.session_state.notice_open:
     if st.session_state.admin:
@@ -154,7 +183,7 @@ if st.session_state.notice_open:
 # --- 투어 경로 버튼 (토글) ---
 if st.button(_(f"tab_map"), key="map_toggle_btn", use_container_width=True):
     st.session_state.map_open = not st.session_state.map_open
-    st.session_state.notice_open = False  # 투어 경로 열리면 공지 닫기
+    st.session_state.notice_open = False
 
 if st.session_state.map_open:
     if st.session_state.admin:
@@ -207,6 +236,8 @@ if st.session_state.map_open:
             nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
             AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
     st_folium(m, width=900, height=550, key="tour_map")
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 사이드바 (PC) ---
 with st.sidebar:
