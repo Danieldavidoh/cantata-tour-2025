@@ -23,17 +23,20 @@ LANG = {
            "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
            "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵", "perf_date": "공연 날짜",
            "warning": "제목·내용 입력", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
-           "add_city": "도시 추가", "city": "도시", "import_cities": "CSV 도시 일괄 추가", "import_success": "도시 일괄 추가 완료!"},
+           "add_city": "도시 추가", "city": "도시", "import_cities": "CSV 도시 일괄 추가", "import_success": "도시 일괄 추가 완료!",
+           "search_city": "도시 검색"},
     "en": {"title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
            "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
            "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps", "perf_date": "Performance Date",
            "warning": "Enter title & content", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
-           "add_city": "Add City", "city": "City", "import_cities": "Import All Cities from CSV", "import_success": "Cities imported successfully!"},
+           "add_city": "Add City", "city": "City", "import_cities": "Import All Cities from CSV", "import_success": "Cities imported successfully!",
+           "search_city": "Search City"},
     "hi": {"title_cantata": "कैंटाटा टूर", "title_year": "2025", "title_region": "महाराष्ट्र",
            "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "indoor": "इनडोर", "outdoor": "आउटडोर",
            "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप", "perf_date": "प्रदर्शन तिथि",
            "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट",
-           "add_city": "शहर जोड़ें", "city": "शहर", "import_cities": "CSV से सभी शहर आयात करें", "import_success": "शहर सफलतापूर्वक आयात किए गए!"}
+           "add_city": "शहर जोड़ें", "city": "शहर", "import_cities": "CSV से सभी शहर आयात करें", "import_success": "शहर सफलतापूर्वक आयात किए गए!",
+           "search_city": "शहर खोजें"}
 }
 
 defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False}
@@ -120,7 +123,7 @@ for i in range(52):
     duration = random.randint(10, 20)
     size = random.uniform(0.8, 1.4)
     delay = random.uniform(0, 10)
-    st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>Snowflake</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
 st.markdown('<div class="header-container">', unsafe_allow_html=True)
 st.markdown('''
@@ -196,8 +199,10 @@ if st.session_state.map_open:
 
     if st.session_state.admin:
         st.header(_("add_city"))
+        search_term = st.text_input(_("search_city"))
+        filtered_cities = [c for c in city_names if search_term.lower() in c.lower()]
         with st.form("city_form", clear_on_submit=True):
-            selected_city = st.selectbox(_("city"), options=[""] + city_names, index=0)
+            selected_city = st.selectbox(_("city"), options=[""] + sorted(filtered_cities), index=0)
             perf_date = st.date_input(_("perf_date"), value=None)
             venue = st.text_input(_("venue"))
             note = st.text_input(_("note"))
@@ -261,7 +266,7 @@ if st.session_state.map_open:
                     st.rerun()
 
 st.markdown(f'''
-<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">Menu</button>
+<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">☰</button>
 <div class="overlay" onclick="document.querySelector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
 <div class="sidebar-mobile">
     <h3 style="color:white;">{_("menu")}</h3>
