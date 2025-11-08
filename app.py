@@ -41,7 +41,7 @@ for k, v in defaults.items():
     if k not in st.session_state: st.session_state[k] = v
 _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
 
-# --- 5. JSON 헬퍼 ---
+# --- 5. JSON 헬퍼Cisco ---
 def load_json(f): return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
 def save_json(f, d): json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
@@ -55,7 +55,7 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS: 제목 3배 위로 + 전체화면 지도 + 닫기 버튼 ---
+# --- 7. CSS: 아이콘 + 제목 + 버튼 완전 밀착 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -69,6 +69,7 @@ st.markdown("""
         position: absolute; top: 8vh; left: 0; width: 100%; z-index: 999;
         display: flex; justify-content: center; gap: 12px; pointer-events: none;
         margin: 0 !important; padding: 0 !important;
+        margin-bottom: 0 !important;  /* 제목과 간격 0 */
     }
     .christmas-decoration i {
         color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6);
@@ -83,18 +84,20 @@ st.markdown("""
     .christmas-decoration i:nth-child(7) { font-size: 2.3em; animation-delay: 2.4s; }
     @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-6px) rotate(4deg); } }
 
-    /* 제목 - 3배 위로 이동 (2.8em × 3 = 8.4em) */
+    /* 제목 - 아이콘 바로 아래 딱 붙음 */
     .main-title {
         font-size: 2.8em !important; font-weight: bold; text-align: center;
         text-shadow: 0 3px 8px rgba(0,0,0,0.6); 
         margin: 0 !important; padding: 0 !important; line-height: 1.2;
-        margin-top: -8.4em !important;  /* 3배 위로 */
+        margin-top: 0 !important;      /* 아이콘과 간격 0 */
+        margin-bottom: 0 !important;   /* 버튼과 간격 0 */
     }
 
-    /* 버튼 라인 */
+    /* 버튼 라인 - 제목 바로 아래 딱 붙음 */
     .button-row {
         display: flex; justify-content: center; gap: 20px; 
         margin: 0 !important; padding: 0 15px !important;
+        margin-top: 0 !important;  /* 제목과 간격 0 */
     }
     .tab-btn {
         background: rgba(255,255,255,0.96); color: #c62828; border: none;
@@ -154,7 +157,7 @@ for i in range(52):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 (3배 위로 이동) ---
+# --- 제목 (아이콘 바로 아래 딱!) ---
 title_html = f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>'
 st.markdown(title_html, unsafe_allow_html=True)
 
