@@ -55,7 +55,7 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS: 제목 최상단 시작 + 모든 위 공간 제거 ---
+# --- 7. CSS: 깜박임 제거 + 오버레이 전환 ---
 st.markdown("""
 <style>
     [data-testid="stAppViewContainer"] {
@@ -67,14 +67,14 @@ st.markdown("""
         font-size: 2.8em !important; font-weight: bold; text-align: center;
         text-shadow: 0 3px 8px rgba(0,0,0,0.6);
         margin: 0 !important; padding: 0 !important; line-height: 1.2;
-        margin-top: 0 !important; /* 위 공간 0 */
-        margin-bottom: 0 !important; /* 아래 버튼과 간격 0 */
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
     }
-    /* 버튼 라인 - 제목 바로 아래 딱 붙음 */
+    /* 버튼 라인 */
     .button-row {
         display: flex; justify-content: center; gap: 20px;
         margin: 0 !important; padding: 0 15px !important;
-        margin-top: 0 !important; /* 제목과 간격 0 */
+        margin-top: 0 !important;
     }
     .tab-btn {
         background: rgba(255,255,255,0.96); color: #c62828; border: none;
@@ -83,11 +83,13 @@ st.markdown("""
         transition: all 0.3s ease; flex: 1; max-width: 200px;
     }
     .tab-btn:hover { background: #d32f2f; color: white; transform: translateY(-2px); }
-    /* 전체화면 지도 */
-    .map-fullscreen {
+
+    /* 전체화면 지도 오버레이 */
+    .map-overlay {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background: #000; z-index: 9999; display: flex; flex-direction: column;
+        background: #000; z-index: 9999; display: none; flex-direction: column;
     }
+    .map-overlay.open { display: flex; }
     .map-container { flex: 1; position: relative; }
     .close-map-btn {
         position: absolute; bottom: 20px; left: 20px;
@@ -96,6 +98,7 @@ st.markdown("""
         cursor: pointer; z-index: 10000; border: none; font-size: 1.1em;
     }
     .close-map-btn:hover { opacity: 1; transform: scale(1.05); }
+
     /* 모바일 햄버거 */
     .hamburger { position:fixed; top:15px; left:15px; z-index:10000; background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%; width:50px; height:50px; font-size:24px; cursor:pointer; box-shadow:0 0 10px rgba(0,0,0,.3); }
     .sidebar-mobile { position:fixed; top:0; left:-300px; width:280px; height:100vh; background:rgba(30,30,30,.95); color:#fff; padding:20px; transition:left .3s; z-index:9999; overflow-y:auto; }
@@ -107,7 +110,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 제목 (최상단 딱 시작!) ---
+# --- 제목 ---
 title_html = f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>'
 st.markdown(title_html, unsafe_allow_html=True)
 
@@ -118,15 +121,13 @@ with col1:
     if st.button(_("tab_notice"), key="btn_notice", use_container_width=True):
         st.session_state.notice_open = not st.session_state.notice_open
         st.session_state.map_open = False
-        st.rerun()
 with col2:
     if st.button(_("tab_map"), key="btn_map", use_container_width=True):
         st.session_state.map_open = True
         st.session_state.notice_open = False
-        st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 공지 (기본 접힘) ---
+# --- 공지 ---
 if st.session_state.notice_open:
     if st.session_state.admin:
         with st.expander("공지 작성"):
@@ -146,7 +147,6 @@ if st.session_state.notice_open:
                         data.insert(0, notice)
                         save_json(NOTICE_FILE, data)
                         st.success("공지 등록 완료!")
-                        st.rerun()
                     else:
                         st.warning(_("warning"))
     data = load_json(NOTICE_FILE)
@@ -158,19 +158,20 @@ if st.session_state.notice_open:
                 b64 = base64.b64encode(open(n["file"], "rb").read()).decode()
                 st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">다운로드</a>', unsafe_allow_html=True)
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
-                data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
+                data.pop(i); save_json(NOTICE_FILE, data)
 
-# --- 지도: 전체화면 + 60% 투명 닫기 버튼 (오류 해결) ---
+# --- 지도 오버레이 (깜박임 없이) ---
 if st.session_state.map_open:
-    st.markdown(
-        """
-        <div class="map-fullscreen">
-            <div class="map-container" id="folium-map"></div>
-            <button class="close-map-btn" onclick="window.location.href='?map_open=False'">✕ """ + _("close") + """</button>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown(f'''
+    <div class="map-overlay open">
+        <div class="map-container" id="folium-map"></div>
+        <button class="close-map-btn" onclick="document.getElementById('map_open').value='False'; this.form.submit();">✕ {_("close")}</button>
+        <form id="close_form" method="post" style="display:none;">
+            <input type="hidden" id="map_open" name="map_open" value="">
+        </form>
+    </div>
+    ''', unsafe_allow_html=True)
+
     cities = load_json(CITY_FILE)
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
@@ -185,8 +186,13 @@ if st.session_state.map_open:
             nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
             AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
     
-    # 오류 해결: returned_objects 제거
+    # 깜박임 없이 렌더링
     st_folium(m, width=1200, height=800, key="tour_map_full")
+
+# --- 닫기 버튼 폼 처리 ---
+if st.experimental_get_query_params().get("map_open") == ["False"]:
+    st.session_state.map_open = False
+    st.experimental_set_query_params()
 
 # --- 모바일 햄버거 메뉴 ---
 st.markdown(f'''
@@ -214,17 +220,14 @@ with st.sidebar:
     sel = st.selectbox("언어", list(lang_map.keys()), index=list(lang_map.values()).index(st.session_state.lang))
     if lang_map[sel] != st.session_state.lang:
         st.session_state.lang = lang_map[sel]
-        st.rerun()
     if not st.session_state.admin:
         pw = st.text_input("비밀번호", type="password", key="pw_input")
         if st.button("로그인", key="login_btn"):
             if pw == "0009":
                 st.session_state.admin = True
-                st.rerun()
             else:
                 st.error("비밀번호 오류")
     else:
         st.success("관리자 모드")
         if st.button("로그아웃", key="logout_btn"):
             st.session_state.admin = False
-            st.rerun()
