@@ -195,18 +195,6 @@ if st.session_state.map_open:
             nxt = cities[i+1]
             AntPath([(lat, lon), (nxt["lat"], nxt["lon"])], color="#e74c3c", weight=6, opacity=0.7).add_to(m)
     st_folium(m, width=900, height=550, key="tour_map")
-    # --- 도시 관리 ---
-    if st.session_state.admin:
-        st.subheader("도시 목록 관리")
-        for i, c in enumerate(cities):
-            cols = st.columns([4, 1])
-            with cols[0]:
-                st.write(f"{c['city']} - {c['venue']}")
-            with cols[1]:
-                if st.button(_("delete"), key=f"del_c_{i}"):
-                    cities.pop(i)
-                    save_json(CITY_FILE, cities)
-                    st.rerun()
 # --- 모바일 메뉴 & 사이드바 ---
 st.markdown(f'''
 <button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">☰</button>
