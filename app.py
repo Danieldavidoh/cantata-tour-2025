@@ -181,12 +181,8 @@ if st.session_state.map_open:
     if st.session_state.admin:
         st.header(_("add_city"))
         with st.form("city_form", clear_on_submit=True):
-            col_a, col_b = st.columns([1, 2])
-            with col_a:
-                selected_city = st.selectbox(_("city"), options=[""] + city_names, index=0)
-            with col_b:
-                perf_date = st.date_input(_("perf_date"), value=None)
-
+            selected_city = st.selectbox(_("city"), options=[""] + city_names, index=0)
+            perf_date = st.date_input(_("perf_date"), value=None)
             venue = st.text_input(_("venue"))
             note = st.text_input(_("note"))
             google_link = st.text_input(_("google_link"))
@@ -250,7 +246,7 @@ if st.session_state.map_open:
                     st.rerun()
 
 st.markdown(f'''
-<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">Menu</button>
+<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">☰</button>
 <div class="overlay" onclick="document.querySelector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
 <div class="sidebar-mobile">
     <h3 style="color:white;">{_("menu")}</h3>
