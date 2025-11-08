@@ -55,7 +55,7 @@ def play_carol():
         st.session_state.sound_played = True
         st.markdown("<audio autoplay><source src='carol.wav' type='audio/wav'></audio>", unsafe_allow_html=True)
 
-# --- 8. CSS + iPhone 최적화 + 하얀 줄 제거 ---
+# --- 8. CSS + iPhone 최적화 ---
 st.markdown("""
 <style>
     [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding-top: 0 !important; }
@@ -80,11 +80,11 @@ st.markdown("""
     .sidebar-mobile.open { left: 0; }
     .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9998; display: none; }
     .overlay.open { display: block; }
+    .notice-title-bar { background: rgba(255,255,255,0.95); padding: 12px; border-radius: 10px; margin: 8px 0; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
     @media (min-width: 769px) {
         .hamburger, .sidebar-mobile, .overlay { display: none !important; }
         section[data-testid="stSidebar"] { display: block !important; }
     }
-    /* iPhone 하얀 줄 제거 */
     .stButton > button { border: none !important; -webkit-appearance: none !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -97,7 +97,7 @@ for i in range(26):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 (상단 1/4 고정) ---
+# --- 제목 ---
 st.markdown('<div class="fixed-title">', unsafe_allow_html=True)
 title_html = f'<span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span>'
 st.markdown(f'<h1 class="main-title">{title_html}</h1>', unsafe_allow_html=True)
@@ -123,7 +123,7 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-# --- 탭 (하얀 줄 제거) ---
+# --- 탭 ---
 st.markdown('<div class="content-area">', unsafe_allow_html=True)
 st.markdown('<div class="tab-container">', unsafe_allow_html=True)
 tab_col1, tab_col2 = st.columns(2)
@@ -179,9 +179,8 @@ with st.sidebar:
                     else:
                         st.error(_("pw_error"))
 
-# --- 공지 (공지 버튼 클릭 시만 표시) ---
+# --- 공지 (공지 탭일 때만 표시) ---
 if st.session_state.tab_selection == _(f"tab_notice"):
-    st.markdown("### 📢 " + _("tab_notice"))
     if st.session_state.admin:
         with st.expander("공지 작성"):
             with st.form("notice_form", clear_on_submit=True):
@@ -204,18 +203,19 @@ if st.session_state.tab_selection == _(f"tab_notice"):
                     else:
                         st.warning(_("warning"))
 
+    # --- 공지 제목 바만 표시 ---
     data = load_json(NOTICE_FILE)
     for i, n in enumerate(data):
-        st.markdown(f"**{n['date']} | {n['title']}**")
-        st.markdown(n["content"])
-        if n.get("image") and os.path.exists(n["image"]): st.image(n["image"], use_column_width=True)
-        if n.get("file") and os.path.exists(n["file"]):
-            b64 = base64.b64encode(open(n["file"], "rb").read()).decode()
-            st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">📎 다운로드</a>', unsafe_allow_html=True)
-        if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
-            data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
+        with st.expander(f"{n['date']} | {n['title']}", expanded=False):
+            st.markdown(n["content"])
+            if n.get("image") and os.path.exists(n["image"]): st.image(n["image"], use_column_width=True)
+            if n.get("file") and os.path.exists(n["file"]):
+                b64 = base64.b64encode(open(n["file"], "rb").read()).decode()
+                st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">📎 다운로드</a>', unsafe_allow_html=True)
+            if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
+                data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
 
-# --- 투어 경로 (투어 경로 버튼 클릭 시만 표시) ---
+# --- 투어 경로 (투어 경로 탭일 때만 표시) ---
 elif st.session_state.tab_selection == _(f"tab_map"):
     if st.session_state.admin:
         if st.button(_("add_city"), key="add_city_btn"):
@@ -261,14 +261,14 @@ elif st.session_state.tab_selection == _(f"tab_map"):
         is_future = c.get("perf_date", "9999-12-31") >= str(date.today())
         color = "red" if is_future else "gray"
         indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
-        popup_html = f"<div style='font-size:14px; line-height:1.6;'><b>{c['city']}</b><br>{_('perf_date')}: {c.get('perf_date','미정')}<br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br><a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving' target='_blank'>🚗 {_('google_link')}</a></div>"
+        popup_html = f"<div style='font-size:14px; line-height:1.6;'><b>{c['city']}</b><br>{_('perf_date')}: {c.get('perf_date','미정')}<br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br><a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving' target='_blank'>{_('google_link')}</a></div>"
         folium.Marker(coords, popup=folium.Popup(popup_html, max_width=300), icon=folium.Icon(color=color, icon="music", prefix="fa")).add_to(m)
         if i < len(cities) - 1:
             nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
             AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
     st_folium(m, width=900, height=550, key="tour_map")
 
-st.markdown('</div>', unsafe_allow_html=True)  # content-area 닫기
+st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 탭 전환 ---
 if st.session_state.tab_selection != st.session_state.get("last_tab"):
