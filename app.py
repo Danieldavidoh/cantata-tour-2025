@@ -1,4 +1,3 @@
-# app.py
 import json, os, uuid, base64, random
 import streamlit as st
 from datetime import datetime, date
@@ -7,11 +6,32 @@ from streamlit_folium import st_folium
 from folium.plugins import AntPath
 from pytz import timezone
 from streamlit_autorefresh import st_autorefresh
+import streamlit.components.v1 as components  # Added for better snow overlay
 
 # --- 1. 페이지 설정 ---
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 if not st.session_state.get("admin", False):
     st_autorefresh(interval=5000, key="auto_refresh_user")
+
+# --- Snow Effect: Use components.html for better overlay and animation control ---
+def show_snow():
+    snow_html = ""
+    for i in range(40):  # You can adjust the number for more/less snow
+        left = random.randint(0, 100)
+        duration = random.randint(10, 20)
+        size = random.uniform(0.7, 1.3)
+        delay = random.uniform(0, 8)
+        snow_html += f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>"
+    
+    # Wrap in a fixed container and inject via components.html (height=0 to make it overlay without taking space)
+    full_html = f"""
+    <div style='position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9999; overflow:hidden;'>
+        {snow_html}
+    </div>
+    """
+    components.html(full_html, height=0)  # height=0 ensures it doesn't add vertical space
+
+show_snow()  # Call it here, right after page config for persistence
 
 # --- 2. 파일 ---
 NOTICE_FILE = "notice.json"
@@ -66,19 +86,6 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = {"Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882)}
 
-# --- 눈 효과: st.empty()로 영구 유지 ---
-snow_container = st.empty()
-def show_snow():
-    snow_html = ""
-    for i in range(40):
-        left = random.randint(0, 100)
-        duration = random.randint(10, 20)
-        size = random.uniform(0.7, 1.3)
-        delay = random.uniform(0, 8)
-        snow_html += f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>"
-    snow_container.markdown(f"<div style='position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1;'>{snow_html}</div>", unsafe_allow_html=True)
-show_snow()
-
 # --- CSS ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -89,7 +96,6 @@ st.markdown("""
 .christmas-decoration i { color:#fff; text-shadow:0 0 10px rgba(255,255,255,0.6); animation: float 3s ease-in-out infinite; opacity:0.95; }
 @keyframes float {0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
 .main-title { font-size: 2.4em !important; font-weight: bold; text-align: center; text-shadow: 0 3px 8
-
 px rgba(0,0,0,0.6); margin: 0; padding: 0; }
 .button-row { display: flex; justify-content: center; gap: 10px; margin: 8px 0; }
 .tab-btn { background: rgba(255,255,255,0.96); color: #c62828; border: none; border-radius: 20px; padding: 8px 15px; font-weight: bold; font-size: 1em; cursor: pointer; transition: all 0.3s ease; }
@@ -143,7 +149,6 @@ if not st.session_state.notice_open and not st.session_state.map_open:
 if st.session_state.notice_open:
     with st.expander("공지사항 전체 보기", expanded=True):
         st.markdown('<div class="notice-box">', unsafe_allow_html=True)
-
         if st.session_state.admin:
             with st.form("notice_form", clear_on_submit=True):
                 title = st.text_input("제목", placeholder="공지 제목을 입력하세요")
@@ -166,7 +171,6 @@ if st.session_state.notice_open:
                         st.rerun()
                     else:
                         st.warning(_("warning"))
-
         data = load_json(NOTICE_FILE)
         if not data:
             st.info("등록된 공지가 없습니다.")
@@ -180,14 +184,12 @@ if st.session_state.notice_open:
                         save_json(NOTICE_FILE, data)
                         st.rerun()
                 st.markdown("---")
-
         st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 투어 경로 + 도시 추가 ---
 if st.session_state.map_open:
     with st.expander("투어 경로 전체 보기", expanded=True):
         st.markdown('<div class="map-box">', unsafe_allow_html=True)
-
         # --- 관리자: 도시 추가 폼 ---
         if st.session_state.admin:
             st.markdown("### 새 도시 추가")
@@ -219,7 +221,6 @@ if st.session_state.map_open:
                         st.rerun()
                     else:
                         st.warning("도시명과 장소명을 입력하세요.")
-
         # --- 지도 ---
         st.markdown("### 지도")
         cities = load_json(CITY_FILE)
@@ -252,7 +253,6 @@ if st.session_state.map_open:
                     nxt = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
                     AntPath([coords, nxt], color="#e74c3c", weight=5, opacity=0.7).add_to(m)
             st_folium(m, width=850, height=420, key="tour_map")
-
         st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 사이드바 ---
@@ -262,7 +262,6 @@ with st.sidebar:
     if lang_map[sel] != st.session_state.lang:
         st.session_state.lang = lang_map[sel]
         st.rerun()
-
     if not st.session_state.admin:
         pw = st.text_input("비밀번호", type="password")
         if st.button("로그인"):
@@ -277,10 +276,8 @@ with st.sidebar:
             st.session_state.admin = False
             st.session_state.change_pw_mode = False
             st.rerun()
-
         if st.button(_("change_pw")):
             st.session_state.change_pw_mode = True
-
         if st.session_state.change_pw_mode:
             st.markdown('<div class="pw-change">', unsafe_allow_html=True)
             with st.form("change_pw_form", clear_on_submit=True):
