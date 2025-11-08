@@ -6,41 +6,52 @@ from streamlit_folium import st_folium
 from folium.plugins import AntPath
 from pytz import timezone
 from streamlit_autorefresh import st_autorefresh
+import pandas as pd
+
 # --- 1. 페이지 설정 ---
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 if not st.session_state.get("admin", False):
     st_autorefresh(interval=5000, key="auto_refresh_user")
+
 # --- 2. 파일 ---
 NOTICE_FILE = "notice.json"
 CITY_FILE = "cities.json"
 UPLOAD_DIR = "uploads"
+CSV_FILE = "cities.csv"  # 새로 추가
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 # --- 3. 다국어 ---
 LANG = {
     "ko": { "title_cantata": "칸타타 투어", "title_year": "2025", "title_region": "마하라스트라",
             "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
             "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵", "perf_date": "공연 날짜",
             "warning": "제목·내용 입력", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
-            "add_city": "도시 추가", "city": "도시", "latitude": "위도", "longitude": "경도" },
+            "add_city": "도시 추가", "city": "도시", "latitude": "위도", "longitude": "경도",
+            "import_cities": "CSV 도시 일괄 추가", "import_success": "도시 일괄 추가 완료!" },
     "en": { "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
             "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
             "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps", "perf_date": "Performance Date",
             "warning": "Enter title & content", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
-            "add_city": "Add City", "city": "City", "latitude": "Latitude", "longitude": "Longitude" },
+            "add_city": "Add City", "city": "City", "latitude": "Latitude", "longitude": "Longitude",
+            "import_cities": "Import All Cities from CSV", "import_success": "Cities imported successfully!" },
     "hi": { "title_cantata": "कैंटाटा टूर", "title_year": "2025", "title_region": "महाराष्ट्र",
             "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "indoor": "इनडोर", "outdoor": "आउटडोर",
             "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप", "perf_date": "प्रदर्शन तिथि",
             "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट",
-            "add_city": "शहर जोड़ें", "city": "शहर", "latitude": "अक्षांश", "longitude": "देशांतर" }
+            "add_city": "शहर जोड़ें", "city": "शहर", "latitude": "अक्षांश", "longitude": "देशांतर",
+            "import_cities": "CSV से सभी शहर आयात करें", "import_success": "शहर सफलतापूर्वक आयात किए गए!" }
 }
+
 # --- 4. 세션 상태 ---
 defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False}
 for k, v in defaults.items():
     if k not in st.session_state: st.session_state[k] = v
 _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
+
 # --- 5. JSON 헬퍼 ---
 def load_json(f): return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
 def save_json(f, d): json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+
 # --- 6. 초기 도시 + 좌표 ---
 DEFAULT_CITIES = [
     {"city": "Mumbai", "venue": "Gateway of India", "seats": "5000", "note": "인도 영화 수도", "google_link": "https://goo.gl/maps/abc123", "indoor": False, "date": "11/07 02:01", "perf_date": "2025-11-10", "lat": 19.0760, "lon": 72.8777},
@@ -49,7 +60,43 @@ DEFAULT_CITIES = [
     {"city": "Nagpur", "venue": "Deekshabhoomi", "seats": "2000", "note": "오렌지 도시", "google_link": "https://goo.gl/maps/ghi789", "indoor": False, "date": "11/07 02:01", "perf_date": "2025-11-16", "lat": 21.1458, "lon": 79.0882}
 ]
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
-# --- 7. CSS: 아이콘 제목 위에 배치 + 밀착 ---
+
+# --- 7. CSV 도시 일괄 추가 함수 ---
+def import_cities_from_csv():
+    if not os.path.exists(CSV_FILE):
+        st.error(f"{CSV_FILE} 파일이 없습니다.")
+        return
+
+    df = pd.read_csv(CSV_FILE)
+    new_cities = df['city'].dropna().astype(str).str.strip().unique().tolist()
+
+    current_cities = load_json(CITY_FILE)
+    current_city_names = {c['city'] for c in current_cities}
+
+    added = 0
+    for city_name in new_cities:
+        if city_name not in current_city_names:
+            # 기본값으로 추가 (좌표는 Pune 중심)
+            new_city = {
+                "city": city_name,
+                "venue": "",
+                "seats": "",
+                "note": "",
+                "google_link": "",
+                "indoor": False,
+                "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
+                "perf_date": "",
+                "lat": 18.5204,
+                "lon": 73.8567
+            }
+            current_cities.append(new_city)
+            current_city_names.add(city_name)
+            added += 1
+
+    save_json(CITY_FILE, current_cities)
+    st.success(f"{added}개 도시가 추가되었습니다!")
+
+# --- 8. CSS ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -57,22 +104,9 @@ st.markdown("""
         background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed;
         padding-top: 0 !important; margin: 0 !important;
     }
-    /* 아이콘 + 제목 컨테이너 */
-    .header-container {
-        text-align: center;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-    /* 크리스마스 아이콘 - 제목 바로 위에 딱 붙음 */
-    .christmas-decoration {
-        display: flex; justify-content: center; gap: 12px;
-        margin: 0 !important; padding: 0 !important;
-        margin-bottom: 0 !important; /* 제목과 간격 0 */
-    }
-    .christmas-decoration i {
-        color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6);
-        animation: float 3s ease-in-out infinite; opacity: 0.95;
-    }
+    .header-container { text-align: center; margin: 0 !important; padding: 0 !important; }
+    .christmas-decoration { display: flex; justify-content: center; gap: 12px; margin: 0 !important; padding: 0 !important; margin-bottom: 0 !important; }
+    .christmas-decoration i { color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6); animation: float 3s ease-in-out infinite; opacity: 0.95; }
     .christmas-decoration i:nth-child(1) { font-size: 2.1em; animation-delay: 0s; }
     .christmas-decoration i:nth-child(2) { font-size: 1.9em; animation-delay: 0.4s; }
     .christmas-decoration i:nth-child(3) { font-size: 2.4em; animation-delay: 0.8s; }
@@ -81,31 +115,12 @@ st.markdown("""
     .christmas-decoration i:nth-child(6) { font-size: 1.8em; animation-delay: 2.0s; }
     .christmas-decoration i:nth-child(7) { font-size: 2.3em; animation-delay: 2.4s; }
     @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-6px) rotate(4deg); } }
-    /* 제목 - 아이콘 바로 아래 딱 붙음 */
-    .main-title {
-        font-size: 2.8em !important; font-weight: bold; text-align: center;
-        text-shadow: 0 3px 8px rgba(0,0,0,0.6);
-        margin: 0 !important; padding: 0 !important; line-height: 1.2;
-        margin-top: 0 !important; /* 아이콘과 간격 0 */
-        margin-bottom: 0 !important; /* 버튼과 간격 0 */
-    }
-    /* 버튼 라인 */
-    .button-row {
-        display: flex; justify-content: center; gap: 20px;
-        margin: 0 !important; padding: 0 15px !important;
-        margin-top: 0 !important;
-    }
-    .tab-btn {
-        background: rgba(255,255,255,0.96); color: #c62828; border: none;
-        border-radius: 20px; padding: 10px 20px; font-weight: bold;
-        font-size: 1.1em; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        transition: all 0.3s ease; flex: 1; max-width: 200px;
-    }
+    .main-title { font-size: 2.8em !important; font-weight: bold; text-align: center; text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; padding: 0 !important; line-height: 1.2; margin-top: 0 !important; margin-bottom: 0 !important; }
+    .button-row { display: flex; justify-content: center; gap: 20px; margin: 0 !important; padding: 0 15px !important; margin-top: 0 !important; }
+    .tab-btn { background: rgba(255,255,255,0.96); color: #c62828; border: none; border-radius: 20px; padding: 10px 20px; font-weight: bold; font-size: 1.1em; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.3s ease; flex: 1; max-width: 200px; }
     .tab-btn:hover { background: #d32f2f; color: white; transform: translateY(-2px); }
-    /* 눈송이 */
     .snowflake { position:fixed; top:-15px; color:#fff; font-size:1.1em; pointer-events:none; animation:fall linear infinite; opacity:0.3; z-index:1; }
     @keyframes fall { 0% { transform:translateY(0) rotate(0deg); } 100% { transform:translateY(120vh) rotate(360deg); } }
-    /* 모바일 햄버거 */
     .hamburger { position:fixed; top:15px; left:15px; z-index:10000; background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%; width:50px; height:50px; font-size:24px; cursor:pointer; box-shadow:0 0 10px rgba(0,0,0,.3); }
     .sidebar-mobile { position:fixed; top:0; left:-300px; width:280px; height:100vh; background:rgba(30,30,30,.95); color:#fff; padding:20px; transition:left .3s; z-index:9999; overflow-y:auto; }
     .sidebar-mobile.open { left:0; }
@@ -115,6 +130,7 @@ st.markdown("""
     .stButton>button { border:none !important; -webkit-appearance:none !important; }
 </style>
 """, unsafe_allow_html=True)
+
 # --- 눈송이 ---
 for i in range(52):
     left = random.randint(0, 100)
@@ -122,9 +138,9 @@ for i in range(52):
     size = random.uniform(0.8, 1.4)
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
-# --- 아이콘 + 제목 컨테이너 (완전 밀착) ---
+
+# --- 헤더 ---
 st.markdown('<div class="header-container">', unsafe_allow_html=True)
-# 크리스마스 아이콘 (제목 바로 위)
 st.markdown('''
 <div class="christmas-decoration">
     <i class="fas fa-gift"></i>
@@ -136,11 +152,11 @@ st.markdown('''
     <i class="fas fa-bell"></i>
 </div>
 ''', unsafe_allow_html=True)
-# 제목 (아이콘 바로 아래 딱!)
 title_html = f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>'
 st.markdown(title_html, unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True) # .header-container 종료
-# --- 버튼 라인 ---
+st.markdown('</div>', unsafe_allow_html=True)
+
+# --- 탭 버튼 ---
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col1, col2 = st.columns([1, 1])
 with col1:
@@ -154,7 +170,8 @@ with col2:
         st.session_state.notice_open = False
         st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
-# --- 공지 내용 ---
+
+# --- 공지 ---
 if st.session_state.notice_open:
     if st.session_state.admin:
         with st.expander("공지 작성"):
@@ -187,9 +204,18 @@ if st.session_state.notice_open:
                 st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">다운로드</a>', unsafe_allow_html=True)
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
+
 # --- 지도 ---
 if st.session_state.map_open:
     cities = load_json(CITY_FILE)
+
+    # 관리자: CSV 일괄 추가 버튼
+    if st.session_state.admin and os.path.exists(CSV_FILE):
+        if st.button(_("import_cities"), key="import_csv_cities"):
+            import_cities_from_csv()
+            st.rerun()
+
+    # 관리자: 개별 도시 추가
     if st.session_state.admin:
         st.header(_("add_city"))
         with st.form("city_form", clear_on_submit=True):
@@ -199,9 +225,9 @@ if st.session_state.map_open:
             note = st.text_input(_("note"))
             google_link = st.text_input(_("google_link"))
             indoor = st.checkbox(_("indoor"))
-            perf_date = st.date_input(_("perf_date"))
-            lat = st.number_input(_("latitude"), format="%.4f")
-            lon = st.number_input(_("longitude"), format="%.4f")
+            perf_date = st.date_input(_("perf_date"), value=None)
+            lat = st.number_input(_("latitude"), format="%.4f", value=18.5204)
+            lon = st.number_input(_("longitude"), format="%.4f", value=73.8567)
             if st.form_submit_button("추가"):
                 if city and venue:
                     new_city = {
@@ -212,7 +238,7 @@ if st.session_state.map_open:
                         "google_link": google_link,
                         "indoor": indoor,
                         "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
-                        "perf_date": str(perf_date),
+                        "perf_date": str(perf_date) if perf_date else "",
                         "lat": lat,
                         "lon": lon
                     }
@@ -222,6 +248,8 @@ if st.session_state.map_open:
                     st.rerun()
                 else:
                     st.warning("도시와 공연 장소를 입력하세요.")
+
+    # 지도 렌더링
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
         lat = c.get("lat", 18.5204)
@@ -236,9 +264,10 @@ if st.session_state.map_open:
             next_c = cities[i+1]
             nxt_lat = next_c.get("lat", 18.5204)
             nxt_lon = next_c.get("lon", 73.8567)
-            nxt_coords = (nxt_lat, nxt_lon)
-            AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
+            AntPath([coords, (nxt_lat, nxt_lon)], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
     st_folium(m, width=900, height=550, key="tour_map")
+
+    # 관리자: 도시 삭제
     if st.session_state.admin:
         st.subheader("도시 목록 관리")
         for i, c in enumerate(cities):
@@ -250,7 +279,8 @@ if st.session_state.map_open:
                     cities.pop(i)
                     save_json(CITY_FILE, cities)
                     st.rerun()
-# --- 모바일 햄버거 메뉴 ---
+
+# --- 모바일 메뉴 ---
 st.markdown(f'''
 <button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">☰</button>
 <div class="overlay" onclick="document.querySelector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
@@ -269,7 +299,8 @@ st.markdown(f'''
     ''' }
 </div>
 ''', unsafe_allow_html=True)
-# --- PC 사이드바 ---
+
+# --- 사이드바 ---
 with st.sidebar:
     lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
     sel = st.selectbox("언어", list(lang_map.keys()), index=list(lang_map.values()).index(st.session_state.lang))
