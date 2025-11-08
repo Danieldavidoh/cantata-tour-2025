@@ -52,26 +52,25 @@ DEFAULT_CITIES = [
     {"city": "Nagpur", "venue": "Deekshabhoomi", "seats": "2000", "note": "오렌지 도시", "google_link": "https://goo.gl/maps/ghi789", "indoor": False, "date": "11/07 02:01", "perf_date": "2025-11-16"}
 ]
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
-CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
+CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21 notifying.1458, 79.0882) }
 
-# --- 7. CSS: 제목 가까이 + 지도 버튼 아래 + 아이콘 잘림 방지 ---
+# --- 7. CSS: 스크롤 허용 + 제목에 아이콘 비침 효과 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-    /* 전체 스크롤 방지 */
+    /* 스크롤 허용 */
     [data-testid="stAppViewContainer"], body, html {
         background: url("background_christmas_dark.png") center/cover fixed;
-        padding:0 !important; margin:0 !important; overflow:hidden !important; height:100vh !important;
+        padding:0 !important; margin:0 !important; overflow:auto !important; height:auto !important;
     }
 
     /* 햄버거 */
     .hamburger { position:fixed; top:15px; left:15px; z-index:10000; background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%; width:50px; height:50px; font-size:24px; cursor:pointer; box-shadow:0 0 10px rgba(0,0,0,.3); }
 
-    /* 크리스마스 장식: 상단 여유 + 잘림 방지 */
+    /* 크리스마스 장식 */
     .christmas-decoration {
-        position: fixed; top: 8vh; left: 0; width: 100%; z-index: 999;
         display: flex; justify-content: center; gap: 12px; flex-wrap: nowrap;
-        overflow: visible !important; pointer-events: none; padding-top: 20px;
+        margin: 20px 0; pointer-events: none;
     }
     .christmas-decoration i {
         color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6);
@@ -89,41 +88,33 @@ st.markdown("""
         50% { transform: translateY(-6px) rotate(4deg); } 
     }
 
-    /* 제목: 아이콘 바로 아래 (가까이) */
-    .fixed-title { 
-        position: fixed; top: 16vh; left: 0; width: 100%; z-index: 1000; 
-        text-align: center; margin-top: 5px;
-    }
-    .main-title { 
+    /* 제목: 아이콘 밑에 비침 효과 */
+    .main-title {
         font-size: 2.8em !important; font-weight: bold; 
-        text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; line-height: 1.1; 
+        text-align: center; margin: 0 0 20px 0 !important; line-height: 1.1;
+        position: relative; z-index: 10;
+        color: transparent;
+        -webkit-background-clip: text;
+        background-clip: text;
+        background-image: linear-gradient(to bottom, rgba(255,255,255,0.9), rgba(255,255,255,0.6));
+        text-shadow: 
+            0 1px 0 rgba(255,255,255,0.8),
+            0 2px 0 rgba(255,255,255,0.6),
+            0 3px 0 rgba(255,255,255,0.4),
+            0 4px 10px rgba(0,0,0,0.3);
     }
 
-    /* 버튼: 작게, 위치 유지 */
-    .btn-notice {
-        position: fixed; top: 34vh; left: 20px; z-index: 1000;
+    /* 버튼 */
+    .button-row {
+        display: flex; justify-content: space-between; padding: 0 20px; margin-bottom: 20px;
+    }
+    .tab-btn {
         background: rgba(255,255,255,0.96); color: #c62828; border: none;
         border-radius: 20px; padding: 8px 16px; font-weight: bold;
         font-size: 1em; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         transition: all 0.3s ease;
     }
-    .btn-notice:hover { background: #d32f2f; color: white; transform: scale(1.05); }
-
-    .btn-map {
-        position: fixed; top: 34vh; right: 20px; z-index: 1000;
-        background: rgba(255,255,255,0.96); color: #c62828; border: none;
-        border-radius: 20px; padding: 8px 16px; font-weight: bold;
-        font-size: 1em; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        transition: all 0.3s ease;
-    }
-    .btn-map:hover { background: #d32f2f; color: white; transform: scale(1.05); }
-
-    /* 지도: 버튼 바로 아래 (top: 42vh) */
-    .fixed-map {
-        position: fixed; top: 42vh; left: 0; width: 100%; height: 58vh; z-index: 900;
-        visibility: hidden; opacity: 0; transition: all 0.5s ease; margin-top: 0;
-    }
-    .fixed-map.show { visibility: visible; opacity: 1; }
+    .tab-btn:hover { background: #d32f2f; color: white; transform: scale(1.05); }
 
     /* 눈송이 */
     .snowflake { position:fixed; top:-15px; color:#fff; font-size:1.1em; pointer-events:none; animation:fall linear infinite; opacity:0.3; z-index:1; }
@@ -139,7 +130,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 크리스마스 장식 (잘림 방지) ---
+# --- 크리스마스 장식 ---
 st.markdown('''
 <div class="christmas-decoration">
     <i class="fas fa-gift"></i>
@@ -152,6 +143,10 @@ st.markdown('''
 </div>
 ''', unsafe_allow_html=True)
 
+# --- 제목: 아이콘 밑에 비침 효과 ---
+title_html = f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>'
+st.markdown(title_html, unsafe_allow_html=True)
+
 # --- 눈송이 ---
 for i in range(26):
     left = random.randint(0, 100)
@@ -160,31 +155,22 @@ for i in range(26):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 (아이콘 바로 아래) ---
-st.markdown('<div class="fixed-title">', unsafe_allow_html=True)
-title_html = f'<span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span>'
-st.markdown(f'<h1 class="main-title">{title_html}</h1>', unsafe_allow_html=True)
+# --- 버튼 라인 ---
+st.markdown('<div class="button-row">', unsafe_allow_html=True)
+col1, col2 = st.columns([1, 1])
+with col1:
+    if st.button(_("tab_notice"), key="btn_notice"):
+        st.session_state.notice_open = True
+        st.session_state.map_open = False
+        st.rerun()
+with col2:
+    if st.button(_("tab_map"), key="btn_map"):
+        st.session_state.map_open = True
+        st.session_state.notice_open = False
+        st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 공지 버튼 (왼쪽) ---
-st.markdown(f'<button class="btn-notice">{_("tab_notice")}</button>', unsafe_allow_html=True)
-if st.button("", key="trigger_notice", help="공지 열기"):
-    st.session_state.notice_open = True
-    st.session_state.map_open = False
-    st.rerun()
-
-# --- 투어 경로 버튼 (오른쪽) ---
-st.markdown(f'<button class="btn-map">{_("tab_map")}</button>', unsafe_allow_html=True)
-if st.button("", key="trigger_map", help="투어 경로 열기"):
-    st.session_state.map_open = True
-    st.session_state.notice_open = False
-    st.rerun()
-
 # --- 지도 (버튼 바로 아래) ---
-map_class = "fixed-map"
-if st.session_state.map_open:
-    map_class += " show"
-st.markdown(f'<div class="{map_class}">', unsafe_allow_html=True)
 if st.session_state.map_open:
     cities = load_json(CITY_FILE)
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=10, tiles="OpenStreetMap")
@@ -199,12 +185,10 @@ if st.session_state.map_open:
         if i < len(cities) - 1:
             nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
             AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
-    st_folium(m, width=900, height=550, key="tour_map_fixed")
-st.markdown('</div>', unsafe_allow_html=True)
+    st_folium(m, width=900, height=550, key="tour_map")
 
-# --- 공지 내용 (지도 아래) ---
+# --- 공지 내용 ---
 if st.session_state.notice_open:
-    st.markdown('<div style="position:fixed; top:42vh; left:0; width:100%; height:58vh; overflow-y:auto; padding:15px; background:rgba(255,255,255,0.9); z-index:800;">', unsafe_allow_html=True)
     if st.session_state.admin:
         with st.expander("공지 작성"):
             with st.form("notice_form", clear_on_submit=True):
@@ -239,7 +223,6 @@ if st.session_state.notice_open:
                 st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">다운로드</a>', unsafe_allow_html=True)
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 모바일 햄버거 메뉴 ---
 st.markdown(f'''
