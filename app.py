@@ -32,7 +32,7 @@ LANG = {
     "hi": {"title_cantata": "कैंटाटा टूर", "title_year": "2025", "title_region": "महाराष्ट्र",
            "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "indoor": "इनडोर", "outdoor": "आउटडोर",
            "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप", "perf_date": "प्रदर्शन तिथि",
-           "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट",
+           "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआ우ट",
            "add_city": "शहर जोड़ें", "city": "शहर", "import_cities": "CSV से सभी शहर आयात करें", "import_success": "शहर सफलतापूर्वक आयात किए गए!"}
 }
 
@@ -213,7 +213,6 @@ if st.session_state.map_open:
     if st.session_state.admin and os.path.exists(CSV_FILE):
         if st.button(_("import_cities"), key="import_csv_cities"):
             import_cities_from_csv()
-            st.rerun()
     cities = load_json(CITY_FILE)
     city_names = sorted({c['city'] for c in cities})
 
