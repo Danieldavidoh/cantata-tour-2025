@@ -55,7 +55,7 @@ def play_carol():
         st.session_state.sound_played = True
         st.markdown("<audio autoplay><source src='carol.wav' type='audio/wav'></audio>", unsafe_allow_html=True)
 
-# --- 8. CSS + 제목 최상단 고정 ---
+# --- 8. CSS + 제목 최상단 ---
 st.markdown("""
 <style>
     [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding-top: 0 !important; }
@@ -97,7 +97,7 @@ for i in range(26):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 (최상단 고정) ---
+# --- 제목 (최상단) ---
 st.markdown('<div class="fixed-title">', unsafe_allow_html=True)
 title_html = f'<span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span>'
 st.markdown(f'<h1 class="main-title">{title_html}</h1>', unsafe_allow_html=True)
@@ -123,64 +123,16 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-# --- 탭 (공지 왼쪽, 투어 경로 오른쪽) ---
+# --- 탭 + 공지 내용 (공지 버튼 아래) ---
 st.markdown('<div class="content-area">', unsafe_allow_html=True)
-st.markdown('<div class="tab-container">', unsafe_allow_html=True)
-tab_col1, tab_col2 = st.columns(2)
-with tab_col1:
-    if st.button(_(f"tab_notice"), use_container_width=True, key="tab_notice_btn"):
-        st.session_state.tab_selection = _(f"tab_notice")
-        st.rerun()
-with tab_col2:
-    if st.button(_(f"tab_map"), use_container_width=True, key="tab_map_btn"):
-        st.session_state.tab_selection = _(f"tab_map")
-        st.rerun()
-st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 사이드바 (PC) ---
-with st.sidebar:
-    lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
-    sel = st.selectbox("언어", list(lang_map.keys()), index=list(lang_map.values()).index(st.session_state.lang))
-    if lang_map[sel] != st.session_state.lang:
-        st.session_state.lang = lang_map[sel]
-        st.rerun()
+# 공지 버튼
+notice_btn = st.button(_(f"tab_notice"), use_container_width=True, key="tab_notice_btn")
+map_btn = st.button(_(f"tab_map"), use_container_width=True, key="tab_map_btn")
 
-    if not st.session_state.admin:
-        pw = st.text_input("비밀번호", type="password", key="pw_input")
-        if st.button("로그인", key="login_btn"):
-            if pw == "0009":
-                st.session_state.admin = True
-                st.rerun()
-            else:
-                st.error("비밀번호 오류")
-    else:
-        st.success("관리자 모드")
-        if st.button("로그아웃", key="logout_btn"):
-            st.session_state.admin = False
-            st.rerun()
-
-        if st.button(_("change_pw"), key="show_change_pw_btn"):
-            st.session_state.show_pw_form = not st.session_state.show_pw_form
-
-        if st.session_state.get("show_pw_form", False):
-            with st.form("change_pw_form"):
-                current_pw = st.text_input(_("current_pw"), type="password", key="current_pw_input")
-                new_pw = st.text_input(_("new_pw"), type="password", key="new_pw_input")
-                confirm_pw = st.text_input(_("confirm_pw"), type="password", key="confirm_pw_input")
-                if st.form_submit_button("변경", key="change_pw_submit"):
-                    if current_pw == "0691":
-                        if new_pw == confirm_pw and new_pw:
-                            st.session_state.password = new_pw
-                            st.success(_("pw_changed"))
-                            st.session_state.show_pw_form = False
-                            st.rerun()
-                        else:
-                            st.error(_("pw_mismatch"))
-                    else:
-                        st.error(_("pw_error"))
-
-# --- 공지 (공지 버튼 아래 + 투어 경로 버튼 위에 삽입) ---
-if st.session_state.tab_selection == _(f"tab_notice"):
+# 공지 클릭 시 내용 표시
+if notice_btn or st.session_state.tab_selection == _(f"tab_notice"):
+    st.session_state.tab_selection = _(f"tab_notice")
     if st.session_state.admin:
         with st.expander("공지 작성"):
             with st.form("notice_form", clear_on_submit=True):
@@ -214,8 +166,9 @@ if st.session_state.tab_selection == _(f"tab_notice"):
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
 
-# --- 투어 경로 (투어 경로 버튼 클릭 시만 표시) ---
-elif st.session_state.tab_selection == _(f"tab_map"):
+# 투어 경로 버튼 (공지 내용 아래에 항상 배치)
+if map_btn or st.session_state.tab_selection == _(f"tab_map"):
+    st.session_state.tab_selection = _(f"tab_map")
     if st.session_state.admin:
         if st.button(_("add_city"), key="add_city_btn"):
             st.session_state.adding_city = True
