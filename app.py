@@ -123,14 +123,13 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-# --- 탭 + 공지 내용 (공지 버튼 아래) ---
+# --- 탭 + 내용 (공지 버튼 아래에 내용, 투어 경로 버튼은 사라짐) ---
 st.markdown('<div class="content-area">', unsafe_allow_html=True)
 
 # 공지 버튼
 notice_btn = st.button(_(f"tab_notice"), use_container_width=True, key="tab_notice_btn")
-map_btn = st.button(_(f"tab_map"), use_container_width=True, key="tab_map_btn")
 
-# 공지 클릭 시 내용 표시
+# 공지 클릭 시 내용 + 투어 경로 버튼 사라짐
 if notice_btn or st.session_state.tab_selection == _(f"tab_notice"):
     st.session_state.tab_selection = _(f"tab_notice")
     if st.session_state.admin:
@@ -166,61 +165,105 @@ if notice_btn or st.session_state.tab_selection == _(f"tab_notice"):
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
 
-# 투어 경로 버튼 (공지 내용 아래에 항상 배치)
-if map_btn or st.session_state.tab_selection == _(f"tab_map"):
-    st.session_state.tab_selection = _(f"tab_map")
-    if st.session_state.admin:
-        if st.button(_("add_city"), key="add_city_btn"):
-            st.session_state.adding_city = True
+# 투어 경로 버튼 (공지 클릭 시 사라짐)
+else:
+    map_btn = st.button(_(f"tab_map"), use_container_width=True, key="tab_map_btn")
+    if map_btn or st.session_state.tab_selection == _(f"tab_map"):
+        st.session_state.tab_selection = _(f"tab_map")
+        if st.session_state.admin:
+            if st.button(_("add_city"), key="add_city_btn"):
+                st.session_state.adding_city = True
 
-        if st.session_state.get("adding_city", False):
-            with st.container():
-                city_name = st.text_input("새 도시 입력", key="new_city_name")
-                if city_name:
-                    with st.form("city_form_add"):
-                        perf_date = st.date_input(_("perf_date"), key="add_perf_date")
-                        venue = st.text_input(_("venue"), key="add_venue")
-                        seats = st.number_input(_("seats"), min_value=0, value=500, step=50, key="add_seats")
-                        indoor = st.radio("실내인지 실외인지", [_(f"indoor"), _(f"outdoor")], key="add_indoor")
-                        google_link = st.text_input(_("google_link"), key="add_link")
-                        note = st.text_area(_("note"), key="add_note")
+            if st.session_state.get("adding_city", False):
+                with st.container():
+                    city_name = st.text_input("새 도시 입력", key="new_city_name")
+                    if city_name:
+                        with st.form("city_form_add"):
+                            perf_date = st.date_input(_("perf_date"), key="add_perf_date")
+                            venue = st.text_input(_("venue"), key="add_venue")
+                            seats = st.number_input(_("seats"), min_value=0, value=500, step=50, key="add_seats")
+                            indoor = st.radio("실내인지 실외인지", [_(f"indoor"), _(f"outdoor")], key="add_indoor")
+                            google_link = st.text_input(_("google_link"), key="add_link")
+                            note = st.text_area(_("note"), key="add_note")
 
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            if st.form_submit_button(_("edit"), key="edit_city_btn"):
-                                st.session_state.edit_mode = True
-                                st.rerun()
-                        with col2:
-                            if st.form_submit_button(_("save"), key="save_city_btn"):
-                                new_city = { "city": city_name, "venue": venue, "seats": str(seats), "indoor": indoor == _(f"indoor"), "note": note, "google_link": google_link, "perf_date": str(perf_date), "date": datetime.now().strftime("%m/%d %H:%M") }
-                                data = load_json(CITY_FILE)
-                                data.append(new_city)
-                                save_json(CITY_FILE, data)
-                                st.session_state.adding_city = False
-                                st.success("도시 추가 완료!")
-                                st.rerun()
-                        with col3:
-                            if st.form_submit_button(_("delete"), key="remove_city_btn"):
-                                st.session_state.adding_city = False
-                                st.rerun()
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                if st.form_submit_button(_("edit"), key="edit_city_btn"):
+                                    st.session_state.edit_mode = True
+                                    st.rerun()
+                            with col2:
+                                if st.form_submit_button(_("save"), key="save_city_btn"):
+                                    new_city = { "city": city_name, "venue": venue, "seats": str(seats), "indoor": indoor == _(f"indoor"), "note": note, "google_link": google_link, "perf_date": str(perf_date), "date": datetime.now().strftime("%m/%d %H:%M") }
+                                    data = load_json(CITY_FILE)
+                                    data.append(new_city)
+                                    save_json(CITY_FILE, data)
+                                    st.session_state.adding_city = False
+                                    st.success("도시 추가 완료!")
+                                    st.rerun()
+                            with col3:
+                                if st.form_submit_button(_("delete"), key="remove_city_btn"):
+                                    st.session_state.adding_city = False
+                                    st.rerun()
 
-    # --- 지도 ---
-    cities = load_json(CITY_FILE)
-    m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
-    for i, c in enumerate(cities):
-        coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
-        lat, lon = coords
-        is_future = c.get("perf_date", "9999-12-31") >= str(date.today())
-        color = "red" if is_future else "gray"
-        indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
-        popup_html = f"<div style='font-size:14px; line-height:1.6;'><b>{c['city']}</b><br>{_('perf_date')}: {c.get('perf_date','미정')}<br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br><a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving' target='_blank'>{_('google_link')}</a></div>"
-        folium.Marker(coords, popup=folium.Popup(popup_html, max_width=300), icon=folium.Icon(color=color, icon="music", prefix="fa")).add_to(m)
-        if i < len(cities) - 1:
-            nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
-            AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
-    st_folium(m, width=900, height=550, key="tour_map")
+        # --- 지도 ---
+        cities = load_json(CITY_FILE)
+        m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
+        for i, c in enumerate(cities):
+            coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
+            lat, lon = coords
+            is_future = c.get("perf_date", "9999-12-31") >= str(date.today())
+            color = "red" if is_future else "gray"
+            indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
+            popup_html = f"<div style='font-size:14px; line-height:1.6;'><b>{c['city']}</b><br>{_('perf_date')}: {c.get('perf_date','미정')}<br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br><a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving' target='_blank'>{_('google_link')}</a></div>"
+            folium.Marker(coords, popup=folium.Popup(popup_html, max_width=300), icon=folium.Icon(color=color, icon="music", prefix="fa")).add_to(m)
+            if i < len(cities) - 1:
+                nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
+                AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
+        st_folium(m, width=900, height=550, key="tour_map")
 
 st.markdown('</div>', unsafe_allow_html=True)
+
+# --- 사이드바 (PC) ---
+with st.sidebar:
+    lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
+    sel = st.selectbox("언어", list(lang_map.keys()), index=list(lang_map.values()).index(st.session_state.lang))
+    if lang_map[sel] != st.session_state.lang:
+        st.session_state.lang = lang_map[sel]
+        st.rerun()
+
+    if not st.session_state.admin:
+        pw = st.text_input("비밀번호", type="password", key="pw_input")
+        if st.button("로그인", key="login_btn"):
+            if pw == "0009":
+                st.session_state.admin = True
+                st.rerun()
+            else:
+                st.error("비밀번호 오류")
+    else:
+        st.success("관리자 모드")
+        if st.button("로그아웃", key="logout_btn"):
+            st.session_state.admin = False
+            st.rerun()
+
+        if st.button(_("change_pw"), key="show_change_pw_btn"):
+            st.session_state.show_pw_form = not st.session_state.show_pw_form
+
+        if st.session_state.get("show_pw_form", False):
+            with st.form("change_pw_form"):
+                current_pw = st.text_input(_("current_pw"), type="password", key="current_pw_input")
+                new_pw = st.text_input(_("new_pw"), type="password", key="new_pw_input")
+                confirm_pw = st.text_input(_("confirm_pw"), type="password", key="confirm_pw_input")
+                if st.form_submit_button("변경", key="change_pw_submit"):
+                    if current_pw == "0691":
+                        if new_pw == confirm_pw and new_pw:
+                            st.session_state.password = new_pw
+                            st.success(_("pw_changed"))
+                            st.session_state.show_pw_form = False
+                            st.rerun()
+                        else:
+                            st.error(_("pw_mismatch"))
+                    else:
+                        st.error(_("pw_error"))
 
 # --- 탭 전환 ---
 if st.session_state.tab_selection != st.session_state.get("last_tab"):
