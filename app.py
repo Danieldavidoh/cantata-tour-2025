@@ -170,13 +170,11 @@ if st.session_state.notice_open:
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
 
 if st.session_state.map_open:
-    cities = load_json(CITY_FILE)
-    city_names = sorted({c['city'] for c in cities})
-
     if st.session_state.admin and os.path.exists(CSV_FILE):
         if st.button(_("import_cities"), key="import_csv_cities"):
             import_cities_from_csv()
-            st.rerun()
+    cities = load_json(CITY_FILE)
+    city_names = sorted({c['city'] for c in cities})
 
     if st.session_state.admin:
         st.header(_("add_city"))
@@ -209,7 +207,6 @@ if st.session_state.map_open:
                     cities.append(new_city)
                     save_json(CITY_FILE, cities)
                     st.success("도시 추가 완료!")
-                    st.rerun()
                 else:
                     st.warning("도시와 공연 장소를 입력하세요.")
 
@@ -246,7 +243,7 @@ if st.session_state.map_open:
                     st.rerun()
 
 st.markdown(f'''
-<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">☰</button>
+<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.query_selector('.overlay').classList.toggle('open');">☰</button>
 <div class="overlay" onclick="document.querySelector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
 <div class="sidebar-mobile">
     <h3 style="color:white;">{_("menu")}</h3>
