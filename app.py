@@ -9,7 +9,7 @@ from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
-# --- 자동 새로고침 (비관리자) ---
+# --- 자동 새로고침 ---
 if not st.session_state.get("admin", False):
     st_autorefresh(interval=5000, key="auto_refresh_user")
 
@@ -39,13 +39,15 @@ LANG = {
     }
 }
 
-# --- 세션 초기화 ---
+# --- 세션 초기화 (lang는 무조건 str) ---
 defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False}
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
+    elif k == "lang" and not isinstance(st.session_state[k], str):
+        st.session_state[k] = "ko"  # 강제 문자열 보장
 
-# --- 번역 함수 (lang 보장) ---
+# --- 번역 함수 ---
 def _(key):
     lang = st.session_state.lang if isinstance(st.session_state.lang, str) else "ko"
     return LANG.get(lang, LANG["ko"]).get(key, key)
@@ -171,9 +173,11 @@ if st.session_state.map_open:
             with st.container():
                 col_select, col_btn = st.columns([8, 1])
                 with col_select:
+                    # 안전한 city 접근
+                    current_city = new_city.get("city", city_options[0])
                     selected_city = st.selectbox(
                         "도시", options=city_options, key=f"city_select_{idx}",
-                        index=city_options.index(new_city["city"])
+                        index=city_options.index(current_city) if current_city in city_options else 0
                     )
                     new_city["city"] = selected_city
                     new_city["lat"] = next(c["lat"] for c in DEFAULT_CITIES if c["city"] == selected_city)
@@ -186,15 +190,23 @@ if st.session_state.map_open:
                         })
                         st.rerun()
 
+                # expander: city 존재 보장
                 with st.expander(f"{new_city['city']} 상세 정보", expanded=False):
                     col1, col2 = st.columns(2)
                     with col1:
-                        default_date = new_city.get("date", date.today())
-                        if isinstance(default_date, str):
-                            default_date = datetime.strptime(default_date, "%Y-%m-%d").date()
-                        new_city["date"] = st.date_input(_("date"), value=default_date, key=f"date_{idx}")
+                        # 날짜: date 객체 사용
+                        current_date = new_city.get("date")
+                        if isinstance(current_date, str) and current_date:
+                            try:
+                                current_date = datetime.strptime(current_date, "%Y-%m-%d").date()
+                            except:
+                                current_date = date.today()
+                        elif not isinstance(current_date, date):
+                            current_date = date.today()
+                        new_city["date"] = st.date_input(_("date"), value=current_date, key=f"date_{idx}")
+
                         new_city["venue"] = st.text_input(_("venue"), value=new_city.get("venue", ""), key=f"venue_{idx}")
-                        new_city["seats"] = st.number_input(_("seats"), min_value=0, value=new_city.get("seats", 500), step=50, key=f"seats_{idx}")
+                        new_city["seats"] = st.number_input(_("seats"), min_value=0, value=int(new_city.get("seats", 500)), step=50, key=f"seats_{idx}")
                     with col2:
                         new_city["google_link"] = st.text_input(_("google_link"), value=new_city.get("google_link", ""), key=f"google_link_{idx}")
                         new_city["note"] = st.text_input(_("note"), value=new_city.get("note", ""), key=f"note_{idx}")
@@ -210,7 +222,7 @@ if st.session_state.map_open:
                     btn_cols = st.columns(3)
                     with btn_cols[0]:
                         if st.button(_("register"), key=f"reg_{idx}"):
-                            if new_city["city"] and new_city["venue"]:
+                            if new_city.get("city") and new_city.get("venue"):
                                 save_city = new_city.copy()
                                 save_city["date"] = save_city["date"].strftime("%Y-%m-%d")
                                 save_city["seats"] = str(save_city["seats"])
@@ -226,7 +238,7 @@ if st.session_state.map_open:
                             st.session_state.new_cities.pop(idx)
                             st.rerun()
 
-        # 첫 번째 + 버튼
+        # 초기 + 버튼
         if not st.session_state.new_cities:
             col_ph, col_init = st.columns([8, 1])
             with col_init:
