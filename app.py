@@ -108,33 +108,7 @@ def import_cities_from_csv():
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-    [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding-top: 0 !important; margin: 0 !important; }
-    .header-container { text-align: center; margin: 0 !important; padding: 0 !important; }
-    .christmas-decoration { display: flex; justify-content: center; gap: 12px; margin: 0 !important; padding: 0 !important; margin-bottom: 0 !important; }
-    .christmas-decoration i { color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6); animation: float 3s ease-in-out infinite; opacity: 0.95; }
-    .christmas-decoration i:nth-child(1) { font-size: 2.1em; animation-delay: 0s; }
-    .christmas-decoration i:nth-child(2) { font-size: 1.9em; animation-delay: 0.4s; }
-    .christmas-decoration i:nth-child(3) { font-size: 2.4em; animation-delay: 0.8s; }
-    .christmas-decoration i:nth-child(4) { font-size: 2.0em; animation-delay: 1.2s; }
-    .christmas-decoration i:nth-child(5) { font-size: 2.5em; animation-delay: 1.6s; }
-    .christmas-decoration i:nth-child(6) { font-size: 1.8em; animation-delay: 2.0s; }
-    .christmas-decoration i:nth-child(7) { font-size: 2.3em; animation-delay: 2.4s; }
-    @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-6px) rotate(4deg); } }
-    .main-title { font-size: 2.8em !important; font-weight: bold; text-align: center; text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; padding: 0 !important; line-height: 1.2; margin-top: 0 !important; margin-bottom: 0 !important; }
-    .button-row { display: flex; justify-content: center; gap: 20px; margin: 0 !important; padding: 0 15px !important; margin-top: 0 !important; }
-    .tab-btn { background: rgba(255,255,255,0.96); color: #c62828; border: none; border-radius: 20px; padding: 10px 20px; font-weight: bold; font-size: 1.1em; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.3s ease; flex: 1; max-width: 200px; }
-    .tab-btn:hover { background: #d32f2f; color: white; transform: translateY(-2px); }
-    .snowflake { position:fixed; top:-15px; color:#fff; font-size:1.1em; pointer-events:none; animation:fall linear infinite; opacity:0.3; z-index:1; }
-    @keyframes fall { 0% { transform:translateY(0) rotate(0deg); } 100% { transform:translateY(120vh) rotate(360deg); } }
-    .hamburger { position:fixed; top:15px; left:15px; z-index:10000; background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%; width:50px; height:50px; font-size:24px; cursor:pointer; box-shadow:0 0 10px rgba(0,0,0,.3); }
-    .sidebar-mobile { position:fixed; top:0; left:-300px; width:280px; height:100vh; background:rgba(30,30,30,.95); color:#fff; padding:20px; transition:left .3s; z-index:9999; overflow-y:auto; }
-    .sidebar-mobile.open { left:0; }
-    .overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,.5); z-index:9998; display:none; }
-    .overlay.open { display:block; }
-    @media(min-width:769px) { .hamburger, .sidebar-mobile, .overlay { display:none !important; } section[data-testid="stSidebar"] { display:block !important; } }
-    .stButton>button { border:none !important; -webkit-appearance:none !important; }
-</style>
-""", unsafe_allow_html=True)
+    s""", unsafe_allow_html=True)
 
 for i in range(52):
     left = random.randint(0, 100)
