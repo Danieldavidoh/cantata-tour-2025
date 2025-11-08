@@ -54,18 +54,18 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS: 초기 화면 상단 고정 + 전체화면 모드 ---
+# --- 7. CSS: 아이콘 항상 최상단 보임 + 지도 조건 렌더링 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
     [data-testid="stAppViewContainer"] { 
         background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; 
-        padding: 0 !important; margin: 0 !important; overflow: hidden;
+        padding-top: 0 !important; margin: 0 !important; 
     }
-
-    /* 크리스마스 아이콘: 항상 최상단, 초기 화면 포함 */
+    
+    /* 크리스마스 아이콘: 항상 최상단, 초기 화면에서도 보임 */
     .christmas-decoration {
-        position: fixed; top: 1vh; left: 0; width: 100%; z-index: 1001;
+        position: fixed; top: 2vh; left: 0; width: 100%; z-index: 1000;
         display: flex; justify-content: center; gap: 12px; flex-wrap: nowrap; pointer-events: none;
     }
     .christmas-decoration i {
@@ -81,18 +81,15 @@ st.markdown("""
     .christmas-decoration i:nth-child(7) { font-size: 2.3em; animation-delay: 2.4s; }
     @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-6px) rotate(4deg); } }
 
-    /* 초기 화면: 제목 위로 두 배 올림 (항상 기본 위치) */
-    .initial-screen {
-        position: relative; margin-top: -15vh; text-align: center; z-index: 100;
-    }
+    /* 제목 */
     .main-title {
-        font-size: 2.8em !important; font-weight: bold;
-        text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; line-height: 1.2;
+        font-size: 2.8em !important; font-weight: bold; text-align: center;
+        text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 15vh 0 10px 0 !important; line-height: 1.2;
     }
 
     /* 버튼 라인 */
     .button-row {
-        display: flex; justify-content: center; gap: 20px; margin: 20px 0; padding: 0 15px;
+        display: flex; justify-content: center; gap: 20px; margin: 0 0 20px 0; padding: 0 15px;
     }
     .tab-btn {
         background: rgba(255,255,255,0.96); color: #c62828; border: none;
@@ -101,13 +98,6 @@ st.markdown("""
         transition: all 0.3s ease; flex: 1; max-width: 200px;
     }
     .tab-btn:hover { background: #d32f2f; color: white; transform: translateY(-2px); }
-
-    /* 전체화면 모드 (지도/공지) */
-    .fullscreen-mode {
-        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1000;
-        background: rgba(255,255,255,0.98); overflow-y: auto; padding: 20px; display: none;
-    }
-    .fullscreen-mode.show { display: block; }
 
     /* 눈송이 */
     .snowflake { position:fixed; top:-15px; color:#fff; font-size:1.1em; pointer-events:none; animation:fall linear infinite; opacity:0.3; z-index:1; }
@@ -124,7 +114,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 크리스마스 아이콘 (항상 최상단) ---
+# --- 크리스마스 아이콘 (초기 화면에서도 보임) ---
 st.markdown('''
 <div class="christmas-decoration">
     <i class="fas fa-gift"></i>
@@ -137,7 +127,7 @@ st.markdown('''
 </div>
 ''', unsafe_allow_html=True)
 
-# --- 눈송이 ---
+# --- 눈송이 (52개) ---
 for i in range(52):
     left = random.randint(0, 100)
     duration = random.randint(10, 20)
@@ -145,37 +135,33 @@ for i in range(52):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 초기 화면 (항상 위로 두 배) ---
-st.markdown('<div class="initial-screen">', unsafe_allow_html=True)
+# --- 제목 ---
 title_html = f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>'
 st.markdown(title_html, unsafe_allow_html=True)
 
 # --- 버튼 라인 ---
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col1, col2 = st.columns([1, 1])
+
+# 공지 버튼
 with col1:
     if st.button(_("tab_notice"), key="btn_notice", use_container_width=True):
-        st.session_state.notice_open = True
+        st.session_state.notice_open = not st.session_state.notice_open
         st.session_state.map_open = False
         st.rerun()
+
+# 투어 경로 버튼 (공지 열려 있으면 숨김)
 with col2:
     if not st.session_state.notice_open:
         if st.button(_("tab_map"), key="btn_map", use_container_width=True):
-            st.session_state.map_open = True
+            st.session_state.map_open = not st.session_state.map_open
             st.session_state.notice_open = False
             st.rerun()
-st.markdown('</div>', unsafe_allow_html=True)
+
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 전체화면 공지 ---
-notice_class = "fullscreen-mode"
+# --- 공지 내용 (지도 아래) ---
 if st.session_state.notice_open:
-    notice_class += " show"
-st.markdown(f'<div class="{notice_class}">', unsafe_allow_html=True)
-if st.session_state.notice_open:
-    if st.button("← 돌아가기", key="back_from_notice"):
-        st.session_state.notice_open = False
-        st.rerun()
     if st.session_state.admin:
         with st.expander("공지 작성"):
             with st.form("notice_form", clear_on_submit=True):
@@ -207,17 +193,9 @@ if st.session_state.notice_open:
                 st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">다운로드</a>', unsafe_allow_html=True)
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
-st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 전체화면 지도 ---
-map_class = "fullscreen-mode"
-if st.session_state.map_open:
-    map_class += " show"
-st.markdown(f'<div class="{map_class}">', unsafe_allow_html=True)
-if st.session_state.map_open:
-    if st.button("← 돌아가기", key="back_from_map"):
-        st.session_state.map_open = False
-        st.rerun()
+# --- 지도: 투어경로 클릭 시만 열림 (초기 화면 안 보임) ---
+if st.session_state.map_open and not st.session_state.notice_open:
     cities = load_json(CITY_FILE)
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
@@ -231,8 +209,7 @@ if st.session_state.map_open:
         if i < len(cities) - 1:
             nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
             AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
-    st_folium(m, width=900, height=600, key="tour_map_fullscreen")
-st.markdown('</div>', unsafe_allow_html=True)
+    st_folium(m, width=900, height=550, key="tour_map")
 
 # --- 모바일 햄버거 메뉴 ---
 st.markdown(f'''
