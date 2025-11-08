@@ -23,20 +23,17 @@ LANG = {
            "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
            "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵", "perf_date": "공연 날짜",
            "warning": "제목·내용 입력", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
-           "add_city": "도시 추가", "city": "도시", "latitude": "위도", "longitude": "경도",
-           "import_cities": "CSV 도시 일괄 추가", "import_success": "도시 일괄 추가 완료!"},
+           "add_city": "도시 추가", "city": "도시", "import_cities": "CSV 도시 일괄 추가", "import_success": "도시 일괄 추가 완료!"},
     "en": {"title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
            "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
            "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps", "perf_date": "Performance Date",
            "warning": "Enter title & content", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
-           "add_city": "Add City", "city": "City", "latitude": "Latitude", "longitude": "Longitude",
-           "import_cities": "Import All Cities from CSV", "import_success": "Cities imported successfully!"},
+           "add_city": "Add City", "city": "City", "import_cities": "Import All Cities from CSV", "import_success": "Cities imported successfully!"},
     "hi": {"title_cantata": "कैंटाटा टूर", "title_year": "2025", "title_region": "महाराष्ट्र",
            "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "indoor": "इनडोर", "outdoor": "आउटडोर",
            "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप", "perf_date": "प्रदर्शन तिथि",
            "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट",
-           "add_city": "शहर जोड़ें", "city": "शहर", "latitude": "अक्षांश", "longitude": "देशांतर",
-           "import_cities": "CSV से सभी शहर आयात करें", "import_success": "शहर सफलतापूर्वक आयात किए गए!"}
+           "add_city": "शहर जोड़ें", "city": "शहर", "import_cities": "CSV से सभी शहर आयात करें", "import_success": "शहर सफलतापूर्वक आयात किए गए!"}
 }
 
 defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False}
@@ -48,10 +45,10 @@ def load_json(f): return json.load(open(f, "r", encoding="utf-8")) if os.path.ex
 def save_json(f, d): json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
 DEFAULT_CITIES = [
-    {"city": "Mumbai", "venue": "Gateway of India", "seats": "5000", "note": "인도 영화 수도", "google_link": "https://goo.gl/maps/abc123", "indoor": False, "date": "11/07 02:01", "perf_date": "2025-11-10", "lat": 19.0760, "lon": 72.8777},
-    {"city": "Pune", "venue": "Shaniwar Wada", "seats": "3000", "note": "IT 허브", "google_link": "https://goo.gl/maps/def456", "indoor": True, "date": "11/07 02:01", "perf_date": "2025-11-12", "lat": 18.5204, "lon": 73.8567},
-    {"city": "Pune", "venue": "Aga Khan Palace", "seats": "2500", "note": "역사적 장소", "google_link": "https://goo.gl/maps/pune2", "indoor": False, "date": "11/08 14:00", "perf_date": "2025-11-14", "lat": 18.5204, "lon": 73.8567},
-    {"city": "Nagpur", "venue": "Deekshabhoomi", "seats": "2000", "note": "오렌지 도시", "google_link": "https://goo.gl/maps/ghi789", "indoor": False, "date": "11/07 02:01", "perf_date": "2025-11-16", "lat": 21.1458, "lon": 79.0882}
+    {"city": "Mumbai", "venue": "Gateway of India", "seats": "5000", "note": "인도 영화 수도", "google_link": "https://goo.gl/maps/abc123", "indoor": False, "date": "11/07 02:01", "perf_date": "2025-11-10"},
+    {"city": "Pune", "venue": "Shaniwar Wada", "seats": "3000", "note": "IT 허브", "google_link": "https://goo.gl/maps/def456", "indoor": True, "date": "11/07 02:01", "perf_date": "2025-11-12"},
+    {"city": "Pune", "venue": "Aga Khan Palace", "seats": "2500", "note": "역사적 장소", "google_link": "https://goo.gl/maps/pune2", "indoor": False, "date": "11/08 14:00", "perf_date": "2025-11-14"},
+    {"city": "Nagpur", "venue": "Deekshabhoomi", "seats": "2000", "note": "오렌지 도시", "google_link": "https://goo.gl/maps/ghi789", "indoor": False, "date": "11/07 02:01", "perf_date": "2025-11-16"}
 ]
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 
@@ -64,9 +61,8 @@ def import_cities_from_csv():
     added = 0
     for city_name in new_cities:
         if city_name not in current_names:
-            new_city = {"city": city_name, "venue": "", "seats": "", "note": "", "google_link": "", "indoor": False,
-                        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"), "perf_date": "", "lat": 18.5204, "lon": 73.8567}
-            current_cities.append(new_city)
+            current_cities.append({"city": city_name, "venue": "", "seats": "", "note": "", "google_link": "", "indoor": False,
+                        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"), "perf_date": ""})
             current_names.add(city_name)
             added += 1
     save_json(CITY_FILE, current_cities)
@@ -175,54 +171,78 @@ if st.session_state.notice_open:
 
 if st.session_state.map_open:
     cities = load_json(CITY_FILE)
+    city_names = sorted({c['city'] for c in cities})
+
     if st.session_state.admin and os.path.exists(CSV_FILE):
         if st.button(_("import_cities"), key="import_csv_cities"):
             import_cities_from_csv()
             st.rerun()
+
     if st.session_state.admin:
         st.header(_("add_city"))
         with st.form("city_form", clear_on_submit=True):
-            city = st.text_input(_("city"))
+            col_a, col_b = st.columns([1, 2])
+            with col_a:
+                selected_city = st.selectbox(_("city"), options=[""] + city_names, index=0)
+            with col_b:
+                perf_date = st.date_input(_("perf_date"), value=None)
+
             venue = st.text_input(_("venue"))
-            seats = st.text_input(_("seats"))
             note = st.text_input(_("note"))
             google_link = st.text_input(_("google_link"))
-            indoor = st.checkbox(_("indoor"))
-            perf_date = st.date_input(_("perf_date"), value=None)
-            lat = st.number_input(_("latitude"), format="%.4f", value=18.5204)
-            lon = st.number_input(_("longitude"), format="%.4f", value=73.8567)
+
+            col_indoor, col_seats = st.columns([1, 2])
+            with col_indoor:
+                indoor_option = st.radio("장소 유형", [(_("indoor"), True), (_("outdoor"), False)], format_func=lambda x: x[0], horizontal=True)
+                indoor = indoor_option[1]
+            with col_seats:
+                seats = st.number_input(_("seats"), min_value=0, max_value=10000, value=500, step=50, format="%d")
+
             if st.form_submit_button("추가"):
-                if city and venue:
-                    new_city = {"city": city, "venue": venue, "seats": seats, "note": note, "google_link": google_link, "indoor": indoor,
-                                "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"), "perf_date": str(perf_date) if perf_date else "",
-                                "lat": lat, "lon": lon}
+                if selected_city and venue:
+                    new_city = {
+                        "city": selected_city,
+                        "venue": venue,
+                        "seats": str(seats),
+                        "note": note,
+                        "google_link": google_link,
+                        "indoor": indoor,
+                        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
+                        "perf_date": str(perf_date) if perf_date else ""
+                    }
                     cities.append(new_city)
                     save_json(CITY_FILE, cities)
                     st.success("도시 추가 완료!")
                     st.rerun()
                 else:
                     st.warning("도시와 공연 장소를 입력하세요.")
+
+    # 지도 생성 (좌표는 도시명 기반으로 하드코딩된 기본값 사용)
+    CITY_COORDS = {
+        "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882),
+        # 나머지 도시는 Pune 중심 사용
+    }
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
-        lat = c.get("lat", 18.5204)
-        lon = c.get("lon", 73.8567)
-        coords = (lat, lon)
+        coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
+        lat, lon = coords
         is_future = c.get("perf_date", "9999-12-31") >= str(date.today())
         color = "red" if is_future else "gray"
         indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
         popup_html = f"<div style='font-size:14px; line-height:1.6;'><b>{c['city']}</b><br>{_('perf_date')}: {c.get('perf_date','미정')}<br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br><a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving' target='_blank'>{_('google_link')}</a></div>"
         folium.Marker(coords, popup=folium.Popup(popup_html, max_width=300), icon=folium.Icon(color=color, icon="music", prefix="fa")).add_to(m)
         if i < len(cities) - 1:
-            next_c = cities[i+1]
-            nxt_lat = next_c.get("lat", 18.5204)
-            nxt_lon = next_c.get("lon", 73.8567)
-            AntPath([coords, (nxt_lat, nxt_lon)], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
+            nxt_city = cities[i+1]["city"]
+            nxt_coords = CITY_COORDS.get(nxt_city, (18.5204, 73.8567))
+            AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
     st_folium(m, width=900, height=550, key="tour_map")
+
     if st.session_state.admin:
         st.subheader("도시 목록 관리")
         for i, c in enumerate(cities):
             cols = st.columns([4, 1])
-            with cols[0]: st.write(f"{c['city']} - {c['venue']} ({c.get('perf_date', '미정')})")
+            with cols[0]:
+                st.write(f"{c['city']} - {c['venue']} ({c.get('perf_date', '미정')})")
             with cols[1]:
                 if st.button(_("delete"), key=f"del_c_{i}"):
                     cities.pop(i)
@@ -230,7 +250,7 @@ if st.session_state.map_open:
                     st.rerun()
 
 st.markdown(f'''
-<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">☰</button>
+<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">Menu</button>
 <div class="overlay" onclick="document.querySelector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
 <div class="sidebar-mobile">
     <h3 style="color:white;">{_("menu")}</h3>
