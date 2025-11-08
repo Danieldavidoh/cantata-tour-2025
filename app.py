@@ -123,17 +123,17 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-# --- 탭 ---
+# --- 탭 (투어 경로 왼쪽, 공지 오른쪽) ---
 st.markdown('<div class="content-area">', unsafe_allow_html=True)
 st.markdown('<div class="tab-container">', unsafe_allow_html=True)
 tab_col1, tab_col2 = st.columns(2)
 with tab_col1:
-    if st.button(_(f"tab_notice"), use_container_width=True, key="tab_notice_btn"):
-        st.session_state.tab_selection = _(f"tab_notice")
-        st.rerun()
-with tab_col2:
     if st.button(_(f"tab_map"), use_container_width=True, key="tab_map_btn"):
         st.session_state.tab_selection = _(f"tab_map")
+        st.rerun()
+with tab_col2:
+    if st.button(_(f"tab_notice"), use_container_width=True, key="tab_notice_btn"):
+        st.session_state.tab_selection = _(f"tab_notice")
         st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -211,7 +211,7 @@ if st.session_state.tab_selection == _(f"tab_notice"):
             if n.get("image") and os.path.exists(n["image"]): st.image(n["image"], use_column_width=True)
             if n.get("file") and os.path.exists(n["file"]):
                 b64 = base64.b64encode(open(n["file"], "rb").read()).decode()
-                st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">📎 다운로드</a>', unsafe_allow_html=True)
+                st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">다운로드</a>', unsafe_allow_html=True)
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
 
