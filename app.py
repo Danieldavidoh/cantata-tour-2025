@@ -34,8 +34,8 @@ LANG = {
     "hi": {"title_cantata": "कैंटाटा टूर", "title_year": "2025", "title_region": "महाराष्ट्र",
            "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "indoor": "इनडोर", "outdoor": "आउटडोर",
            "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप", "perf_date": "प्रदर्शन तिथि",
-           "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआ우ट",
-           "add_city": "शहर जोड़ें", "city": "शहर", "import_cities": "CSV से सभी शहर आयात करें", "import_success": "शहर सफलतापूर्वक आयात किए गए!",
+           "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट",
+           "add_city": "शहर जोड़ें", "city": "शहर", "import_cities": "CSV से सभी शहर आयात करें", "import_success": "शहर 성공तापूर्वक आयात किए गए!",
            "search_city": "शहर खोजें"}
 }
 
@@ -202,7 +202,6 @@ if st.session_state.map_open:
         search_term = st.text_input(_("search_city"))
         filtered_cities = [c for c in city_names if search_term.lower() in c.lower()]
         selected_city = st.selectbox(_("city"), options=[""] + sorted(filtered_cities), index=0)
-        perf_date = st.date_input(_("perf_date"), value=None)
         venue = st.text_input(_("venue"))
         note = st.text_input(_("note"))
         google_link = st.text_input(_("google_link"))
@@ -228,7 +227,7 @@ if st.session_state.map_open:
                     "google_link": google_link,
                     "indoor": indoor,
                     "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
-                    "perf_date": str(perf_date) if perf_date else "",
+                    "perf_date": "",
                     "lat": lat, "lon": lon
                 }
                 cities.append(new_city)
