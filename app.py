@@ -54,7 +54,7 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS: 버튼 같은 줄 + 토글 기능 ---
+# --- 7. CSS: 버튼 같은 줄 + 제목 아래 + 아이콘 보임 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -84,7 +84,7 @@ st.markdown("""
         text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 20px 0 10px 0 !important; line-height: 1.2;
     }
 
-    /* 버튼 라인: 같은 줄 */
+    /* 버튼 라인: 제목 바로 아래, 같은 줄 평행 */
     .button-row {
         display: flex; justify-content: center; gap: 20px; margin: 0 0 20px 0; padding: 0 15px;
     }
@@ -111,7 +111,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 크리스마스 아이콘 ---
+# --- 크리스마스 아이콘 (항상 보임) ---
 st.markdown('''
 <div class="christmas-decoration">
     <i class="fas fa-gift"></i>
@@ -124,7 +124,7 @@ st.markdown('''
 </div>
 ''', unsafe_allow_html=True)
 
-# --- 눈송이 ---
+# --- 눈송이 (52개) ---
 for i in range(52):
     left = random.randint(0, 100)
     duration = random.randint(10, 20)
@@ -136,28 +136,22 @@ for i in range(52):
 title_html = f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>'
 st.markdown(title_html, unsafe_allow_html=True)
 
-# --- 버튼 라인: 공지 + 투어 경로 ---
+# --- 버튼 라인: 공지 + 투어 경로 (같은 줄) ---
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col1, col2 = st.columns([1, 1])
-
-# 공지 버튼
 with col1:
     if st.button(_("tab_notice"), key="btn_notice", use_container_width=True):
         st.session_state.notice_open = not st.session_state.notice_open
-        st.session_state.map_open = False  # 공지 열리면 지도 닫힘
+        st.session_state.map_open = False
         st.rerun()
-
-# 투어 경로 버튼 (공지 열려 있으면 안 보임)
 with col2:
-    if not st.session_state.notice_open:  # 공지 열려 있으면 숨김
-        if st.button(_("tab_map"), key="btn_map", use_container_width=True):
-            st.session_state.map_open = not st.session_state.map_open
-            st.session_state.notice_open = False
-            st.rerun()
-
+    if st.button(_("tab_map"), key="btn_map", use_container_width=True):
+        st.session_state.map_open = not st.session_state.map_open
+        st.session_state.notice_open = False
+        st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 공지 내용 (지도 아래, 토글) ---
+# --- 공지 내용 ---
 if st.session_state.notice_open:
     if st.session_state.admin:
         with st.expander("공지 작성"):
@@ -191,8 +185,8 @@ if st.session_state.notice_open:
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
 
-# --- 지도 (공지 열려 있으면 안 보임) ---
-if st.session_state.map_open and not st.session_state.notice_open:
+# --- 지도 ---
+if st.session_state.map_open:
     cities = load_json(CITY_FILE)
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
