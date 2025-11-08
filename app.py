@@ -1,3 +1,4 @@
+# app.py
 import json, os, uuid, base64, random
 import streamlit as st
 from datetime import datetime, date
@@ -23,15 +24,15 @@ LANG = {
     "ko": { "title_cantata": "칸타타 투어", "title_year": "2025", "title_region": "마하라스트라",
             "tab_notice": "공지", "tab_map": "투어 경로", "add_city": "도시 추가", "indoor": "실내", "outdoor": "실외",
             "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵", "perf_date": "공연 날짜",
-            "warning": "제목·내용 입력", "edit": "수정", "save": "입력", "cancel": "취소", "delete": "제거" },
+            "warning": "제목·내용 입력", "edit": "수정", "save": "입력", "cancel": "취소", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃" },
     "en": { "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
             "tab_notice": "Notice", "tab_map": "Tour Route", "add_city": "Add City", "indoor": "Indoor", "outdoor": "Outdoor",
             "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps", "perf_date": "Performance Date",
-            "warning": "Enter title & content", "edit": "Edit", "save": "Add", "cancel": "Cancel", "delete": "Remove" },
+            "warning": "Enter title & content", "edit": "Edit", "save": "Add", "cancel": "Cancel", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout" },
     "hi": { "title_cantata": "कैंटाटा टूर", "title_year": "2025", "title_region": "महाराष्ट्र",
             "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "add_city": "शहर जोड़ें", "indoor": "इनडोर", "outdoor": "आउटडोर",
             "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप", "perf_date": "प्रदर्शन तिथि",
-            "warning": "शीर्षक·सामग्री दर्ज करें", "edit": "संपादन", "save": "जोड़ें", "cancel": "रद्द करें", "delete": "हटाएं" }
+            "warning": "शीर्षक·सामग्री दर्ज करें", "edit": "संपादन", "save": "जोड़ें", "cancel": "रद्द करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट" }
 }
 
 # --- 4. 세션 상태 ---
@@ -54,16 +55,20 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS: 버튼 같은 줄 + 제목 아래 + 아이콘 보임 ---
+# --- 7. CSS: 아이콘 + 제목 + 버튼 완전 밀착 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-    [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding-top: 0 !important; margin: 0 !important; }
-    
-    /* 크리스마스 아이콘: 항상 보임 */
+    [data-testid="stAppViewContainer"] { 
+        background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding-top: 0 !important; margin: 0 !important; 
+    }
+
+    /* 크리스마스 아이콘 */
     .christmas-decoration {
         position: absolute; top: 8vh; left: 0; width: 100%; z-index: 999;
         display: flex; justify-content: center; gap: 12px; flex-wrap: nowrap; pointer-events: none;
+        margin: 0 !important; padding: 0 !important;
+        margin-bottom: 0 !important;  /* 제목과 간격 0 */
     }
     .christmas-decoration i {
         color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6);
@@ -78,15 +83,19 @@ st.markdown("""
     .christmas-decoration i:nth-child(7) { font-size: 2.3em; animation-delay: 2.4s; }
     @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-6px) rotate(4deg); } }
 
-    /* 제목 */
+    /* 제목 - 아이콘 바로 아래 딱 붙음 */
     .main-title {
         font-size: 2.8em !important; font-weight: bold; text-align: center;
-        text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 20px 0 10px 0 !important; line-height: 1.2;
+        text-shadow: 0 3px 8px rgba(0,0,0,0.6); 
+        margin: 0 !important; padding: 0 !important; line-height: 1.2;
+        margin-top: 0 !important;  /* 아이콘과 간격 0 */
     }
 
-    /* 버튼 라인: 제목 바로 아래, 같은 줄 평행 */
+    /* 버튼 라인 - 제목 바로 아래 딱 붙음 */
     .button-row {
-        display: flex; justify-content: center; gap: 20px; margin: 0 0 20px 0; padding: 0 15px;
+        display: flex; justify-content: center; gap: 20px; 
+        margin: 0 !important; padding: 0 15px !important;
+        margin-top: 0 !important;  /* 제목과 간격 0 */
     }
     .tab-btn {
         background: rgba(255,255,255,0.96); color: #c62828; border: none;
@@ -132,11 +141,11 @@ for i in range(52):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 ---
+# --- 제목 (아이콘 바로 아래 딱!) ---
 title_html = f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>'
 st.markdown(title_html, unsafe_allow_html=True)
 
-# --- 버튼 라인: 공지 + 투어 경로 (같은 줄) ---
+# --- 버튼 라인: 공지 + 투어 경로 (제목 바로 아래 딱!) ---
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col1, col2 = st.columns([1, 1])
 with col1:
