@@ -1,45 +1,58 @@
 import json, os, uuid, base64, random
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, date
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
 from pytz import timezone
 from streamlit_autorefresh import st_autorefresh
+
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
+
 if not st.session_state.get("admin", False):
     st_autorefresh(interval=5000, key="auto_refresh_user")
+
 NOTICE_FILE = "notice.json"
 CITY_FILE = "cities.json"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 LANG = {
-    "ko": {"title_cantata": "칸타타 투어", "title_year": "2025", "title_region": "마하라스트라",
-           "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
-           "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵",
-           "warning": "도시와 장소를 입력하세요", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
-           "add_city": "도시", "add_more": "추가", "save_all": "저장", "date": "날짜", "perf_date": "공연 날짜",
-           "register": "등록", "update": "수정", "remove": "제거"},
-    "en": {"title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
-           "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
-           "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps",
-           "warning": "Enter city and venue", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
-           "add_city": "City", "add_more": "Add More", "save_all": "Save All", "date": "Date", "perf_date": "Performance Date",
-           "register": "Register", "update": "Update", "remove": "Remove"}
+    "ko": {
+        "title_cantata": "칸타타 투어", "title_year": "2025", "title_region": "마하라스트라",
+        "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
+        "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵",
+        "warning": "도시와 장소를 입력하세요", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
+        "add_city": "도시", "register": "등록", "update": "수정", "remove": "제거",
+        "date": "등록일", "perf_date": "공연 날짜"
+    },
+    "en": {
+        "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
+        "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
+        "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps",
+        "warning": "Enter city and venue", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
+        "add_city": "City", "register": "Register", "update": "Update", "remove": "Remove",
+        "date": "Date", "perf_date": "Performance Date"
+    }
 }
+
 defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False}
 for k, v in defaults.items():
     if k not in st.session_state: st.session_state[k] = v
+
 _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
+
 def load_json(f): return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
 def save_json(f, d): json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
-# --- 초기 데이터 (Mumbai, Pune, Nagpur) ---
+
+# --- 초기 데이터 ---
 DEFAULT_CITIES = [
-    {"city": "Mumbai", "venue": "", "seats": "", "note": "", "google_link": "", "indoor": False, "date": "", "perf_date": "", "lat": 19.07609, "lon": 72.877426},
-    {"city": "Pune", "venue": "", "seats": "", "note": "", "google_link": "", "indoor": False, "date": "", "perf_date": "", "lat": 18.52043, "lon": 73.856743},
-    {"city": "Nagpur", "venue": "", "seats": "", "note": "", "google_link": "", "indoor": False, "date": "", "perf_date": "", "lat": 21.1458, "lon": 79.088154}
+    {"city": "Mumbai", "venue": "", "seats": "", "note": "", "google_link": "", "indoor": True, "date": "", "lat": 19.07609, "lon": 72.877426},
+    {"city": "Pune", "venue": "", "seats": "", "note": "", "google_link": "", "indoor": True, "date": "", "lat": 18.52043, "lon": 73.856743},
+    {"city": "Nagpur", "venue": "", "seats": "", "note": "", "google_link": "", "indoor": True, "date": "", "lat": 21.1458, "lon": 79.088154}
 ]
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
+
 # --- CSS & 눈송이 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -62,10 +75,15 @@ st.markdown("""
     .overlay.open { display:block; }
     @media(min-width:769px) { .hamburger, .sidebar-mobile, .overlay { display:none !important; } }
     .stButton>button { border:none !important; }
+    .add-city-header { display: flex; align-items: center; gap: 10px; }
+    .add-city-header h2 { margin: 0; }
+    .add-city-btn { background-color: white !important; color: black !important; font-size: 1.5rem; padding: 0 12px !important; height: 40px; width: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
 </style>
 """, unsafe_allow_html=True)
+
 for i in range(52):
     st.markdown(f"<div class='snowflake' style='left:{random.randint(0,100)}vw; animation-duration:{random.randint(10,20)}s; font-size:{random.uniform(0.8,1.4)}em; animation-delay:{random.uniform(0,10)}s;'>❄</div>", unsafe_allow_html=True)
+
 # --- 헤더 ---
 st.markdown('<div class="header-container">', unsafe_allow_html=True)
 st.markdown('''
@@ -76,6 +94,7 @@ st.markdown('''
 ''', unsafe_allow_html=True)
 st.markdown(f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
+
 # --- 탭 버튼 ---
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col1, col2 = st.columns(2)
@@ -90,6 +109,7 @@ with col2:
         st.session_state.notice_open = False
         st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
+
 # --- 공지 ---
 if st.session_state.notice_open:
     if st.session_state.admin:
@@ -105,7 +125,11 @@ if st.session_state.notice_open:
                         file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.name}") if file else None
                         if img: open(img_path, "wb").write(img.getbuffer())
                         if file: open(file_path, "wb").write(file.getbuffer())
-                        notice = {"id": str(uuid.uuid4()), "title": title, "content": content, "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"), "image": img_path, "file": file_path}
+                        notice = {
+                            "id": str(uuid.uuid4()), "title": title, "content": content,
+                            "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
+                            "image": img_path, "file": file_path
+                        }
                         data = load_json(NOTICE_FILE)
                         data.insert(0, notice)
                         save_json(NOTICE_FILE, data)
@@ -113,6 +137,7 @@ if st.session_state.notice_open:
                         st.rerun()
                     else:
                         st.warning(_("warning"))
+
     for i, n in enumerate(load_json(NOTICE_FILE)):
         with st.expander(f"{n['date']} | {n['title']}", expanded=False):
             st.markdown(n["content"])
@@ -125,76 +150,101 @@ if st.session_state.notice_open:
                 data.pop(i)
                 save_json(NOTICE_FILE, data)
                 st.rerun()
-# --- 지도 & 도시 추가 ---
+
+# --- 투어 경로 & 도시 추가 ---
 if st.session_state.map_open:
     cities = load_json(CITY_FILE)
     city_options = ["Mumbai", "Pune", "Nagpur"]
+
     if st.session_state.admin:
-        col_header, col_add = st.columns([9, 1])
-        with col_header:
-            st.header(_("add_city"))
-        with col_add:
-            if st.button("+", key="add_city_block"):
-                if 'new_cities' not in st.session_state:
-                    st.session_state.new_cities = []
-                st.session_state.new_cities.append({
-                    "city": city_options[0], "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": False,
-                    "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"), "perf_date": ""
-                })
-                st.rerun()
-        if 'new_cities' in st.session_state:
-            for idx, new_city in enumerate(st.session_state.new_cities):
-                with st.container():
-                    cols = st.columns([9, 1])
-                    with cols[0]:
-                        selected_city = st.selectbox(_("city"), options=city_options, key=f"city_select_{idx}", index=city_options.index(new_city["city"]))
-                        new_city["city"] = selected_city
-                        new_city["lat"] = next(c["lat"] for c in DEFAULT_CITIES if c["city"] == selected_city)
-                        new_city["lon"] = next(c["lon"] for c in DEFAULT_CITIES if c["city"] == selected_city)
-                    with cols[1]:
-                        pass  # 빈 공간으로 바 클릭 영역 확보
-                    with st.expander(f"{new_city['city']} 상세", expanded=False):
-                        new_city["date"] = st.text_input(_("date"), value=new_city["date"], key=f"date_{idx}")
+        # 도시 추가 헤더
+        st.markdown(f'<div class="add-city-header"><h2>{_("add_city")}</h2></div>', unsafe_allow_html=True)
+
+        # 새로운 도시 입력 블록
+        if 'new_cities' not in st.session_state:
+            st.session_state.new_cities = []
+
+        for idx, new_city in enumerate(st.session_state.new_cities):
+            with st.container():
+                cols = st.columns([8, 1])
+                with cols[0]:
+                    selected_city = st.selectbox(
+                        "도시", options=city_options, key=f"city_select_{idx}",
+                        index=city_options.index(new_city["city"])
+                    )
+                    new_city["city"] = selected_city
+                    new_city["lat"] = next(c["lat"] for c in DEFAULT_CITIES if c["city"] == selected_city)
+                    new_city["lon"] = next(c["lon"] for c in DEFAULT_CITIES if c["city"] == selected_city)
+                with cols[1]:
+                    if st.button("+", key=f"add_city_block_{idx}", help="도시 추가"):
+                        st.session_state.new_cities.append({
+                            "city": city_options[0], "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True,
+                            "date": date.today().strftime("%Y-%m-%d")
+                        })
+                        st.rerun()
+
+                with st.expander(f"{new_city['city']} 상세 정보", expanded=False):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        new_city["date"] = st.date_input(_("date"), value=date.today() if not new_city.get("date") else datetime.strptime(new_city["date"], "%Y-%m-%d").date(), key=f"date_{idx}")
                         new_city["venue"] = st.text_input(_("venue"), value=new_city["venue"], key=f"venue_{idx}")
                         new_city["seats"] = st.number_input(_("seats"), min_value=0, value=new_city["seats"], step=50, key=f"seats_{idx}")
-                        new_city["indoor"] = st.checkbox(_("indoor"), value=new_city["indoor"], key=f"indoor_{idx}")
+                    with col2:
                         new_city["google_link"] = st.text_input(_("google_link"), value=new_city["google_link"], key=f"google_link_{idx}")
                         new_city["note"] = st.text_input(_("note"), value=new_city["note"], key=f"note_{idx}")
-                        new_city["perf_date"] = st.text_input(_("perf_date"), value=new_city["perf_date"], key=f"perf_date_{idx}")
-                        btn_cols = st.columns(3)
-                        with btn_cols[0]:
-                            if st.button(_("register"), key=f"register_{idx}"):
-                                if new_city["city"] and new_city["venue"]:
-                                    cities.append(new_city.copy())
-                                    save_json(CITY_FILE, cities)
-                                    st.session_state.new_cities.pop(idx)
-                                    st.success("등록 완료!")
-                                    st.rerun()
-                                else:
-                                    st.warning(_("warning"))
-                        with btn_cols[1]:
-                            if st.button(_("update"), key=f"update_{idx}"):
-                                if new_city["city"] and new_city["venue"]:
-                                    # 기존 cities에 업데이트 (새로운 블록이므로 등록과 유사하나, 이미 추가된 경우를 가정)
-                                    st.info("업데이트 기능은 기존 도시 관리에서 사용하세요. 여기서는 등록으로 처리됩니다.")
-                                else:
-                                    st.warning(_("warning"))
-                        with btn_cols[2]:
-                            if st.button(_("remove"), key=f"remove_{idx}"):
+
+                    venue_type_col = st.columns(2)
+                    with venue_type_col[0]:
+                        indoor_selected = st.radio(_("indoor"), [True, False], index=0 if new_city["indoor"] else 1, key=f"indoor_radio_{idx}", horizontal=True)
+                        new_city["indoor"] = indoor_selected
+                    with venue_type_col[1]:
+                        st.radio(_("outdoor"), [True, False], index=0 if not new_city["indoor"] else 1, key=f"outdoor_radio_{idx}", horizontal=True, disabled=True)  # Mirror of indoor
+
+                    btn_cols = st.columns(3)
+                    with btn_cols[0]:
+                        if st.button(_("register"), key=f"register_{idx}"):
+                            if new_city["city"] and new_city["venue"]:
+                                new_city["date"] = new_city["date"].strftime("%Y-%m-%d")
+                                cities.append(new_city.copy())
+                                save_json(CITY_FILE, cities)
                                 st.session_state.new_cities.pop(idx)
+                                st.success("도시 등록 완료!")
                                 st.rerun()
+                            else:
+                                st.warning(_("warning"))
+                    with btn_cols[1]:
+                        if st.button(_("update"), key=f"update_{idx}"):
+                            st.info("새로운 도시는 등록 후 목록에서 수정 가능합니다.")
+                    with btn_cols[2]:
+                        if st.button(_("remove"), key=f"remove_{idx}"):
+                            st.session_state.new_cities.pop(idx)
+                            st.rerun()
+
+        # 초기 추가 버튼 (첫 블록 추가용)
+        if not st.session_state.new_cities:
+            if st.button("+", key="initial_add_city_block", help="도시 추가"):
+                st.session_state.new_cities.append({
+                    "city": city_options[0], "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True,
+                    "date": date.today().strftime("%Y-%m-%d")
+                })
+                st.rerun()
+
     # --- 지도 ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
         lat, lon = c["lat"], c["lon"]
-        color = "red" if not c.get("perf_date") else "gray"
+        color = "red" if "perf_date" in c and c.get("perf_date") else "gray"  # Legacy check if needed
         indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
         popup_html = f"<b>{c['city']}</b><br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}"
-        folium.Marker((lat, lon), popup=folium.Popup(popup_html, max_width=300), icon=folium.Icon(color=color, icon="music", prefix="fa")).add_to(m)
+        folium.Marker(
+            (lat, lon), popup=folium.Popup(popup_html, max_width=300),
+            icon=folium.Icon(color=color, icon="music", prefix="fa")
+        ).add_to(m)
         if i < len(cities) - 1:
             nxt = cities[i+1]
             AntPath([(lat, lon), (nxt["lat"], nxt["lon"])], color="#e74c3c", weight=6, opacity=0.7).add_to(m)
     st_folium(m, width=900, height=550, key="tour_map")
+
 # --- 모바일 메뉴 & 사이드바 ---
 st.markdown(f'''
 <button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">☰</button>
@@ -213,6 +263,7 @@ st.markdown(f'''
     ''' }
 </div>
 ''', unsafe_allow_html=True)
+
 with st.sidebar:
     sel = st.selectbox("언어", ["한국어", "English"], index=0 if st.session_state.lang == "ko" else 1)
     if sel == "English" and st.session_state.lang != "en":
@@ -221,6 +272,7 @@ with st.sidebar:
     elif sel == "한국어" and st.session_state.lang != "ko":
         st.session_state.lang = "ko"
         st.rerun()
+
     if not st.session_state.admin:
         pw = st.text_input("비밀번호", type="password")
         if st.button("로그인"):
