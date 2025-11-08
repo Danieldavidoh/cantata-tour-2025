@@ -21,7 +21,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # --- 3. 다국어 ---
 LANG = {
     "ko": {
-        "title_cantata": "칸타타 투어", "title_year": "2025", "title_region": "마하라슈트라",
+        "title_cantata": "칸타타 투어", "title_year": "2025", "title_region": "마하라스트라",
         "tab_notice": "공지", "tab_map": "투어 경로", "today": "오늘", "yesterday": "어제",
         "new_notice_alert": "새 공지가 도착했어요!", "warning": "제목·내용 입력",
         "edit": "수정", "save": "입력", "cancel": "취소", "add_city": "도시 추가",
@@ -75,32 +75,101 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS + 제목 + 버튼 고정 ---
+# --- 7. CSS + 크리스마스 장식 + 제목 + 버튼 고정 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-    [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png") center/cover fixed; padding-top:0 !important; margin:0 !important; }
-    .fixed-title { position:fixed; top:20vh; left:0; width:100%; z-index:1000; text-align:center; padding:0; margin:0; }
-    .main-title { font-size:2.8em !important; font-weight:bold; text-shadow:0 3px 8px rgba(0,0,0,0.6); margin:0 !important; line-height:1.2; }
-    .button-bar { position:fixed; top:32vh; left:0; width:100%; z-index:1000; display:flex; justify-content:center; gap:30px; padding:12px 0; background:transparent; }
-    .tab-btn { background:rgba(255,255,255,0.94); color:#333; border:none; border-radius:50px; padding:14px 28px; font-weight:bold; font-size:1.1em; cursor:pointer; box-shadow:0 6px 20px rgba(0,0,0,0.2); display:flex; align-items:center; gap:8px; min-width:160px; justify-content:center; }
-    .tab-btn:hover { background:#f1c40f; color:#fff; }
-    .tab-btn i { font-size:1.3em; }
-    .content-area { margin-top:48vh !important; visibility:hidden; opacity:0; transition:all .4s; }
-    .content-area.show { visibility:visible; opacity:1; }
-    .snowflake { position:fixed; top:-15px; color:#fff; font-size:1.1em; pointer-events:none; animation:fall linear infinite; opacity:.3; z-index:1; }
-    @keyframes fall { 0% { transform:translateY(0) rotate(0deg); } 100% { transform:translateY(120vh) rotate(360deg); } }
-    .hamburger { position:fixed; top:15px; left:15px; z-index:10000; background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%; width:50px; height:50px; font-size:24px; cursor:pointer; box-shadow:0 0 10px rgba(0,0,0,.3); }
-    .sidebar-mobile { position:fixed; top:0; left:-300px; width:280px; height:100vh; background:rgba(30,30,30,.95); color:#fff; padding:20px; transition:left .3s; z-index:9999; overflow-y:auto; }
-    .sidebar-mobile.open { left:0; }
-    .overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,.5); z-index:9998; display:none; }
-    .overlay.open { display:block; }
-    @media(min-width:769px) { .hamburger, .sidebar-mobile, .overlay { display:none !important; } section[data-testid="stSidebar"] { display:block !important; } }
-    .stButton>button { border:none !important; -webkit-appearance:none !important; }
+    /* 전체 배경 + 스크롤 방지 */
+    [data-testid="stAppViewContainer"] {
+        background: url("background_christmas_dark.png") center/cover fixed;
+        padding:0 !important; margin:0 !important; overflow:hidden; height:100vh;
+    }
+    body { overflow:hidden; }
+
+    /* 제목 위 크리스마스 장식 */
+    .christmas-decoration {
+        position: fixed; top: 5vh; left: 0; width: 100%; z-index: 999;
+        display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; pointer-events: none;
+    }
+    .christmas-decoration i {
+        font-size: 2.5em; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6);
+        animation: float 3s ease-in-out infinite; opacity: 0.9;
+    }
+    .christmas-decoration i:nth-child(1) { font-size: 3.5em; animation-delay: 0s; }
+    .christmas-decoration i:nth-child(2) { font-size: 2.8em; animation-delay: 0.5s; }
+    .christmas-decoration i:nth-child(3) { font-size: 3.2em; animation-delay: 1s; }
+    .christmas-decoration i:nth-child(4) { font-size: 2.6em; animation-delay: 1.5s; }
+    .christmas-decoration i:nth-child(5) { font-size: 3.0em; animation-delay: 2s; }
+    .christmas-decoration i:nth-child(6) { font-size: 2.9em; animation-delay: 2.5s; }
+    .christmas-decoration i:nth-child(7) { font-size: 3.3em; animation-delay: 3s; }
+    @keyframes float {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-10px) rotate(5deg); }
+    }
+
+    /* 제목 */
+    .fixed-title {
+        position: fixed; top: 18vh; left: 0; width: 100%; z-index: 1000;
+        text-align: center; padding: 0; margin: 0;
+    }
+    .main-title {
+        font-size: 2.8em !important; font-weight: bold;
+        text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; line-height: 1.2;
+    }
+
+    /* 버튼 라인 (제목 아래, 왼쪽 공지 / 오른쪽 투어경로) */
+    .button-row {
+        position: fixed; top: 30vh; left: 0; width: 100%; z-index: 1000;
+        display: flex; justify-content: space-between; padding: 0 20px;
+    }
+    .tab-btn {
+        background: rgba(255,255,255,0.95); color: #d32f2f; border: none;
+        border-radius: 50px; padding: 14px 28px; font-weight: bold;
+        font-size: 1.1em; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        display: flex; align-items: center; gap: 10px; min-width: 140px;
+        transition: all 0.3s;
+    }
+    .tab-btn:hover { background: #c62828; color: white; transform: scale(1.05); }
+    .tab-btn i { font-size: 1.4em; }
+
+    /* 콘텐츠 (초기 숨김) */
+    .content-area { margin-top: 45vh !important; visibility: hidden; opacity: 0; transition: all 0.5s; overflow-y: auto; height: 55vh; }
+    .content-area.show { visibility: visible; opacity: 1; }
+
+    /* 눈송이 */
+    .snowflake { position: fixed; top: -15px; color: #fff; font-size: 1.1em; pointer-events: none;
+                 animation: fall linear infinite; opacity: 0.3; z-index: 1; }
+    @keyframes fall { 0% { transform: translateY(0) rotate(0deg); } 100% { transform: translateY(120vh) rotate(360deg); } }
+
+    /* 모바일 햄버거 */
+    .hamburger { position: fixed; top: 15px; left: 15px; z-index: 10000;
+                 background: rgba(0,0,0,.6); color: #fff; border: none; border-radius: 50%;
+                 width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 0 10px rgba(0,0,0,.3); }
+    .sidebar-mobile { position: fixed; top: 0; left: -300px; width: 280px; height: 100vh;
+                      background: rgba(30,30,30,.95); color: #fff; padding: 20px; transition: left .3s; z-index: 9999; overflow-y: auto; }
+    .sidebar-mobile.open { left: 0; }
+    .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+               background: rgba(0,0,0,.5); z-index: 9998; display: none; }
+    .overlay.open { display: block; }
+    @media(min-width:769px) { .hamburger, .sidebar-mobile, .overlay { display: none !important; } section[data-testid="stSidebar"] { display: block !important; } }
+    .stButton>button { border: none !important; -webkit-appearance: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 눈송이 ---
+# --- 크리스마스 장식 (제목 위) ---
+st.markdown('''
+<div class="christmas-decoration">
+    <i class="fas fa-gift"></i>
+    <i class="fas fa-candy-cane"></i>
+    <i class="fas fa-socks"></i>
+    <i class="fas fa-sleigh"></i>
+    <i class="fas fa-deer"></i>
+    <i class="fas fa-tree"></i>
+    <i class="fas fa-bell"></i>
+</div>
+''', unsafe_allow_html=True)
+
+# --- 눈송이 (26개) ---
 for i in range(26):
     left = random.randint(0, 100)
     duration = random.randint(10, 20)
@@ -114,15 +183,15 @@ title_html = f'<span style="color:red;">{_("title_cantata")}</span> <span style=
 st.markdown(f'<h1 class="main-title">{title_html}</h1>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 버튼 바 고정 ---
-st.markdown('<div class="button-bar">', unsafe_allow_html=True)
-col1, col2 = st.columns([1, 1], gap="large")
-with col1:
+# --- 버튼 라인 (왼쪽 공지 / 오른쪽 투어경로) ---
+st.markdown('<div class="button-row">', unsafe_allow_html=True)
+col_left, col_right = st.columns([1, 1])
+with col_left:
     if st.button(f"**{_('tab_notice')}**  <i class='fa-solid fa-bullhorn'></i>", key="notice_btn", use_container_width=True):
         st.session_state.notice_open = True
         st.session_state.map_open = False
         st.rerun()
-with col2:
+with col_right:
     if st.button(f"**{_('tab_map')}**  <i class='fa-solid fa-route'></i>", key="map_btn", use_container_width=True):
         st.session_state.map_open = True
         st.session_state.notice_open = False
@@ -135,7 +204,7 @@ if st.session_state.notice_open or st.session_state.map_open:
     content_class += " show"
 st.markdown(f'<div class="{content_class}">', unsafe_allow_html=True)
 
-# --- 공지 섹션 ---
+# === [공지] 섹션 ===
 if st.session_state.notice_open:
     if st.session_state.admin:
         with st.expander("공지 작성"):
@@ -150,11 +219,9 @@ if st.session_state.notice_open:
                         file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.name}") if file else None
                         if img: open(img_path, "wb").write(img.getbuffer())
                         if file: open(file_path, "wb").write(file.getbuffer())
-                        notice = {
-                            "id": str(uuid.uuid4()), "title": title, "content": content,
-                            "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
-                            "image": img_path, "file": file_path
-                        }
+                        notice = { "id": str(uuid.uuid4()), "title": title, "content": content,
+                                  "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
+                                  "image": img_path, "file": file_path }
                         data = load_json(NOTICE_FILE)
                         data.insert(0, notice)
                         save_json(NOTICE_FILE, data)
@@ -174,7 +241,7 @@ if st.session_state.notice_open:
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
 
-# --- 지도 섹션 ---
+# === [지도] 섹션 ===
 if st.session_state.map_open:
     if st.session_state.admin:
         if st.button(_("add_city")):
@@ -197,12 +264,10 @@ if st.session_state.map_open:
                                 st.rerun()
                         with col2:
                             if st.form_submit_button(_("save")):
-                                new_city = {
-                                    "city": city_name, "venue": venue, "seats": str(seats),
-                                    "indoor": indoor == _(f"indoor"), "note": note,
-                                    "google_link": google_link, "perf_date": str(perf_date),
-                                    "date": datetime.now().strftime("%m/%d %H:%M")
-                                }
+                                new_city = { "city": city_name, "venue": venue, "seats": str(seats),
+                                            "indoor": indoor == _(f"indoor"), "note": note,
+                                            "google_link": google_link, "perf_date": str(perf_date),
+                                            "date": datetime.now().strftime("%m/%d %H:%M") }
                                 data = load_json(CITY_FILE)
                                 data.append(new_city)
                                 save_json(CITY_FILE, data)
@@ -214,7 +279,6 @@ if st.session_state.map_open:
                                 st.session_state.adding_city = False
                                 st.rerun()
 
-    # --- 지도 렌더링 ---
     cities = load_json(CITY_FILE)
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
