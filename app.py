@@ -15,7 +15,7 @@ if not st.session_state.get("admin", False):
 NOTICE_FILE = "notice.json"
 CITY_FILE = "cities.json"
 UPLOAD_DIR = "uploads"
-CSV_FILE = "마하라스트라 도시목록.csv"
+CSV_FILE = "maharashtra_cities_200_batch_filled.csv"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 LANG = {
@@ -32,7 +32,7 @@ LANG = {
     "hi": {"title_cantata": "कैंटाटा टूर", "title_year": "2025", "title_region": "महाराष्ट्र",
            "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "indoor": "इनडोर", "outdoor": "आउटडोर",
            "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप", "perf_date": "प्रदर्शन तिथि",
-           "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआ우ट",
+           "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट",
            "add_city": "शहर जोड़ें", "city": "शहर", "import_cities": "CSV से सभी शहर आयात करें", "import_success": "शहर सफलतापूर्वक आयात किए गए!"}
 }
 
@@ -44,69 +44,45 @@ _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
 def load_json(f): return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
 def save_json(f, d): json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
-# --- 도시 & 좌표 (전체 목록) ---
-CITY_COORDS = {
-    "Mumbai": (19.07, 72.88), "Pune": (18.52, 73.86), "Nagpur": (21.15, 79.08), "Nashik": (20.00, 73.79),
-    "Thane": (19.22, 72.98), "Aurangabad": (19.88, 75.34), "Solapur": (17.67, 75.91), "Amravati": (20.93, 77.75),
-    "Nanded": (19.16, 77.31), "Kolhapur": (16.70, 74.24), "Akola": (20.70, 77.00), "Latur": (18.40, 76.18),
-    "Ahmadnagar": (19.10, 74.75), "Jalgaon": (21.00, 75.57), "Dhule": (20.90, 74.77), "Ichalkaranji": (16.69, 74.47),
-    "Malegaon": (20.55, 74.53), "Bhusawal": (21.05, 76.00), "Bhiwandi": (19.30, 73.06), "Bhandara": (21.17, 79.65),
-    "Beed": (18.99, 75.76), "Buldana": (20.54, 76.18), "Chandrapur": (19.95, 79.30), "Dharashiv": (18.40, 76.57),
-    "Gondia": (21.46, 80.19), "Hingoli": (19.72, 77.15), "Jalna": (19.85, 75.89), "Mira-Bhayandar": (19.28, 72.87),
-    "Nandurbar": (21.37, 74.22), "Osmanabad": (18.18, 76.07), "Palghar": (19.70, 72.77), "Parbhani": (19.27, 76.77),
-    "Ratnagiri": (16.99, 73.31), "Sangli": (16.85, 74.57), "Satara": (17.68, 74.02), "Sindhudurg": (16.24, 73.42),
-    "Wardha": (20.75, 78.60), "Washim": (20.11, 77.13), "Yavatmal": (20.39, 78.12), "Kalyan-Dombivli": (19.24, 73.13),
-    "Ulhasnagar": (19.22, 73.16), "Vasai-Virar": (19.37, 72.81), "Sangli-Miraj-Kupwad": (16.85, 74.57), "Nanded-Waghala": (19.16, 77.31),
-    "Bandra (Mumbai)": (19.06, 72.84), "Colaba (Mumbai)": (18.92, 72.82), "Andheri (Mumbai)": (19.12, 72.84),
-    "Navi Mumbai": (19.03, 73.00), "Pimpri-Chinchwad (Pune)": (18.62, 73.80), "Kothrud (Pune)": (18.50, 73.81), "Hadapsar (Pune)": (18.51, 73.94),
-    "Pune Cantonment": (18.50, 73.89), "Nashik Road": (20.00, 73.79), "Deolali (Nashik)": (19.94, 73.82), "Satpur (Nashik)": (20.01, 73.79),
-    "Aurangabad City": (19.88, 75.34), "Jalgaon City": (21.00, 75.57), "Nagpur City": (21.15, 79.08), "Sitabuldi (Nagpur)": (21.14, 79.08),
-    "Jaripatka (Nagpur)": (21.12, 79.07), "Solapur City": (17.67, 75.91), "Pandharpur (Solapur)": (17.66, 75.32), "Amravati City": (20.93, 77.75),
-    "Badnera (Amravati)": (20.84, 77.73), "Akola City": (20.70, 77.00), "Washim City": (20.11, 77.13), "Yavatmal City": (20.39, 78.12),
-    "Wardha City": (20.75, 78.60), "Chandrapur City": (19.95, 79.30), "Gadchiroli": (20.09, 80.11), "Gondia City": (21.46, 80.19),
-    "Bhandara City": (21.17, 79.65), "Gadhinglaj (Kolhapur)": (16.22, 74.35), "Kagal (Kolhapur)": (16.58, 74.31)
-}
-
-# --- 기본 도시 목록 (추가된 도시 포함) ---
-DEFAULT_CITIES = [
-    {"city": "Mumbai", "venue": "Gateway of India", "seats": "5000", "note": "인도 영화 수도", "google_link": "https://goo.gl/maps/abc123", "indoor": False, "date": "11/07 02:01", "perf_date": "2025-11-10", "lat": CITY_COORDS["Mumbai"][0], "lon": CITY_COORDS["Mumbai"][1]},
-    {"city": "Pune", "venue": "Shaniwar Wada", "seats": "3000", "note": "IT 허브", "google_link": "https://goo.gl/maps/def456", "indoor": True, "date": "11/07 02:01", "perf_date": "2025-11-12", "lat": CITY_COORDS["Pune"][0], "lon": CITY_COORDS["Pune"][1]},
-    {"city": "Pune", "venue": "Aga Khan Palace", "seats": "2500", "note": "역사적 장소", "google_link": "https://goo.gl/maps/pune2", "indoor": False, "date": "11/08 14:00", "perf_date": "2025-11-14", "lat": CITY_COORDS["Pune"][0], "lon": CITY_COORDS["Pune"][1]},
-    {"city": "Nagpur", "venue": "Deekshabhoomi", "seats": "2000", "note": "오렌지 도시", "google_link": "https://goo.gl/maps/ghi789", "indoor": False, "date": "11/07 02:01", "perf_date": "2025-11-16", "lat": CITY_COORDS["Nagpur"][0], "lon": CITY_COORDS["Nagpur"][1]}
-]
-
-# 추가 도시
-for city in sorted(CITY_COORDS.keys()):
-    if city not in [d["city"] for d in DEFAULT_CITIES]:
-        lat, lon = CITY_COORDS[city]
-        DEFAULT_CITIES.append({
-            "city": city, "venue": "", "seats": "", "note": "", "google_link": "",
-            "indoor": False, "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
-            "perf_date": "", "lat": lat, "lon": lon
-        })
-
-if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
-
-# --- CSV 도시 일괄 추가 ---
-def import_cities_from_csv():
-    if not os.path.exists(CSV_FILE): return st.error(f"{CSV_FILE} 파일이 없습니다.")
+# --- CSV에서 도시 + 좌표 로드 (기본값) ---
+def load_cities_from_csv():
+    if not os.path.exists(CSV_FILE):
+        st.error(f"{CSV_FILE} 파일이 없습니다. 프로젝트 폴더에 업로드하세요.")
+        return []
     df = pd.read_csv(CSV_FILE)
-    new_cities = df.dropna(subset=['city'])['city'].astype(str).str.strip().unique().tolist()
-    current_cities = load_json(CITY_FILE)
-    current_names = {c['city'] for c in current_cities}
-    added = 0
-    for city_name in new_cities:
-        if city_name not in current_names:
-            lat, lon = CITY_COORDS.get(city_name, (18.52, 73.86))
-            current_cities.append({
-                "city": city_name, "venue": "", "seats": "", "note": "", "google_link": "",
-                "indoor": False, "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
-                "perf_date": "", "lat": lat, "lon": lon
-            })
-            current_names.add(city_name)
-            added += 1
-    save_json(CITY_FILE, current_cities)
-    st.success(f"{added}개 도시가 추가되었습니다!")
+    cities = []
+    seen = set()
+    for _, row in df.iterrows():
+        city = str(row['city']).strip()
+        if not city or city in seen:
+            continue
+        seen.add(city)
+        lat = float(row['latitude']) if pd.notna(row['latitude']) else 18.5204
+        lon = float(row['longitude']) if pd.notna(row['longitude']) else 73.8567
+        cities.append({
+            "city": city,
+            "venue": "",
+            "seats": "",
+            "note": "",
+            "google_link": "",
+            "indoor": False,
+            "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
+            "perf_date": "",
+            "lat": lat,
+            "lon": lon
+        })
+    return cities
+
+# --- 초기 데이터 생성 ---
+if not os.path.exists(CITY_FILE):
+    default_cities = load_cities_from_csv()
+    save_json(CITY_FILE, default_cities)
+
+# --- CSV 재로딩 (관리자용) ---
+def import_cities_from_csv():
+    new_cities = load_cities_from_csv()
+    save_json(CITY_FILE, new_cities)
+    st.success(f"{len(new_cities)}개 도시가 성공적으로 로드되었습니다!")
 
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -144,7 +120,7 @@ for i in range(52):
     duration = random.randint(10, 20)
     size = random.uniform(0.8, 1.4)
     delay = random.uniform(0, 10)
-    st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>Snowflake</div>", unsafe_allow_html=True)
 
 st.markdown('<div class="header-container">', unsafe_allow_html=True)
 st.markdown('''
@@ -210,9 +186,11 @@ if st.session_state.notice_open:
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
 
 if st.session_state.map_open:
-    if st.session_state.admin and os.path.exists(CSV_FILE):
+    if st.session_state.admin:
         if st.button(_("import_cities"), key="import_csv_cities"):
             import_cities_from_csv()
+            st.rerun()
+
     cities = load_json(CITY_FILE)
     city_names = sorted({c['city'] for c in cities})
 
@@ -234,7 +212,10 @@ if st.session_state.map_open:
 
             if st.form_submit_button("추가"):
                 if selected_city and venue:
-                    lat, lon = CITY_COORDS.get(selected_city, (18.52, 73.86))
+                    # 좌표는 CSV에서 가져오거나 기본값
+                    city_data = next((c for c in cities if c["city"] == selected_city), {})
+                    lat = city_data.get("lat", 18.5204)
+                    lon = city_data.get("lon", 73.8567)
                     new_city = {
                         "city": selected_city,
                         "venue": venue,
@@ -253,10 +234,9 @@ if st.session_state.map_open:
                 else:
                     st.warning("도시와 공연 장소를 입력하세요.")
 
-    m = folium.Map(location=[18.52, 73.86], zoom_start=7, tiles="OpenStreetMap")
+    m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
-        lat = c.get("lat", CITY_COORDS.get(c["city"], (18.52, 73.86))[0])
-        lon = c.get("lon", CITY_COORDS.get(c["city"], (18.52, 73.86))[1])
+        lat, lon = c["lat"], c["lon"]
         coords = (lat, lon)
         is_future = c.get("perf_date", "9999-12-31") >= str(date.today())
         color = "red" if is_future else "gray"
@@ -264,9 +244,8 @@ if st.session_state.map_open:
         popup_html = f"<div style='font-size:14px; line-height:1.6;'><b>{c['city']}</b><br>{_('perf_date')}: {c.get('perf_date','미정')}<br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br><a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving' target='_blank'>{_('google_link')}</a></div>"
         folium.Marker(coords, popup=folium.Popup(popup_html, max_width=300), icon=folium.Icon(color=color, icon="music", prefix="fa")).add_to(m)
         if i < len(cities) - 1:
-            nxt_city = cities[i+1]["city"]
-            nxt_lat, nxt_lon = CITY_COORDS.get(nxt_city, (18.52, 73.86))
-            AntPath([coords, (nxt_lat, nxt_lon)], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
+            nxt_city = cities[i+1]
+            AntPath([coords, (nxt_city["lat"], nxt_city["lon"])], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
     st_folium(m, width=900, height=550, key="tour_map")
 
     if st.session_state.admin:
@@ -282,7 +261,7 @@ if st.session_state.map_open:
                     st.rerun()
 
 st.markdown(f'''
-<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">☰</button>
+<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">Menu</button>
 <div class="overlay" onclick="document.querySelector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
 <div class="sidebar-mobile">
     <h3 style="color:white;">{_("menu")}</h3>
