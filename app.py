@@ -15,6 +15,7 @@ if not st.session_state.get("admin", False):
 NOTICE_FILE = "notice.json"
 CITY_FILE = "cities.json"
 UPLOAD_DIR = "uploads"
+CSV_FILE = "maharashtra_cities_200_batch_filled.csv"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 LANG = {
@@ -22,17 +23,20 @@ LANG = {
            "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
            "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵", "perf_date": "공연 날짜",
            "warning": "제목·내용 입력", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
-           "add_city": "도시 추가", "city": "도시", "search_city": "도시 검색"},
+           "add_city": "도시 추가", "city": "도시", "import_cities": "CSV 도시 일괄 추가", "import_success": "도시 일괄 추가 완료!",
+           "search_city": "도시 검색"},
     "en": {"title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
            "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
            "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps", "perf_date": "Performance Date",
            "warning": "Enter title & content", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
-           "add_city": "Add City", "city": "City", "search_city": "Search City"},
+           "add_city": "Add City", "city": "City", "import_cities": "Import All Cities from CSV", "import_success": "Cities imported successfully!",
+           "search_city": "Search City"},
     "hi": {"title_cantata": "कैंटाटा टूर", "title_year": "2025", "title_region": "महाराष्ट्र",
            "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "indoor": "इनडोर", "outdoor": "आउटडोर",
            "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप", "perf_date": "प्रदर्शन तिथि",
-           "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट",
-           "add_city": "शहर जोड़ें", "city": "शहर", "search_city": "शहर खोजें"}
+           "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआ우ट",
+           "add_city": "शहर जोड़ें", "city": "शहर", "import_cities": "CSV से सभी शहर आयात करें", "import_success": "शहर सफलतापूर्वक आयात किए गए!",
+           "search_city": "शहर खोजें"}
 }
 
 defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False}
@@ -43,46 +47,45 @@ _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
 def load_json(f): return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
 def save_json(f, d): json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
-# --- 초기 데이터 (Mumbai, Pune, Nagpur만) ---
-DEFAULT_CITIES = [
-    {
-        "city": "Mumbai",
-        "venue": "",
-        "seats": "",
-        "note": "",
-        "google_link": "",
-        "indoor": False,
-        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
-        "perf_date": "",
-        "lat": 19.07609,
-        "lon": 72.877426
-    },
-    {
-        "city": "Pune",
-        "venue": "",
-        "seats": "",
-        "note": "",
-        "google_link": "",
-        "indoor": False,
-        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
-        "perf_date": "",
-        "lat": 18.52043,
-        "lon": 73.856743
-    },
-    {
-        "city": "Nagpur",
-        "venue": "",
-        "seats": "",
-        "note": "",
-        "google_link": "",
-        "indoor": False,
-        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
-        "perf_date": "",
-        "lat": 21.1458,
-        "lon": 79.088154
-    }
-]
-if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
+# --- CSV에서 도시 + 좌표 로드 (기본값) ---
+def load_cities_from_csv():
+    if not os.path.exists(CSV_FILE):
+        st.error(f"{CSV_FILE} 파일이 없습니다. 프로젝트 폴더에 업로드하세요.")
+        return []
+    df = pd.read_csv(CSV_FILE)
+    cities = []
+    seen = set()
+    for _, row in df.iterrows():
+        city = str(row['city']).strip()
+        if not city or city in seen:
+            continue
+        seen.add(city)
+        lat = float(row['latitude']) if pd.notna(row['latitude']) else 18.5204
+        lon = float(row['longitude']) if pd.notna(row['longitude']) else 73.8567
+        cities.append({
+            "city": city,
+            "venue": "",
+            "seats": "",
+            "note": "",
+            "google_link": "",
+            "indoor": False,
+            "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
+            "perf_date": "",
+            "lat": lat,
+            "lon": lon
+        })
+    return cities
+
+# --- 초기 데이터 생성 ---
+if not os.path.exists(CITY_FILE):
+    default_cities = load_cities_from_csv()
+    save_json(CITY_FILE, default_cities)
+
+# --- CSV 재로딩 (관리자용) ---
+def import_cities_from_csv():
+    new_cities = load_cities_from_csv()
+    save_json(CITY_FILE, new_cities)
+    st.success(f"{len(new_cities)}개 도시가 성공적으로 로드되었습니다!")
 
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
