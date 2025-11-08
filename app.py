@@ -143,54 +143,13 @@ if st.session_state.notice_open:
                 save_json(NOTICE_FILE, data)
                 st.rerun()
 
-# --- 지도 & 도시 추가 ---
+# --- 지도 ---
 if st.session_state.map_open:
     cities = load_json(CITY_FILE)
 
-    if st.session_state.admin:
-        col_header, col_add = st.columns([3, 1])
-        with col_header:
-            st.header(_("add_city"))
-        with col_add:
-            if st.button("+"):
-                st.session_state.form_count = st.session_state.get("form_count", 0) + 1
-                st.rerun()
+    # 이전에 있던 '도시 추가' 및 '도시 목록 관리' 기능이 모두 삭제되었습니다.
 
-        if 'form_count' not in st.session_state:
-            st.session_state.form_count = 0
-
-        new_cities = []
-        for i in range(st.session_state.form_count):
-            with st.container():
-                col1, col2 = st.columns(2)
-                with col1:
-                    city = st.selectbox(_("city"), options=CITY_OPTIONS, key=f"city_{i}")
-                    venue = st.text_input(_("venue"), key=f"venue_{i}")
-                with col2:
-                    indoor = st.checkbox(_("indoor"), key=f"indoor_{i}")
-                    seats = st.number_input(_("seats"), min_value=0, value=500, step=50, key=f"seats_{i}")
-
-                note = st.text_input(_("note"), key=f"note_{i}")
-                google_link = st.text_input(_("google_link"), key=f"link_{i}")
-
-                new_cities.append({
-                    "city": city, "venue": venue, "indoor": indoor, "seats": str(seats),
-                    "note": note, "google_link": google_link,
-                    "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
-                    "perf_date": "", "lat": CITY_COORDS[city][0], "lon": CITY_COORDS[city][1]
-                })
-
-        if st.session_state.form_count > 0 and st.button(_("save_all"), use_container_width=True):
-            if all(c["city"] and c["venue"] for c in new_cities):
-                cities.extend(new_cities)
-                save_json(CITY_FILE, cities)
-                st.session_state.form_count = 0
-                st.success("추가 완료!")
-                st.rerun()
-            else:
-                st.warning(_("warning"))
-
-    # --- 지도 ---
+    # --- 지도 렌더링 ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
         lat, lon = c["lat"], c["lon"]
@@ -203,18 +162,6 @@ if st.session_state.map_open:
             AntPath([(lat, lon), (nxt["lat"], nxt["lon"])], color="#e74c3c", weight=6, opacity=0.7).add_to(m)
     st_folium(m, width=900, height=550, key="tour_map")
 
-    # --- 도시 관리 ---
-    if st.session_state.admin:
-        st.subheader("도시 목록 관리")
-        for i, c in enumerate(cities):
-            cols = st.columns([4, 1])
-            with cols[0]:
-                st.write(f"{c['city']} - {c['venue']}")
-            with cols[1]:
-                if st.button(_("delete"), key=f"del_c_{i}"):
-                    cities.pop(i)
-                    save_json(CITY_FILE, cities)
-                    st.rerun()
 
 # --- 모바일 메뉴 & 사이드바 ---
 st.markdown(f'''
