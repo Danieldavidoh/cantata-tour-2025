@@ -4,77 +4,75 @@ from datetime import datetime, date
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
-from pytz import actimezone
+from pytz import timezone
 from streamlit_autorefresh import st_autorefresh
-import pandas as pd
-
+# --- 1. 페이지 설정 ---
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 if not st.session_state.get("admin", False):
     st_autorefresh(interval=5000, key="auto_refresh_user")
-
+# --- 2. 파일 ---
 NOTICE_FILE = "notice.json"
 CITY_FILE = "cities.json"
 UPLOAD_DIR = "uploads"
-CSV_FILE = "cities.csv"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-
+# --- 3. 다국어 ---
 LANG = {
-    "ko": {"title_cantata": "칸타타 투어", "title_year": "2025", "title_region": "마하라스트라",
-           "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
-           "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵", "perf_date": "공연 날짜",
-           "warning": "제목·내용 입력", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
-           "add_city": "도시 추가", "city": "도시", "import_cities": "CSV 도시 일괄 추가", "import_success": "도시 일괄 추가 완료!"},
-    "en": {"title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
-           "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
-           "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps", "perf_date": "Performance Date",
-           "warning": "Enter title & content", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
-           "add_city": "Add City", "city": "City", "import_cities": "Import All Cities from CSV", "import_success": "Cities imported successfully!"},
-    "hi": {"title_cantata": "कैंटाटा टूर", "title_year": "2025", "title_region": "महाराष्ट्र",
-           "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "indoor": "इनडोर", "outdoor": "आउटडोर",
-           "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप", "perf_date": "प्रदर्शन तिथि",
-           "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट",
-           "add_city": "शहर जोड़ें", "city": "शहर", "import_cities": "CSV से सभी शहर आयात करें", "import_success": "शहर सफलतापूर्वक आयात किए गए!"}
+    "ko": { "title_cantata": "칸타타 투어", "title_year": "2025", "title_region": "마하라스트라",
+            "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
+            "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵", "perf_date": "공연 날짜",
+            "warning": "제목·내용 입력", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
+            "add_city": "도시 추가", "city": "도시", "latitude": "위도", "longitude": "경도" },
+    "en": { "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
+            "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
+            "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps", "perf_date": "Performance Date",
+            "warning": "Enter title & content", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
+            "add_city": "Add City", "city": "City", "latitude": "Latitude", "longitude": "Longitude" },
+    "hi": { "title_cantata": "कैंटाटा टूर", "title_year": "2025", "title_region": "महाराष्ट्र",
+            "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "indoor": "इनडोर", "outdoor": "आउटडोर",
+            "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप", "perf_date": "प्रदर्शन तिथि",
+            "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट",
+            "add_city": "शहर जोड़ें", "city": "शहर", "latitude": "अक्षांश", "longitude": "देशांतर" }
 }
-
+# --- 4. 세션 상태 ---
 defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False}
 for k, v in defaults.items():
     if k not in st.session_state: st.session_state[k] = v
 _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
-
+# --- 5. JSON 헬퍼 ---
 def load_json(f): return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
 def save_json(f, d): json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
-
+# --- 6. 초기 도시 + 좌표 ---
 DEFAULT_CITIES = [
-    {"city": "Mumbai", "venue": "Gateway of India", "seats": "5000", "note": "인도 영화 수도", "google_link": "https://goo.gl/maps/abc123", "indoor": False, "date": "11/07 02:01", "perf_date": "2025-11-10"},
-    {"city": "Pune", "venue": "Shaniwar Wada", "seats": "3000", "note": "IT 허브", "google_link": "https://goo.gl/maps/def456", "indoor": True, "date": "11/07 02:01", "perf_date": "2025-11-12"},
-    {"city": "Pune", "venue": "Aga Khan Palace", "seats": "2500", "note": "역사적 장소", "google_link": "https://goo.gl/maps/pune2", "indoor": False, "date": "11/08 14:00", "perf_date": "2025-11-14"},
-    {"city": "Nagpur", "venue": "Deekshabhoomi", "seats": "2000", "note": "오렌지 도시", "google_link": "https://goo.gl/maps/ghi789", "indoor": False, "date": "11/07 02:01", "perf_date": "2025-11-16"}
+    {"city": "Mumbai", "venue": "Gateway of India", "seats": "5000", "note": "인도 영화 수도", "google_link": "https://goo.gl/maps/abc123", "indoor": False, "date": "11/07 02:01", "perf_date": "2025-11-10", "lat": 19.0760, "lon": 72.8777},
+    {"city": "Pune", "venue": "Shaniwar Wada", "seats": "3000", "note": "IT 허브", "google_link": "https://goo.gl/maps/def456", "indoor": True, "date": "11/07 02:01", "perf_date": "2025-11-12", "lat": 18.5204, "lon": 73.8567},
+    {"city": "Pune", "venue": "Aga Khan Palace", "seats": "2500", "note": "역사적 장소", "google_link": "https://goo.gl/maps/pune2", "indoor": False, "date": "11/08 14:00", "perf_date": "2025-11-14", "lat": 18.5204, "lon": 73.8567},
+    {"city": "Nagpur", "venue": "Deekshabhoomi", "seats": "2000", "note": "오렌지 도시", "google_link": "https://goo.gl/maps/ghi789", "indoor": False, "date": "11/07 02:01", "perf_date": "2025-11-16", "lat": 21.1458, "lon": 79.0882}
 ]
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
-
-def import_cities_from_csv():
-    if not os.path.exists(CSV_FILE): return st.error(f"{CSV_FILE} 파일이 없습니다.")
-    df = pd.read_csv(CSV_FILE)
-    new_cities = df['city'].dropna().astype(str).str.strip().unique().tolist()
-    current_cities = load_json(CITY_FILE)
-    current_names = {c['city'] for c in current_cities}
-    added = 0
-    for city_name in new_cities:
-        if city_name not in current_names:
-            current_cities.append({"city": city_name, "venue": "", "seats": "", "note": "", "google_link": "", "indoor": False,
-                        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"), "perf_date": ""})
-            current_names.add(city_name)
-            added += 1
-    save_json(CITY_FILE, current_cities)
-    st.success(f"{added}개 도시가 추가되었습니다!")
-
+# --- 7. CSS: 아이콘 제목 위에 배치 + 밀착 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-    [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding-top: 0 !important; margin: 0 !important; }
-    .header-container { text-align: center; margin: 0 !important; padding: 0 !important; }
-    .christmas-decoration { display: flex; justify-content: center; gap: 12px; margin: 0 !important; padding: 0 !important; margin-bottom: 0 !important; }
-    .christmas-decoration i { color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6); animation: float 3s ease-in-out infinite; opacity: 0.95; }
+    [data-testid="stAppViewContainer"] {
+        background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed;
+        padding-top: 0 !important; margin: 0 !important;
+    }
+    /* 아이콘 + 제목 컨테이너 */
+    .header-container {
+        text-align: center;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    /* 크리스마스 아이콘 - 제목 바로 위에 딱 붙음 */
+    .christmas-decoration {
+        display: flex; justify-content: center; gap: 12px;
+        margin: 0 !important; padding: 0 !important;
+        margin-bottom: 0 !important; /* 제목과 간격 0 */
+    }
+    .christmas-decoration i {
+        color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6);
+        animation: float 3s ease-in-out infinite; opacity: 0.95;
+    }
     .christmas-decoration i:nth-child(1) { font-size: 2.1em; animation-delay: 0s; }
     .christmas-decoration i:nth-child(2) { font-size: 1.9em; animation-delay: 0.4s; }
     .christmas-decoration i:nth-child(3) { font-size: 2.4em; animation-delay: 0.8s; }
@@ -83,12 +81,31 @@ st.markdown("""
     .christmas-decoration i:nth-child(6) { font-size: 1.8em; animation-delay: 2.0s; }
     .christmas-decoration i:nth-child(7) { font-size: 2.3em; animation-delay: 2.4s; }
     @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-6px) rotate(4deg); } }
-    .main-title { font-size: 2.8em !important; font-weight: bold; text-align: center; text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; padding: 0 !important; line-height: 1.2; margin-top: 0 !important; margin-bottom: 0 !important; }
-    .button-row { display: flex; justify-content: center; gap: 20px; margin: 0 !important; padding: 0 15px !important; margin-top: 0 !important; }
-    .tab-btn { background: rgba(255,255,255,0.96); color: #c62828; border: none; border-radius: 20px; padding: 10px 20px; font-weight: bold; font-size: 1.1em; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.3s ease; flex: 1; max-width: 200px; }
+    /* 제목 - 아이콘 바로 아래 딱 붙음 */
+    .main-title {
+        font-size: 2.8em !important; font-weight: bold; text-align: center;
+        text-shadow: 0 3px 8px rgba(0,0,0,0.6);
+        margin: 0 !important; padding: 0 !important; line-height: 1.2;
+        margin-top: 0 !important; /* 아이콘과 간격 0 */
+        margin-bottom: 0 !important; /* 버튼과 간격 0 */
+    }
+    /* 버튼 라인 */
+    .button-row {
+        display: flex; justify-content: center; gap: 20px;
+        margin: 0 !important; padding: 0 15px !important;
+        margin-top: 0 !important;
+    }
+    .tab-btn {
+        background: rgba(255,255,255,0.96); color: #c62828; border: none;
+        border-radius: 20px; padding: 10px 20px; font-weight: bold;
+        font-size: 1.1em; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        transition: all 0.3s ease; flex: 1; max-width: 200px;
+    }
     .tab-btn:hover { background: #d32f2f; color: white; transform: translateY(-2px); }
+    /* 눈송이 */
     .snowflake { position:fixed; top:-15px; color:#fff; font-size:1.1em; pointer-events:none; animation:fall linear infinite; opacity:0.3; z-index:1; }
     @keyframes fall { 0% { transform:translateY(0) rotate(0deg); } 100% { transform:translateY(120vh) rotate(360deg); } }
+    /* 모바일 햄버거 */
     .hamburger { position:fixed; top:15px; left:15px; z-index:10000; background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%; width:50px; height:50px; font-size:24px; cursor:pointer; box-shadow:0 0 10px rgba(0,0,0,.3); }
     .sidebar-mobile { position:fixed; top:0; left:-300px; width:280px; height:100vh; background:rgba(30,30,30,.95); color:#fff; padding:20px; transition:left .3s; z-index:9999; overflow-y:auto; }
     .sidebar-mobile.open { left:0; }
@@ -98,15 +115,16 @@ st.markdown("""
     .stButton>button { border:none !important; -webkit-appearance:none !important; }
 </style>
 """, unsafe_allow_html=True)
-
+# --- 눈송이 ---
 for i in range(52):
     left = random.randint(0, 100)
     duration = random.randint(10, 20)
     size = random.uniform(0.8, 1.4)
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
-
+# --- 아이콘 + 제목 컨테이너 (완전 밀착) ---
 st.markdown('<div class="header-container">', unsafe_allow_html=True)
+# 크리스마스 아이콘 (제목 바로 위)
 st.markdown('''
 <div class="christmas-decoration">
     <i class="fas fa-gift"></i>
@@ -118,12 +136,13 @@ st.markdown('''
     <i class="fas fa-bell"></i>
 </div>
 ''', unsafe_allow_html=True)
+# 제목 (아이콘 바로 아래 딱!)
 title_html = f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>'
 st.markdown(title_html, unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
-
+st.markdown('</div>', unsafe_allow_html=True) # .header-container 종료
+# --- 버튼 라인 ---
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
-col1, col2 = st.columns(2)
+col1, col2 = st.columns([1, 1])
 with col1:
     if st.button(_("tab_notice"), key="btn_notice", use_container_width=True):
         st.session_state.notice_open = not st.session_state.notice_open
@@ -135,7 +154,7 @@ with col2:
         st.session_state.notice_open = False
         st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
-
+# --- 공지 내용 ---
 if st.session_state.notice_open:
     if st.session_state.admin:
         with st.expander("공지 작성"):
@@ -150,7 +169,7 @@ if st.session_state.notice_open:
                         file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.name}") if file else None
                         if img: open(img_path, "wb").write(img.getbuffer())
                         if file: open(file_path, "wb").write(file.getbuffer())
-                        notice = {"id": str(uuid.uuid4()), "title": title, "content": content, "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"), "image": img_path, "file": file_path}
+                        notice = { "id": str(uuid.uuid4()), "title": title, "content": content, "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"), "image": img_path, "file": file_path }
                         data = load_json(NOTICE_FILE)
                         data.insert(0, notice)
                         save_json(NOTICE_FILE, data)
@@ -168,43 +187,34 @@ if st.session_state.notice_open:
                 st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">다운로드</a>', unsafe_allow_html=True)
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
-
+# --- 지도 ---
 if st.session_state.map_open:
     cities = load_json(CITY_FILE)
-    city_names = sorted({c['city'] for c in cities})
-
-    if st.session_state.admin and os.path.exists(CSV_FILE):
-        if st.button(_("import_cities"), key="import_csv_cities"):
-            import_cities_from_csv()
-            st.rerun()
-
     if st.session_state.admin:
         st.header(_("add_city"))
         with st.form("city_form", clear_on_submit=True):
-            selected_city = st.selectbox(_("city"), options=[""] + city_names, index=0)
-            perf_date = st.date_input(_("perf_date"), value=None)
+            city = st.text_input(_("city"))
             venue = st.text_input(_("venue"))
+            seats = st.text_input(_("seats"))
             note = st.text_input(_("note"))
             google_link = st.text_input(_("google_link"))
-
-            col_indoor, col_seats = st.columns([1, 2])
-            with col_indoor:
-                indoor_option = st.radio("장소 유형", [(_("indoor"), True), (_("outdoor"), False)], format_func=lambda x: x[0], horizontal=True)
-                indoor = indoor_option[1]
-            with col_seats:
-                seats = st.number_input(_("seats"), min_value=0, max_value=10000, value=500, step=50, format="%d")
-
+            indoor = st.checkbox(_("indoor"))
+            perf_date = st.date_input(_("perf_date"))
+            lat = st.number_input(_("latitude"), format="%.4f")
+            lon = st.number_input(_("longitude"), format="%.4f")
             if st.form_submit_button("추가"):
-                if selected_city and venue:
+                if city and venue:
                     new_city = {
-                        "city": selected_city,
+                        "city": city,
                         "venue": venue,
-                        "seats": str(seats),
+                        "seats": seats,
                         "note": note,
                         "google_link": google_link,
                         "indoor": indoor,
                         "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
-                        "perf_date": str(perf_date) if perf_date else ""
+                        "perf_date": str(perf_date),
+                        "lat": lat,
+                        "lon": lon
                     }
                     cities.append(new_city)
                     save_json(CITY_FILE, cities)
@@ -212,27 +222,23 @@ if st.session_state.map_open:
                     st.rerun()
                 else:
                     st.warning("도시와 공연 장소를 입력하세요.")
-
-    # 지도 생성 (좌표는 도시명 기반으로 하드코딩된 기본값 사용)
-    CITY_COORDS = {
-        "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882),
-        # 나머지 도시는 Pune 중심 사용
-    }
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
-        coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
-        lat, lon = coords
+        lat = c.get("lat", 18.5204)
+        lon = c.get("lon", 73.8567)
+        coords = (lat, lon)
         is_future = c.get("perf_date", "9999-12-31") >= str(date.today())
         color = "red" if is_future else "gray"
         indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
         popup_html = f"<div style='font-size:14px; line-height:1.6;'><b>{c['city']}</b><br>{_('perf_date')}: {c.get('perf_date','미정')}<br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br><a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving' target='_blank'>{_('google_link')}</a></div>"
         folium.Marker(coords, popup=folium.Popup(popup_html, max_width=300), icon=folium.Icon(color=color, icon="music", prefix="fa")).add_to(m)
         if i < len(cities) - 1:
-            nxt_city = cities[i+1]["city"]
-            nxt_coords = CITY_COORDS.get(nxt_city, (18.5204, 73.8567))
+            next_c = cities[i+1]
+            nxt_lat = next_c.get("lat", 18.5204)
+            nxt_lon = next_c.get("lon", 73.8567)
+            nxt_coords = (nxt_lat, nxt_lon)
             AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
     st_folium(m, width=900, height=550, key="tour_map")
-
     if st.session_state.admin:
         st.subheader("도시 목록 관리")
         for i, c in enumerate(cities):
@@ -244,7 +250,7 @@ if st.session_state.map_open:
                     cities.pop(i)
                     save_json(CITY_FILE, cities)
                     st.rerun()
-
+# --- 모바일 햄버거 메뉴 ---
 st.markdown(f'''
 <button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">☰</button>
 <div class="overlay" onclick="document.querySelector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
@@ -263,7 +269,7 @@ st.markdown(f'''
     ''' }
 </div>
 ''', unsafe_allow_html=True)
-
+# --- PC 사이드바 ---
 with st.sidebar:
     lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
     sel = st.selectbox("언어", list(lang_map.keys()), index=list(lang_map.values()).index(st.session_state.lang))
@@ -283,4 +289,3 @@ with st.sidebar:
         if st.button("로그아웃", key="logout_btn"):
             st.session_state.admin = False
             st.rerun()
-ㅣ
