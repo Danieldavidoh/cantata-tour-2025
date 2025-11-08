@@ -54,7 +54,7 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS: 아이콘 작게 + 한 줄 + 크기 다양 ---
+# --- 7. CSS: 공지/경로 버튼 텍스트 + 지도 바로 아래 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -67,7 +67,7 @@ st.markdown("""
     /* 햄버거 */
     .hamburger { position:fixed; top:15px; left:15px; z-index:10000; background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%; width:50px; height:50px; font-size:24px; cursor:pointer; box-shadow:0 0 10px rgba(0,0,0,.3); }
 
-    /* 크리스마스 장식: 제목보다 작게 + 한 줄 + 크기 다양 */
+    /* 크리스마스 장식: 한 줄 + 작게 */
     .christmas-decoration {
         position: fixed; top: 12vh; left: 0; width: 100%; z-index: 999;
         display: flex; justify-content: center; gap: 12px; flex-wrap: nowrap; overflow-x: hidden;
@@ -77,7 +77,6 @@ st.markdown("""
         color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6);
         animation: float 3s ease-in-out infinite; opacity: 0.95;
     }
-    /* 각각 다른 크기 (작게: 1.8em ~ 2.5em) */
     .christmas-decoration i:nth-child(1) { font-size: 2.1em; animation-delay: 0s; }
     .christmas-decoration i:nth-child(2) { font-size: 1.9em; animation-delay: 0.4s; }
     .christmas-decoration i:nth-child(3) { font-size: 2.4em; animation-delay: 0.8s; }
@@ -91,23 +90,23 @@ st.markdown("""
     .fixed-title { position: fixed; top: 22vh; left: 0; width: 100%; z-index: 1000; text-align: center; }
     .main-title { font-size: 2.8em !important; font-weight: bold; text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; line-height: 1.2; }
 
-    /* 버튼 라인: 아이콘만, 좌우 */
+    /* 버튼 라인: "공지" + "투어 경로" 텍스트, 같은 줄 */
     .button-row {
         position: fixed; top: 34vh; left: 0; width: 100%; z-index: 1000;
-        display: flex; justify-content: space-between; padding: 0 30px; box-sizing: border-box;
+        display: flex; justify-content: center; gap: 30px; padding: 0 20px; box-sizing: border-box;
     }
-    .icon-btn {
-        background: rgba(255,255,255,0.96); color: #c62828; border: none; border-radius: 50%;
-        width: 70px; height: 70px; font-size: 1.8em; cursor: pointer;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center;
-        transition: all 0.3s ease;
+    .tab-btn {
+        background: rgba(255,255,255,0.96); color: #c62828; border: none;
+        border-radius: 50px; padding: 12px 28px; font-weight: bold;
+        font-size: 1.1em; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.22);
+        transition: all 0.3s ease; min-width: 120px; text-align: center;
     }
-    .icon-btn:hover { background: #d32f2f; color: white; transform: scale(1.1); }
+    .tab-btn:hover { background: #d32f2f; color: white; transform: translateY(-2px); }
 
-    /* 콘텐츠 */
+    /* 콘텐츠: 지도 바로 아래 (margin-top: 0) */
     .content-area {
-        position: relative; margin-top: 48vh !important; visibility: hidden; opacity: 0;
-        transition: all 0.5s ease; overflow-y: auto; height: 52vh; padding: 15px;
+        position: relative; margin-top: 44vh !important; visibility: hidden; opacity: 0;
+        transition: all 0.5s ease; overflow-y: auto; height: 56vh; padding: 10px 15px;
     }
     .content-area.show { visibility: visible; opacity: 1; }
 
@@ -125,7 +124,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 크리스마스 장식: 한 줄 + 작게 + 크기 다양 ---
+# --- 크리스마스 장식 ---
 st.markdown('''
 <div class="christmas-decoration">
     <i class="fas fa-gift"></i>
@@ -152,22 +151,22 @@ title_html = f'<span style="color:red;">{_("title_cantata")}</span> <span style=
 st.markdown(f'<h1 class="main-title">{title_html}</h1>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 버튼 라인: 아이콘만 ---
+# --- 버튼 라인: "공지" + "투어 경로" 같은 줄 ---
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
-col_left, col_right = st.columns([1, 1])
-with col_left:
-    if st.button("확성기", key="btn_notice", help="공지사항 보기"):
+col1, col2 = st.columns([1, 1])
+with col1:
+    if st.button(_("tab_notice"), key="btn_notice", use_container_width=True):
         st.session_state.notice_open = True
         st.session_state.map_open = False
         st.rerun()
-with col_right:
-    if st.button("경로", key="btn_map", help="투어 경로 보기"):
+with col2:
+    if st.button(_("tab_map"), key="btn_map", use_container_width=True):
         st.session_state.map_open = True
         st.session_state.notice_open = False
         st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 콘텐츠 영역 ---
+# --- 콘텐츠 영역: 지도 바로 아래 ---
 content_class = "content-area"
 if st.session_state.notice_open or st.session_state.map_open:
     content_class += " show"
