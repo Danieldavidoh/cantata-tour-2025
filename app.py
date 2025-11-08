@@ -24,15 +24,15 @@ LANG = {
     "ko": { "title_cantata": "칸타타 투어", "title_year": "2025", "title_region": "마하라스트라",
             "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
             "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵", "perf_date": "공연 날짜",
-            "warning": "제목·내용 입력", "delete": "제거", "close": "닫기", "menu": "메뉴", "login": "로그인", "logout": "로그아웃" },
+            "warning": "제목·내용 입력", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃" },
     "en": { "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
             "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
             "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps", "perf_date": "Performance Date",
-            "warning": "Enter title & content", "delete": "Remove", "close": "Close", "menu": "Menu", "login": "Login", "logout": "Logout" },
+            "warning": "Enter title & content", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout" },
     "hi": { "title_cantata": "कैंटाटा टूर", "title_year": "2025", "title_region": "महाराष्ट्र",
             "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "indoor": "इनडोर", "outdoor": "आउटडोर",
             "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप", "perf_date": "प्रदर्शन तिथि",
-            "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं", "close": "बंद करें", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट" }
+            "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट" }
 }
 
 # --- 4. 세션 상태 ---
@@ -55,14 +55,14 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS: 깜박임 제거 + 오버레이 전환 ---
+# --- 7. CSS: 닫기 버튼 제거 + 오버레이 클릭으로 닫기 ---
 st.markdown("""
 <style>
     [data-testid="stAppViewContainer"] {
         background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed;
         padding-top: 0 !important; margin: 0 !important;
     }
-    /* 제목 - 최상단 딱 붙음 */
+    /* 제목 */
     .main-title {
         font-size: 2.8em !important; font-weight: bold; text-align: center;
         text-shadow: 0 3px 8px rgba(0,0,0,0.6);
@@ -88,16 +88,10 @@ st.markdown("""
     .map-overlay {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
         background: #000; z-index: 9999; display: none; flex-direction: column;
+        cursor: pointer; /* 오버레이 클릭 시 닫기 */
     }
     .map-overlay.open { display: flex; }
     .map-container { flex: 1; position: relative; }
-    .close-map-btn {
-        position: absolute; bottom: 20px; left: 20px;
-        background: #27ae60; opacity: 0.6; color: white;
-        padding: 12px 24px; border-radius: 12px; font-weight: bold;
-        cursor: pointer; z-index: 10000; border: none; font-size: 1.1em;
-    }
-    .close-map-btn:hover { opacity: 1; transform: scale(1.05); }
 
     /* 모바일 햄버거 */
     .hamburger { position:fixed; top:15px; left:15px; z-index:10000; background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%; width:50px; height:50px; font-size:24px; cursor:pointer; box-shadow:0 0 10px rgba(0,0,0,.3); }
@@ -160,12 +154,11 @@ if st.session_state.notice_open:
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data)
 
-# --- 지도 오버레이 (깜박임 없이) ---
+# --- 지도 오버레이 (닫기 버튼 제거) ---
 if st.session_state.map_open:
     st.markdown(f'''
-    <div class="map-overlay open">
+    <div class="map-overlay open" onclick="document.getElementById('map_open').value='False'; this.parentNode.submit();">
         <div class="map-container" id="folium-map"></div>
-        <button class="close-map-btn" onclick="document.getElementById('map_open').value='False'; this.form.submit();">✕ {_("close")}</button>
         <form id="close_form" method="post" style="display:none;">
             <input type="hidden" id="map_open" name="map_open" value="">
         </form>
@@ -186,10 +179,9 @@ if st.session_state.map_open:
             nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
             AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
     
-    # 깜박임 없이 렌더링
     st_folium(m, width=1200, height=800, key="tour_map_full")
 
-# --- 닫기 버튼 폼 처리 ---
+# --- 오버레이 클릭 처리 ---
 if st.experimental_get_query_params().get("map_open") == ["False"]:
     st.session_state.map_open = False
     st.experimental_set_query_params()
