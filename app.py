@@ -76,13 +76,8 @@ st.markdown("""
 .button-row { display: flex; justify-content: center; gap: 10px; margin: 8px 0; }
 .tab-btn { background: rgba(255,255,255,0.96); color: #c62828; border: none; border-radius: 20px; padding: 8px 15px; font-weight: bold; font-size: 1em; cursor: pointer; transition: all 0.3s ease; }
 .tab-btn:hover { background: #d32f2f; color: white; transform: translateY(-2px); }
-.notice-container, .map-container {
-    height: 62vh; overflow-y: auto; margin: 8px 0; padding: 15px;
-    background: rgba(255,255,255,0.12); border-radius: 15px; backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,0.2);
-}
-.notice-container::-webkit-scrollbar, .map-container::-webkit-scrollbar { width: 8px; }
-.notice-container::-webkit-scrollbar-thumb, .map-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.4); border-radius: 10px; }
+.notice-box { background: rgba(255,255,255,0.12); border-radius: 15px; padding: 15px; margin: 8px 0; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); }
+.notice-box .stForm { margin-bottom: 20px; }
 .snowflake { position:fixed; top:-15px; color:#fff; font-size:1em; pointer-events:none; animation:fall linear infinite; opacity:0.4; z-index:1; }
 @keyframes fall {0%{transform:translateY(0);}100%{transform:translateY(110vh);}}
 </style>
@@ -112,12 +107,12 @@ st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col1, col2 = st.columns([1, 1])
 with col1:
     if st.button(_("tab_notice"), use_container_width=True):
-        st.session_state.notice_open = True
+        st.session_state.notice_open = not st.session_state.notice_open
         st.session_state.map_open = False
         st.rerun()
 with col2:
     if st.button(_("tab_map"), use_container_width=True):
-        st.session_state.map_open = True
+        st.session_state.map_open = not st.session_state.map_open
         st.session_state.notice_open = False
         st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
@@ -133,90 +128,89 @@ if not st.session_state.notice_open and not st.session_state.map_open:
     </div>
     """, unsafe_allow_html=True)
 
-# --- 공지 영역 (박스 안에 전부!) ---
+# --- 공지사항 전체를 하나의 expander 박스 안에 배치 ---
 if st.session_state.notice_open:
-    st.markdown('<div class="notice-container">', unsafe_allow_html=True)
-    
-    if st.session_state.admin:
-        st.markdown("### 공지 작성")
-        with st.form("notice_form", clear_on_submit=True):
-            title = st.text_input("제목", placeholder="공지 제목을 입력하세요")
-            content = st.text_area("내용", placeholder="내용을 입력하세요", height=120)
-            col1, col2 = st.columns([1, 4])
-            with col1:
-                submit = st.form_submit_button("등록")
-            if submit:
-                if title.strip() and content.strip():
-                    notice = {
-                        "id": str(uuid.uuid4()),
-                        "title": title,
-                        "content": content,
-                        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
-                    }
-                    data = load_json(NOTICE_FILE)
-                    data.insert(0, notice)
-                    save_json(NOTICE_FILE, data)
-                    st.success("공지가 등록되었습니다!")
-                    st.rerun()
-                else:
-                    st.warning(_("warning"))
+    with st.expander("📢 공지사항 전체 보기", expanded=True):
+        st.markdown('<div class="notice-box">', unsafe_allow_html=True)
 
-    st.markdown("### 공지사항")
-    data = load_json(NOTICE_FILE)
-    if not data:
-        st.info("등록된 공지가 없습니다.")
-    else:
-        for i, n in enumerate(data):
-            st.markdown(f"**{n['date']} | {n['title']}**")
-            st.markdown(n["content"])
-            if st.session_state.admin:
-                if st.button("삭제", key=f"del_{n['id']}"):
-                    data.pop(i)
-                    save_json(NOTICE_FILE, data)
-                    st.rerun()
-            st.markdown("---")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+        # --- 관리자 공지 작성 ---
+        if st.session_state.admin:
+            with st.form("notice_form", clear_on_submit=True):
+                title = st.text_input("제목", placeholder="공지 제목을 입력하세요")
+                content = st.text_area("내용", placeholder="내용을 입력하세요", height=120)
+                col1, col2 = st.columns([1, 4])
+                with col1:
+                    submit = st.form_submit_button("등록")
+                if submit:
+                    if title.strip() and content.strip():
+                        notice = {
+                            "id": str(uuid.uuid4()),
+                            "title": title,
+                            "content": content,
+                            "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
+                        }
+                        data = load_json(NOTICE_FILE)
+                        data.insert(0, notice)
+                        save_json(NOTICE_FILE, data)
+                        st.success("공지가 등록되었습니다!")
+                        st.rerun()
+                    else:
+                        st.warning(_("warning"))
 
-# --- 지도 영역 (박스 안에 전부!) ---
+        # --- 공지 목록 ---
+        data = load_json(NOTICE_FILE)
+        if not data:
+            st.info("등록된 공지가 없습니다.")
+        else:
+            for i, n in enumerate(data):
+                st.markdown(f"**{n['date']} | {n['title']}**")
+                st.markdown(n["content"])
+                if st.session_state.admin:
+                    if st.button("삭제", key=f"del_{n['id']}"):
+                        data.pop(i)
+                        save_json(NOTICE_FILE, data)
+                        st.rerun()
+                st.markdown("---")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# --- 지도 영역 ---
 if st.session_state.map_open:
-    st.markdown('<div class="map-container">', unsafe_allow_html=True)
-    st.markdown("### 투어 경로")
-    cities = load_json(CITY_FILE)
-    if not cities:
-        st.warning("등록된 도시가 없습니다.")
-    else:
-        m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
-        for i, c in enumerate(cities):
-            coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
-            lat, lon = coords
-            is_future = c.get("perf_date", "9999-12-31") >= str(date.today())
-            color = "red" if is_future else "gray"
-            indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
-            popup_html = f"""
-            <div style='font-size:13px; line-height:1.5;'>
-                <b>{c['city']}</b><br>
-                공연: {c.get('perf_date','미정')}<br>
-                장소: {c.get('venue','—')}<br>
-                인원: {c.get('seats','—')}<br>
-                {indoor_text}<br>
-                <a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}' target='_blank'>
-                    길찾기
-                </a>
-            </div>
-            """
-            folium.Marker(
-                coords,
-                popup=folium.Popup(popup_html, max_width=260),
-                icon=folium.Icon(color=color, icon="music", prefix="fa")
-            ).add_to(m)
-            if i < len(cities) - 1:
-                nxt = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
-                AntPath([coords, nxt], color="#e74c3c", weight=5, opacity=0.7).add_to(m)
-        st_folium(m, width=850, height=380, key="tour_map")
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.expander("🗺️ 투어 경로 전체 보기", expanded=True):
+        cities = load_json(CITY_FILE)
+        if not cities:
+            st.warning("등록된 도시가 없습니다.")
+        else:
+            m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
+            for i, c in enumerate(cities):
+                coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
+                lat, lon = coords
+                is_future = c.get("perf_date", "9999-12-31") >= str(date.today())
+                color = "red" if is_future else "gray"
+                indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
+                popup_html = f"""
+                <div style='font-size:13px; line-height:1.5;'>
+                    <b>{c['city']}</b><br>
+                    공연: {c.get('perf_date','미정')}<br>
+                    장소: {c.get('venue','—')}<br>
+                    인원: {c.get('seats','—')}<br>
+                    {indoor_text}<br>
+                    <a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}' target='_blank'>
+                        길찾기
+                    </a>
+                </div>
+                """
+                folium.Marker(
+                    coords,
+                    popup=folium.Popup(popup_html, max_width=260),
+                    icon=folium.Icon(color=color, icon="music", prefix="fa")
+                ).add_to(m)
+                if i < len(cities) - 1:
+                    nxt = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
+                    AntPath([coords, nxt], color="#e74c3c", weight=5, opacity=0.7).add_to(m)
+            st_folium(m, width=850, height=450, key="tour_map")
 
-# --- 사이드바 (언어 + 관리자 로그인) ---
+# --- 사이드바 ---
 with st.sidebar:
     lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
     sel = st.selectbox("언어", list(lang_map.keys()), index=list(lang_map.values()).index(st.session_state.lang))
