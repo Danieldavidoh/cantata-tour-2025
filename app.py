@@ -1,6 +1,6 @@
 import json, os, uuid, base64
 import streamlit as st
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
@@ -49,45 +49,39 @@ if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. 캐롤 사운드 ---
-def play_carol():
-    if os.path.exists("carol.wav"):
-        st.session_state.sound_played = True
-        st.markdown("<audio autoplay><source src='carol.wav' type='audio/wav'></audio>", unsafe_allow_html=True)
-
-# --- 8. CSS + 제목 최상단 (여백 0) ---
+# --- 8. CSS + 제목 위 여백 최대 (모바일 기준 중간 위치) ---
 st.markdown("""
 <style>
-    [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding: 0 !important; margin: 0 !important; }
+    [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding-top: 0 !important; margin: 0 !important; }
     .fixed-title { 
         position: fixed; 
-        top: 5px; 
+        top: 30vh; 
         left: 0; 
         width: 100%; 
         z-index: 1000; 
         text-align: center; 
-        padding: 0; 
-        margin: 0; 
+        padding: 20vh 0 5vh 0; 
+        margin: 0 !important; 
         background: transparent; 
     }
     .main-title { 
-        font-size: 2.6em !important; 
+        font-size: 2.8em !important; 
         font-weight: bold; 
-        text-shadow: 0 2px 5px rgba(0,0,0,0.5); 
+        text-shadow: 0 3px 8px rgba(0,0,0,0.6); 
         margin: 0 !important; 
         line-height: 1.2; 
     }
-    .content-area { margin-top: 70px !important; padding: 0 10px; }
+    .content-area { margin-top: 40vh !important; padding: 0 15px; }
     .tab-button { 
         background: rgba(255,255,255,0.95); 
-        padding: 14px; 
-        border-radius: 15px; 
-        margin: 8px 0; 
+        padding: 16px; 
+        border-radius: 18px; 
+        margin: 12px 0; 
         text-align: center; 
         cursor: pointer; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+        box-shadow: 0 6px 20px rgba(0,0,0,0.2); 
         font-weight: bold; 
-        font-size: 1.1em; 
+        font-size: 1.2em; 
     }
     .snowflake { position: fixed; top: -15px; color: white; font-size: 1.1em; pointer-events: none; animation: fall linear infinite; opacity: 0.3 !important; text-shadow: 0 0 4px rgba(255,255,255,0.6); z-index: 1; }
     @keyframes fall { 0% { transform: translateY(0) rotate(0deg); } 100% { transform: translateY(120vh) rotate(360deg); } }
@@ -112,7 +106,7 @@ for i in range(26):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 (최상단, 여백 0) ---
+# --- 제목 (최상단, 여백 최대) ---
 st.markdown('<div class="fixed-title">', unsafe_allow_html=True)
 title_html = f'<span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span>'
 st.markdown(f'<h1 class="main-title">{title_html}</h1>', unsafe_allow_html=True)
@@ -138,7 +132,7 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-# --- 내용 시작 (제목 아래 바로) ---
+# --- 내용 시작 ---
 st.markdown('<div class="content-area">', unsafe_allow_html=True)
 
 # --- 공지 버튼 (토글) ---
