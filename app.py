@@ -55,24 +55,24 @@ def play_carol():
         st.session_state.sound_played = True
         st.markdown("<audio autoplay><source src='carol.wav' type='audio/wav'></audio>", unsafe_allow_html=True)
 
-# --- 8. CSS + iPhone 최적화 ---
+# --- 8. CSS + 제목 최상단 고정 ---
 st.markdown("""
 <style>
     [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding-top: 0 !important; }
-    .fixed-title { position: fixed; top: 25%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; text-align: center; width: 100%; }
-    .main-title { font-size: 3.2em !important; font-weight: bold; text-shadow: 0 3px 8px rgba(0,0,0,0.5); }
+    .fixed-title { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; text-align: center; padding: 10px 0; background: rgba(0, 0, 0, 0.3); }
+    .main-title { font-size: 2.8em !important; font-weight: bold; text-shadow: 0 2px 5px rgba(0,0,0,0.3); margin: 0; }
     .tab-container { 
         background: rgba(255,255,255,0.9); 
         padding: 8px; 
         border-radius: 15px; 
         box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
-        margin: 0 0 10px 0 !important; 
+        margin: 80px 0 10px 0 !important; 
         position: relative; 
         z-index: 10; 
         border: none !important;
         -webkit-appearance: none !important;
     }
-    .content-area { margin-top: 120px; }
+    .content-area { margin-top: 0; }
     .snowflake { position: fixed; top: -15px; color: white; font-size: 1.1em; pointer-events: none; animation: fall linear infinite; opacity: 0.3 !important; text-shadow: 0 0 4px rgba(255,255,255,0.6); z-index: 1; }
     @keyframes fall { 0% { transform: translateY(0) rotate(0deg); } 100% { transform: translateY(120vh) rotate(360deg); } }
     .hamburger { position: fixed; top: 15px; left: 15px; z-index: 10000; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
@@ -97,7 +97,7 @@ for i in range(26):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 ---
+# --- 제목 (최상단 고정) ---
 st.markdown('<div class="fixed-title">', unsafe_allow_html=True)
 title_html = f'<span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span>'
 st.markdown(f'<h1 class="main-title">{title_html}</h1>', unsafe_allow_html=True)
@@ -179,7 +179,7 @@ with st.sidebar:
                     else:
                         st.error(_("pw_error"))
 
-# --- 공지 (공지 탭일 때만 표시) ---
+# --- 공지 (공지 버튼 아래 + 투어 경로 버튼 위에 삽입) ---
 if st.session_state.tab_selection == _(f"tab_notice"):
     if st.session_state.admin:
         with st.expander("공지 작성"):
@@ -214,7 +214,7 @@ if st.session_state.tab_selection == _(f"tab_notice"):
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
 
-# --- 투어 경로 (투어 경로 탭일 때만 표시) ---
+# --- 투어 경로 (투어 경로 버튼 클릭 시만 표시) ---
 elif st.session_state.tab_selection == _(f"tab_map"):
     if st.session_state.admin:
         if st.button(_("add_city"), key="add_city_btn"):
