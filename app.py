@@ -1,4 +1,8 @@
-import json, os, uuid, base64, random
+import json
+import os
+import uuid
+import base64
+import random
 import streamlit as st
 from datetime import datetime, date
 import folium
@@ -54,39 +58,41 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS: 버튼 같은 줄 + 제목 아래 + 아이콘 보임 ---
+# --- 7. CSS: 전체 배치 위로 올림 + 투어 경로 클릭 시 전체 화면 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-    [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding-top: 0 !important; margin: 0 !important; }
-    
-    /* 크리스마스 아이콘: 항상 보임 */
+    [data-testid="stAppViewContainer"] { 
+        background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; 
+        padding-top: 0 !important; margin: 0 !important; overflow: hidden;
+    }
+
+    /* 초기 화면 전체 위로 올림 (두 배) */
+    .initial-screen {
+        position: relative; margin-top: -30vh; z-index: 100; text-align: center;
+    }
+
+    /* 크리스마스 아이콘: 랜덤 크기 + 애니메이션 */
     .christmas-decoration {
-        position: absolute; top: 8vh; left: 0; width: 100%; z-index: 999;
-        display: flex; justify-content: center; gap: 12px; flex-wrap: nowrap; pointer-events: none;
+        display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; pointer-events: none;
+        margin: 0 0 10px 0;
     }
     .christmas-decoration i {
         color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6);
-        animation: float 3s ease-in-out infinite; opacity: 0.95;
+        animation: float 3s ease-in-out infinite, sparkle 2s infinite alternate;
+        opacity: 0.95;
     }
-    .christmas-decoration i:nth-child(1) { font-size: 2.1em; animation-delay: 0s; }
-    .christmas-decoration i:nth-child(2) { font-size: 1.9em; animation-delay: 0.4s; }
-    .christmas-decoration i:nth-child(3) { font-size: 2.4em; animation-delay: 0.8s; }
-    .christmas-decoration i:nth-child(4) { font-size: 2.0em; animation-delay: 1.2s; }
-    .christmas-decoration i:nth-child(5) { font-size: 2.5em; animation-delay: 1.6s; }
-    .christmas-decoration i:nth-child(6) { font-size: 1.8em; animation-delay: 2.0s; }
-    .christmas-decoration i:nth-child(7) { font-size: 2.3em; animation-delay: 2.4s; }
-    @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-6px) rotate(4deg); } }
+    @keyframes sparkle { 0% { text-shadow: 0 0 5px #fff; } 100% { text-shadow: 0 0 15px #fff, 0 0 30px #f00; } }
 
     /* 제목 */
     .main-title {
         font-size: 2.8em !important; font-weight: bold; text-align: center;
-        text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 20px 0 10px 0 !important; line-height: 1.2;
+        text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; line-height: 1.2;
     }
 
-    /* 버튼 라인: 제목 바로 아래, 같은 줄 평행 */
+    /* 버튼 라인 */
     .button-row {
-        display: flex; justify-content: center; gap: 20px; margin: 0 0 20px 0; padding: 0 15px;
+        display: flex; justify-content: center; gap: 20px; margin: 10px 0 20px 0; padding: 0 15px;
     }
     .tab-btn {
         background: rgba(255,255,255,0.96); color: #c62828; border: none;
@@ -95,6 +101,23 @@ st.markdown("""
         transition: all 0.3s ease; flex: 1; max-width: 200px;
     }
     .tab-btn:hover { background: #d32f2f; color: white; transform: translateY(-2px); }
+
+    /* 전체화면 모드: 투어 경로 클릭 시 */
+    .fullscreen-map {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1000;
+        background: transparent; display: none; flex-direction: column;
+    }
+    .fullscreen-map.show { display: flex; }
+
+    /* 투어 경로 버튼 (상단) */
+    .fullscreen-btn {
+        background: rgba(255,255,255,0.96); color: #c62828; border: none;
+        border-radius: 20px; padding: 10px 20px; font-weight: bold; font-size: 1.1em;
+        cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin: 20px auto 10px auto;
+    }
+
+    /* 지도: 화면 꽉차게 */
+    .fullscreen-map .stFolium { flex: 1; width: 100%; height: 100%; }
 
     /* 눈송이 */
     .snowflake { position:fixed; top:-15px; color:#fff; font-size:1.1em; pointer-events:none; animation:fall linear infinite; opacity:0.3; z-index:1; }
@@ -111,20 +134,16 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 크리스마스 아이콘 (항상 보임) ---
-st.markdown('''
-<div class="christmas-decoration">
-    <i class="fas fa-gift"></i>
-    <i class="fas fa-candy-cane"></i>
-    <i class="fas fa-socks"></i>
-    <i class="fas fa-sleigh"></i>
-    <i class="fas fa-deer"></i>
-    <i class="fas fa-tree"></i>
-    <i class="fas fa-bell"></i>
-</div>
-''', unsafe_allow_html=True)
+# --- 크리스마스 아이콘 (랜덤 크기 + 애니메이션) ---
+icons = ["fa-gift", "fa-candy-cane", "fa-socks", "fa-sleigh", "fa-deer", "fa-tree", "fa-bell"]
+icon_html = ""
+for icon in icons:
+    size = random.uniform(1.8, 2.5)
+    delay = random.uniform(0, 2)
+    icon_html += f'<i class="fas {icon}" style="font-size:{size}em; animation-delay:{delay}s;"></i> '
+st.markdown(f'<div class="christmas-decoration">{icon_html}</div>', unsafe_allow_html=True)
 
-# --- 눈송이 (52개) ---
+# --- 눈송이 ---
 for i in range(52):
     left = random.randint(0, 100)
     duration = random.randint(10, 20)
@@ -132,11 +151,12 @@ for i in range(52):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 ---
+# --- 제목 (항상 기본 배치, 두 배 위로) ---
+st.markdown('<div class="initial-screen">', unsafe_allow_html=True)
 title_html = f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>'
 st.markdown(title_html, unsafe_allow_html=True)
 
-# --- 버튼 라인: 공지 + 투어 경로 (같은 줄) ---
+# --- 버튼 라인 ---
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col1, col2 = st.columns([1, 1])
 with col1:
@@ -145,14 +165,24 @@ with col1:
         st.session_state.map_open = False
         st.rerun()
 with col2:
-    if st.button(_("tab_map"), key="btn_map", use_container_width=True):
-        st.session_state.map_open = not st.session_state.map_open
-        st.session_state.notice_open = False
-        st.rerun()
+    if not st.session_state.notice_open:
+        if st.button(_("tab_map"), key="btn_map", use_container_width=True):
+            st.session_state.map_open = not st.session_state.map_open
+            st.session_state.notice_open = False
+            st.rerun()
+st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 공지 내용 ---
+# --- 전체화면 공지 ---
+notice_class = "fullscreen-mode"
 if st.session_state.notice_open:
+    notice_class += " show"
+st.markdown(f'<div class="{notice_class}">', unsafe_allow_html=True)
+if st.session_state.notice_open:
+    if st.button("← 돌아가기", key="back_from_notice"):
+        st.session_state.notice_open = False
+        st.rerun()
+    # 공지 내용
     if st.session_state.admin:
         with st.expander("공지 작성"):
             with st.form("notice_form", clear_on_submit=True):
@@ -184,11 +214,17 @@ if st.session_state.notice_open:
                 st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">다운로드</a>', unsafe_allow_html=True)
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
+st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 지도 ---
+# --- 전체화면 지도 (투어 경로 클릭 시) ---
+map_class = "fullscreen-mode"
 if st.session_state.map_open:
+    map_class += " show"
+st.markdown(f'<div class="{map_class}">', unsafe_allow_html=True)
+if st.session_state.map_open:
+    st.markdown(f'<button class="fullscreen-btn">{_("tab_map")}</button>', unsafe_allow_html=True)
     cities = load_json(CITY_FILE)
-    m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
+    m = folium.Map(location=[18.5204, 73.8567], zoom_start=10, tiles="OpenStreetMap")  # Pune 중심
     for i, c in enumerate(cities):
         coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
         lat, lon = coords
@@ -200,18 +236,19 @@ if st.session_state.map_open:
         if i < len(cities) - 1:
             nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
             AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
-    st_folium(m, width=900, height=550, key="tour_map")
+    st_folium(m, width='100%', height=800, key="tour_map")
+st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 모바일 햄버거 메뉴 ---
 st.markdown(f'''
-<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">☰</button>
-<div class="overlay" onclick="document.querySelector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
+<button class="hamburger" onclick="document.query_selector('.sidebar-mobile').classList.toggle('open'); document.query_selector('.overlay').classList.toggle('open');">☰</button>
+<div class="overlay" onclick="document.query_selector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
 <div class="sidebar-mobile">
     <h3 style="color:white;">{_("menu")}</h3>
     <select onchange="window.location.href='?lang='+this.value" style="width:100%; padding:8px; margin:10px 0;">
-        <option value="ko" {'selected' if st.session_state.lang=="ko" else ''}>한국어</option>
-        <option value="en" {'selected' if st.session_state.lang=="en" else ''}>English</option>
-        <option value="hi" {'selected' if st.session_state.lang=="hi" else ''}>हिंदी</option>
+        <option value="ko" {'selected' if st.session_state.lang=='ko' else ''}>한국어</option>
+        <option value="en" {'selected' if st.session_state.lang=='en' else ''}>English</option>
+        <option value="hi" {'selected' if st.session_state.lang=='hi' else ''}>हिंदी</option>
     </select>
     {'''
         <input type="password" placeholder="비밀번호" id="mobile_pw" style="width:100%; padding:8px; margin:10px 0;">
