@@ -1,8 +1,4 @@
-import json
-import os
-import uuid
-import base64
-import random
+import json, os, uuid, base64, random
 import streamlit as st
 from datetime import datetime, date
 import folium
@@ -58,69 +54,50 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS: 아이콘 바로 아래 제목 + 버튼 정상 작동 ---
+# --- 7. CSS: 버튼 같은 줄 + 제목 아래 + 아이콘 보임 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-    [data-testid="stAppViewContainer"] { 
-        background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; 
-        padding-top: 0 !important; margin: 0 !important; overflow: hidden;
-    }
-
-    /* 초기 화면 위로 올림 */
-    .initial-screen {
-        position: relative; margin-top: -30vh; z-index: 100; text-align: center;
-    }
-
-    /* 크리스마스 아이콘 */
+    [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding-top: 0 !important; margin: 0 !important; }
+    
+    /* 크리스마스 아이콘: 항상 보임 */
     .christmas-decoration {
-        display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; pointer-events: none;
-        margin: 0; padding: 0;
+        position: absolute; top: 8vh; left: 0; width: 100%; z-index: 999;
+        display: flex; justify-content: center; gap: 12px; flex-wrap: nowrap; pointer-events: none;
     }
     .christmas-decoration i {
         color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6);
-        animation: float 3s ease-in-out infinite, sparkle 2s infinite alternate;
-        opacity: 0.95;
+        animation: float 3s ease-in-out infinite; opacity: 0.95;
     }
-    @keyframes sparkle { 0% { text-shadow: 0 0 5px #fff; } 100% { text-shadow: 0 0 15px #fff, 0 0 30px #f00; } }
+    .christmas-decoration i:nth-child(1) { font-size: 2.1em; animation-delay: 0s; }
+    .christmas-decoration i:nth-child(2) { font-size: 1.9em; animation-delay: 0.4s; }
+    .christmas-decoration i:nth-child(3) { font-size: 2.4em; animation-delay: 0.8s; }
+    .christmas-decoration i:nth-child(4) { font-size: 2.0em; animation-delay: 1.2s; }
+    .christmas-decoration i:nth-child(5) { font-size: 2.5em; animation-delay: 1.6s; }
+    .christmas-decoration i:nth-child(6) { font-size: 1.8em; animation-delay: 2.0s; }
+    .christmas-decoration i:nth-child(7) { font-size: 2.3em; animation-delay: 2.4s; }
+    @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-6px) rotate(4deg); } }
 
-    /* 제목: 아이콘 바로 아래 */
+    /* 제목 */
     .main-title {
         font-size: 2.8em !important; font-weight: bold; text-align: center;
-        text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; padding: 0 !important; line-height: 1.2; z-index: 1000;
+        text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 20px 0 10px 0 !important; line-height: 1.2;
     }
 
-    /* 버튼 라인: 클릭 가능 */
+    /* 버튼 라인: 제목 바로 아래, 같은 줄 평행 */
     .button-row {
-        display: flex; justify-content: center; gap: 20px; margin: 20px 0; padding: 0 15px; z-index: 1000; pointer-events: auto;
+        display: flex; justify-content: center; gap: 20px; margin: 0 0 20px 0; padding: 0 15px;
     }
     .tab-btn {
         background: rgba(255,255,255,0.96); color: #c62828; border: none;
         border-radius: 20px; padding: 10px 20px; font-weight: bold;
         font-size: 1.1em; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        transition: all 0.3s ease; flex: 1; max-width: 200px; pointer-events: auto;
+        transition: all 0.3s ease; flex: 1; max-width: 200px;
     }
     .tab-btn:hover { background: #d32f2f; color: white; transform: translateY(-2px); }
 
-    /* 전체화면 지도 */
-    .fullscreen-map {
-        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1000;
-        background: transparent; display: none; flex-direction: column;
-    }
-    .fullscreen-map.show { display: flex; }
-
-    /* 지도 닫기 버튼 */
-    .map-close-btn {
-        position: fixed; bottom: 20px; left: 20px; z-index: 1001;
-        background: rgba(0,0,0,0.5); color: white; border: none;
-        border-radius: 50%; width: 50px; height: 50px; font-size: 1.5em;
-        cursor: pointer; opacity: 0.7; transition: opacity 0.3s;
-        display: flex; align-items: center; justify-content: center;
-    }
-    .map-close-btn:hover { opacity: 1; }
-
     /* 눈송이 */
-    .snowflake { position:fixed; top:-15px; color:#fff; font-size:1.1em; pointer-events:none; animation:fall linear infinite; opacity:0.3; z-index:-1; }
+    .snowflake { position:fixed; top:-15px; color:#fff; font-size:1.1em; pointer-events:none; animation:fall linear infinite; opacity:0.3; z-index:1; }
     @keyframes fall { 0% { transform:translateY(0) rotate(0deg); } 100% { transform:translateY(120vh) rotate(360deg); } }
 
     /* 모바일 햄버거 */
@@ -134,16 +111,20 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 크리스마스 아이콘 (랜덤 크기 + 애니메이션) ---
-icons = ["fa-gift", "fa-candy-cane", "fa-socks", "fa-sleigh", "fa-deer", "fa-tree", "fa-bell"]
-icon_html = ""
-for icon in icons:
-    size = random.uniform(1.8, 2.5)
-    delay = random.uniform(0, 2)
-    icon_html += f'<i class="fas {icon}" style="font-size:{size}em; animation-delay:{delay}s;"></i> '
-st.markdown(f'<div class="christmas-decoration">{icon_html}</div>', unsafe_allow_html=True)
+# --- 크리스마스 아이콘 (항상 보임) ---
+st.markdown('''
+<div class="christmas-decoration">
+    <i class="fas fa-gift"></i>
+    <i class="fas fa-candy-cane"></i>
+    <i class="fas fa-socks"></i>
+    <i class="fas fa-sleigh"></i>
+    <i class="fas fa-deer"></i>
+    <i class="fas fa-tree"></i>
+    <i class="fas fa-bell"></i>
+</div>
+''', unsafe_allow_html=True)
 
-# --- 눈송이 ---
+# --- 눈송이 (52개) ---
 for i in range(52):
     left = random.randint(0, 100)
     duration = random.randint(10, 20)
@@ -151,12 +132,11 @@ for i in range(52):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 (아이콘 바로 아래) ---
-st.markdown('<div class="initial-screen">', unsafe_allow_html=True)
+# --- 제목 ---
 title_html = f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>'
 st.markdown(title_html, unsafe_allow_html=True)
 
-# --- 버튼 라인 (클릭 정상 작동) ---
+# --- 버튼 라인: 공지 + 투어 경로 (같은 줄) ---
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col1, col2 = st.columns([1, 1])
 with col1:
@@ -165,25 +145,50 @@ with col1:
         st.session_state.map_open = False
         st.rerun()
 with col2:
-    if not st.session_state.notice_open:
-        if st.button(_("tab_map"), key="btn_map", use_container_width=True):
-            st.session_state.map_open = not st.session_state.map_open
-            st.session_state.notice_open = False
-            st.rerun()
-st.markdown('</div>', unsafe_allow_html=True)
+    if st.button(_("tab_map"), key="btn_map", use_container_width=True):
+        st.session_state.map_open = not st.session_state.map_open
+        st.session_state.notice_open = False
+        st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 전체화면 지도 ---
-map_class = "fullscreen-map"
+# --- 공지 내용 ---
+if st.session_state.notice_open:
+    if st.session_state.admin:
+        with st.expander("공지 작성"):
+            with st.form("notice_form", clear_on_submit=True):
+                title = st.text_input("제목", key="notice_title")
+                content = st.text_area("내용", key="notice_content")
+                img = st.file_uploader("이미지", type=["png", "jpg", "jpeg"], key="notice_img")
+                file = st.file_uploader("첨부 파일", key="notice_file")
+                if st.form_submit_button("등록"):
+                    if title.strip() and content.strip():
+                        img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{img.name}") if img else None
+                        file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.name}") if file else None
+                        if img: open(img_path, "wb").write(img.getbuffer())
+                        if file: open(file_path, "wb").write(file.getbuffer())
+                        notice = { "id": str(uuid.uuid4()), "title": title, "content": content, "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"), "image": img_path, "file": file_path }
+                        data = load_json(NOTICE_FILE)
+                        data.insert(0, notice)
+                        save_json(NOTICE_FILE, data)
+                        st.success("공지 등록 완료!")
+                        st.rerun()
+                    else:
+                        st.warning(_("warning"))
+    data = load_json(NOTICE_FILE)
+    for i, n in enumerate(data):
+        with st.expander(f"{n['date']} | {n['title']}", expanded=False):
+            st.markdown(n["content"])
+            if n.get("image") and os.path.exists(n["image"]): st.image(n["image"], use_column_width=True)
+            if n.get("file") and os.path.exists(n["file"]):
+                b64 = base64.b64encode(open(n["file"], "rb").read()).decode()
+                st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">다운로드</a>', unsafe_allow_html=True)
+            if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
+                data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
+
+# --- 지도 ---
 if st.session_state.map_open:
-    map_class += " show"
-st.markdown(f'<div class="{map_class}">', unsafe_allow_html=True)
-if st.session_state.map_open:
-    st.markdown(f'''
-    <button class="map-close-btn" onclick="window.location.href='?map_open=False'">✕</button>
-    ''', unsafe_allow_html=True)
     cities = load_json(CITY_FILE)
-    m = folium.Map(location=[18.5204, 73.8567], zoom_start=10, tiles="OpenStreetMap")
+    m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
         coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
         lat, lon = coords
@@ -195,8 +200,45 @@ if st.session_state.map_open:
         if i < len(cities) - 1:
             nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
             AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
-    st_folium(m, width='100%', height='100%', key="tour_map_full")
-st.markdown('</div>', unsafe_allow_html=True)
+    st_folium(m, width=900, height=550, key="tour_map")
 
-# --- 공지/기타 (기존 코드 유지) ---
-# ... (이전 코드 그대로)
+# --- 모바일 햄버거 메뉴 ---
+st.markdown(f'''
+<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">☰</button>
+<div class="overlay" onclick="document.querySelector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
+<div class="sidebar-mobile">
+    <h3 style="color:white;">{_("menu")}</h3>
+    <select onchange="window.location.href='?lang='+this.value" style="width:100%; padding:8px; margin:10px 0;">
+        <option value="ko" {'selected' if st.session_state.lang=="ko" else ''}>한국어</option>
+        <option value="en" {'selected' if st.session_state.lang=="en" else ''}>English</option>
+        <option value="hi" {'selected' if st.session_state.lang=="hi" else ''}>हिंदी</option>
+    </select>
+    {'''
+        <input type="password" placeholder="비밀번호" id="mobile_pw" style="width:100%; padding:8px; margin:10px 0;">
+        <button onclick="if(document.getElementById(\'mobile_pw\').value==\'0009\') window.location.href=\'?admin=true\'; else alert(\'비밀번호 오류\');" style="width:100%; padding:10px; background:#e74c3c; color:white; border:none; border-radius:8px;">{_("login")}</button>
+    ''' if not st.session_state.admin else f'''
+        <button onclick="window.location.href=\'?admin=false\'" style="width:100%; padding:10px; background:#27ae60; color:white; border:none; border-radius:8px; margin:10px 0;">{_("logout")}</button>
+    ''' }
+</div>
+''', unsafe_allow_html=True)
+
+# --- PC 사이드바 ---
+with st.sidebar:
+    lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
+    sel = st.selectbox("언어", list(lang_map.keys()), index=list(lang_map.values()).index(st.session_state.lang))
+    if lang_map[sel] != st.session_state.lang:
+        st.session_state.lang = lang_map[sel]
+        st.rerun()
+    if not st.session_state.admin:
+        pw = st.text_input("비밀번호", type="password", key="pw_input")
+        if st.button("로그인", key="login_btn"):
+            if pw == "0009":
+                st.session_state.admin = True
+                st.rerun()
+            else:
+                st.error("비밀번호 오류")
+    else:
+        st.success("관리자 모드")
+        if st.button("로그아웃", key="logout_btn"):
+            st.session_state.admin = False
+            st.rerun()
