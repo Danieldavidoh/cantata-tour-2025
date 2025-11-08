@@ -25,21 +25,21 @@ LANG = {
            "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
            "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵",
            "perf_date": "공연 날짜", "warning": "제목·내용 입력", "delete": "제거",
-           "menu": "메뉴", "login": "로그인", "logout": "로그아웃"},
+           "menu": "메뉴", "login": "로그인", "logout": "로그아웃", "change_pw": "비밀번호 변경"},
     "en": {"title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
            "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
            "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps",
            "perf_date": "Performance Date", "warning": "Enter title & content", "delete": "Remove",
-           "menu": "Menu", "login": "Login", "logout": "Logout"},
+           "menu": "Menu", "login": "Login", "logout": "Logout", "change_pw": "Change Password"},
     "hi": {"title_cantata": "कैंटाटा टूर", "title_year": "2025", "title_region": "महाराष्ट्र",
            "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "indoor": "इनडोर", "outdoor": "आउटडोर",
            "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप",
            "perf_date": "प्रदर्शन तिथि", "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं",
-           "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट"}
+           "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट", "change_pw": "पासवर्ड बदलें"}
 }
 
 # --- 4. 세션 상태 ---
-defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False}
+defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "change_pw_mode": False}
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -63,7 +63,7 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = {"Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882)}
 
-# --- CSS ---
+# --- CSS: expander 여백 제거 + 비번 변경 스타일 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -76,8 +76,16 @@ st.markdown("""
 .button-row { display: flex; justify-content: center; gap: 10px; margin: 8px 0; }
 .tab-btn { background: rgba(255,255,255,0.96); color: #c62828; border: none; border-radius: 20px; padding: 8px 15px; font-weight: bold; font-size: 1em; cursor: pointer; transition: all 0.3s ease; }
 .tab-btn:hover { background: #d32f2f; color: white; transform: translateY(-2px); }
-.notice-box { background: rgba(255,255,255,0.12); border-radius: 15px; padding: 15px; margin: 8px 0; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); }
-.notice-box .stForm { margin-bottom: 20px; }
+
+/* expander 여백 완전 제거 */
+.css-1d391kg { padding-top: 0 !important; margin-top: -10px !important; }
+.css-1cpxl2t { margin: 0 !important; padding: 0 !important; }
+
+/* 공지 박스 */
+.notice-box { background: rgba(255,255,255,0.12); border-radius: 15px; padding: 15px; margin: 0; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); }
+
+/* 비밀번호 변경 입력창 스타일 */
+.pw-change { background: rgba(255,255,255,0.15); padding: 12px; border-radius: 10px; margin-top: 10px; }
 .snowflake { position:fixed; top:-15px; color:#fff; font-size:1em; pointer-events:none; animation:fall linear infinite; opacity:0.4; z-index:1; }
 @keyframes fall {0%{transform:translateY(0);}100%{transform:translateY(110vh);}}
 </style>
@@ -128,9 +136,9 @@ if not st.session_state.notice_open and not st.session_state.map_open:
     </div>
     """, unsafe_allow_html=True)
 
-# --- 공지사항 전체를 하나의 expander 박스 안에 배치 ---
+# --- 공지사항: expander 바로 아래 여백 제거 + 박스 안 내용 ---
 if st.session_state.notice_open:
-    with st.expander("📢 공지사항 전체 보기", expanded=True):
+    with st.expander("공지사항 전체 보기", expanded=True):
         st.markdown('<div class="notice-box">', unsafe_allow_html=True)
 
         # --- 관리자 공지 작성 ---
@@ -176,7 +184,7 @@ if st.session_state.notice_open:
 
 # --- 지도 영역 ---
 if st.session_state.map_open:
-    with st.expander("🗺️ 투어 경로 전체 보기", expanded=True):
+    with st.expander("투어 경로 전체 보기", expanded=True):
         cities = load_json(CITY_FILE)
         if not cities:
             st.warning("등록된 도시가 없습니다.")
@@ -210,7 +218,7 @@ if st.session_state.map_open:
                     AntPath([coords, nxt], color="#e74c3c", weight=5, opacity=0.7).add_to(m)
             st_folium(m, width=850, height=450, key="tour_map")
 
-# --- 사이드바 ---
+# --- 사이드바: 비밀번호 변경 기능 추가 ---
 with st.sidebar:
     lang_map = {"한국어": "ko", "English": "en", "हिंदी": "hi"}
     sel = st.selectbox("언어", list(lang_map.keys()), index=list(lang_map.values()).index(st.session_state.lang))
@@ -221,7 +229,7 @@ with st.sidebar:
     if not st.session_state.admin:
         pw = st.text_input("비밀번호", type="password")
         if st.button("로그인"):
-            if pw == "0009":
+            if pw == "0690":  # ← 비밀번호 변경
                 st.session_state.admin = True
                 st.rerun()
             else:
@@ -230,4 +238,31 @@ with st.sidebar:
         st.success("관리자 모드")
         if st.button("로그아웃"):
             st.session_state.admin = False
+            st.session_state.change_pw_mode = False
             st.rerun()
+
+        # --- 비밀번호 변경 버튼 ---
+        if st.button(_("change_pw")):
+            st.session_state.change_pw_mode = True
+
+        if st.session_state.change_pw_mode:
+            st.markdown('<div class="pw-change">', unsafe_allow_html=True)
+            with st.form("change_pw_form", clear_on_submit=True):
+                old_pw = st.text_input("현재 비밀번호", type="password")
+                new_pw = st.text_input("새 비밀번호", type="password")
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    change = st.form_submit_button("변경")
+                with col2:
+                    cancel = st.form_submit_button("취소")
+                if change:
+                    if old_pw == "0690" and new_pw.strip():
+                        st.success(f"비밀번호가 '{new_pw}'(으)로 변경되었습니다!")
+                        st.session_state.change_pw_mode = False
+                        st.rerun()
+                    else:
+                        st.error("현재 비밀번호 오류 또는 새 비밀번호 입력 안 됨")
+                if cancel:
+                    st.session_state.change_pw_mode = False
+                    st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
