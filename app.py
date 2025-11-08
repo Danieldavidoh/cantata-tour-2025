@@ -23,20 +23,12 @@ LANG = {
            "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
            "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵", "perf_date": "공연 날짜",
            "warning": "제목·내용 입력", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
-           "add_city": "도시 추가", "city": "도시", "import_cities": "CSV 도시 일괄 추가", "import_success": "도시 일괄 추가 완료!",
-           "search_city": "도시 검색"},
+           "add_city": "도시 추가", "add_more": "추가", "save_all": "저장"},
     "en": {"title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
            "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
            "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps", "perf_date": "Performance Date",
            "warning": "Enter title & content", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
-           "add_city": "Add City", "city": "City", "import_cities": "Import All Cities from CSV", "import_success": "Cities imported successfully!",
-           "search_city": "Search City"},
-    "hi": {"title_cantata": "कैंटाटा टूर", "title_year": "2025", "title_region": "महाराष्ट्र",
-           "tab_notice": "सूचना", "tab_map": "टूर मार्ग", "indoor": "इनडोर", "outdoor": "आउटडोर",
-           "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप", "perf_date": "प्रदर्शन तिथि",
-           "warning": "शीर्षक·सामग्री दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट",
-           "add_city": "शहर जोड़ें", "city": "शहर", "import_cities": "CSV से सभी शहर आयात करें", "import_success": "शहर सफलतापूर्वक आयात किए गए!",
-           "search_city": "शहर खोजें"}
+           "add_city": "Add City", "add_more": "Add More", "save_all": "Save All"}
 }
 
 defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False}
@@ -200,23 +192,35 @@ if st.session_state.map_open:
     if st.session_state.admin:
         st.header(_("add_city"))
         if 'form_count' not in st.session_state:
-            st.session_state.form_count = 0
+            st.session_state.form_count = 1
 
-        if st.button(_("add_more")):
-            st.session_state.form_count += 1
-            st.rerun()
+        col_header, col_add = st.columns([3, 1])
+        with col_header:
+            st.write("")  # 헤더 공간
+        with col_add:
+            if st.button("+"):
+                st.session_state.form_count += 1
+                st.rerun()
 
         new_cities = []
-        for i in range(st.session_state.form_count + 1):
-            with st.container():
+        for i in range(st.session_state.form_count):
+            with st.expander(f"추가 {i+1}", expanded=True):
                 col1, col2 = st.columns(2)
                 with col1:
-                    selected_city = st.text_input(_("city"), key=f"city_{i}")
-                    venue = st.text_input(_("venue"), key=f"venue_{i}")
-                    indoor = st.checkbox(_("indoor"), key=f"indoor_{i}")
+                    selected_city = st.selectbox(_("city"), options=city_options, key=f"city_{i}")
                 with col2:
+                    venue = st.text_input(_("venue"), key=f"venue_{i}")
+
+                col3, col4 = st.columns(2)
+                with col3:
+                    indoor = st.checkbox(_("indoor"), key=f"indoor_{i}")
+                with col4:
                     seats = st.number_input(_("seats"), min_value=0, value=500, step=50, key=f"seats_{i}")
+
+                col5, col6 = st.columns(2)
+                with col5:
                     note = st.text_input(_("note"), key=f"note_{i}")
+                with col6:
                     google_link = st.text_input(_("google_link"), key=f"link_{i}")
 
                 new_cities.append({
@@ -231,13 +235,13 @@ if st.session_state.map_open:
                     "lat": 18.5204, "lon": 73.8567  # 기본 좌표
                 })
 
-        if st.button("저장"):
-            valid = all(c["city"] and c["venue"] for c in new_cities if c["city"])
+        if st.button(_("save_all"), use_container_width=True):
+            valid = all(c["city"] and c["venue"] for c in new_cities)
             if valid:
-                cities.extend([c for c in new_cities if c["city"]])
+                cities.extend(new_cities)
                 save_json(CITY_FILE, cities)
-                st.session_state.form_count = 0
-                st.success("추가 완료!")
+                st.session_state.form_count = 1
+                st.success("모든 도시 추가 완료!")
                 st.rerun()
             else:
                 st.warning(_("warning"))
