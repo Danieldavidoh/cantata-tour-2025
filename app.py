@@ -130,55 +130,59 @@ if st.session_state.map_open:
     cities = load_json(CITY_FILE)
     city_options = ["Mumbai", "Pune", "Nagpur"]
     if st.session_state.admin:
-        st.header(_("add_city"))
-        if 'new_cities' not in st.session_state:
-            st.session_state.new_cities = []
-        if st.button("+", key="add_city_block"):
-            st.session_state.new_cities.append({
-                "city": city_options[0], "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": False,
-                "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"), "perf_date": ""
-            })
-            st.rerun()
-        for idx, new_city in enumerate(st.session_state.new_cities):
-            with st.container():
-                cols = st.columns([9, 1])
-                with cols[0]:
-                    selected_city = st.selectbox(_("city"), options=city_options, key=f"city_select_{idx}", index=city_options.index(new_city["city"]))
-                    new_city["city"] = selected_city
-                    new_city["lat"] = next(c["lat"] for c in DEFAULT_CITIES if c["city"] == selected_city)
-                    new_city["lon"] = next(c["lon"] for c in DEFAULT_CITIES if c["city"] == selected_city)
-                with cols[1]:
-                    pass  # 빈 공간으로 바 클릭 영역 확보
-                with st.expander(f"{new_city['city']} 상세", expanded=False):
-                    new_city["date"] = st.text_input(_("date"), value=new_city["date"], key=f"date_{idx}")
-                    new_city["venue"] = st.text_input(_("venue"), value=new_city["venue"], key=f"venue_{idx}")
-                    new_city["seats"] = st.number_input(_("seats"), min_value=0, value=new_city["seats"], step=50, key=f"seats_{idx}")
-                    new_city["indoor"] = st.checkbox(_("indoor"), value=new_city["indoor"], key=f"indoor_{idx}")
-                    new_city["google_link"] = st.text_input(_("google_link"), value=new_city["google_link"], key=f"google_link_{idx}")
-                    new_city["note"] = st.text_input(_("note"), value=new_city["note"], key=f"note_{idx}")
-                    new_city["perf_date"] = st.text_input(_("perf_date"), value=new_city["perf_date"], key=f"perf_date_{idx}")
-                    btn_cols = st.columns(3)
-                    with btn_cols[0]:
-                        if st.button(_("register"), key=f"register_{idx}"):
-                            if new_city["city"] and new_city["venue"]:
-                                cities.append(new_city.copy())
-                                save_json(CITY_FILE, cities)
+        col_header, col_add = st.columns([9, 1])
+        with col_header:
+            st.header(_("add_city"))
+        with col_add:
+            if st.button("+", key="add_city_block"):
+                if 'new_cities' not in st.session_state:
+                    st.session_state.new_cities = []
+                st.session_state.new_cities.append({
+                    "city": city_options[0], "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": False,
+                    "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"), "perf_date": ""
+                })
+                st.rerun()
+        if 'new_cities' in st.session_state:
+            for idx, new_city in enumerate(st.session_state.new_cities):
+                with st.container():
+                    cols = st.columns([9, 1])
+                    with cols[0]:
+                        selected_city = st.selectbox(_("city"), options=city_options, key=f"city_select_{idx}", index=city_options.index(new_city["city"]))
+                        new_city["city"] = selected_city
+                        new_city["lat"] = next(c["lat"] for c in DEFAULT_CITIES if c["city"] == selected_city)
+                        new_city["lon"] = next(c["lon"] for c in DEFAULT_CITIES if c["city"] == selected_city)
+                    with cols[1]:
+                        pass  # 빈 공간으로 바 클릭 영역 확보
+                    with st.expander(f"{new_city['city']} 상세", expanded=False):
+                        new_city["date"] = st.text_input(_("date"), value=new_city["date"], key=f"date_{idx}")
+                        new_city["venue"] = st.text_input(_("venue"), value=new_city["venue"], key=f"venue_{idx}")
+                        new_city["seats"] = st.number_input(_("seats"), min_value=0, value=new_city["seats"], step=50, key=f"seats_{idx}")
+                        new_city["indoor"] = st.checkbox(_("indoor"), value=new_city["indoor"], key=f"indoor_{idx}")
+                        new_city["google_link"] = st.text_input(_("google_link"), value=new_city["google_link"], key=f"google_link_{idx}")
+                        new_city["note"] = st.text_input(_("note"), value=new_city["note"], key=f"note_{idx}")
+                        new_city["perf_date"] = st.text_input(_("perf_date"), value=new_city["perf_date"], key=f"perf_date_{idx}")
+                        btn_cols = st.columns(3)
+                        with btn_cols[0]:
+                            if st.button(_("register"), key=f"register_{idx}"):
+                                if new_city["city"] and new_city["venue"]:
+                                    cities.append(new_city.copy())
+                                    save_json(CITY_FILE, cities)
+                                    st.session_state.new_cities.pop(idx)
+                                    st.success("등록 완료!")
+                                    st.rerun()
+                                else:
+                                    st.warning(_("warning"))
+                        with btn_cols[1]:
+                            if st.button(_("update"), key=f"update_{idx}"):
+                                if new_city["city"] and new_city["venue"]:
+                                    # 기존 cities에 업데이트 (새로운 블록이므로 등록과 유사하나, 이미 추가된 경우를 가정)
+                                    st.info("업데이트 기능은 기존 도시 관리에서 사용하세요. 여기서는 등록으로 처리됩니다.")
+                                else:
+                                    st.warning(_("warning"))
+                        with btn_cols[2]:
+                            if st.button(_("remove"), key=f"remove_{idx}"):
                                 st.session_state.new_cities.pop(idx)
-                                st.success("등록 완료!")
                                 st.rerun()
-                            else:
-                                st.warning(_("warning"))
-                    with btn_cols[1]:
-                        if st.button(_("update"), key=f"update_{idx}"):
-                            if new_city["city"] and new_city["venue"]:
-                                # 기존 cities에 업데이트 (새로운 블록이므로 등록과 유사하나, 이미 추가된 경우를 가정)
-                                st.info("업데이트 기능은 기존 도시 관리에서 사용하세요. 여기서는 등록으로 처리됩니다.")
-                            else:
-                                st.warning(_("warning"))
-                    with btn_cols[2]:
-                        if st.button(_("remove"), key=f"remove_{idx}"):
-                            st.session_state.new_cities.pop(idx)
-                            st.rerun()
     # --- 지도 ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
