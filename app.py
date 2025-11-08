@@ -82,7 +82,7 @@ CITY_COORDS = {
     "Nagpur": (21.1458, 79.0882)
 }
 
-# --- 7. CSS: 버튼 오류 해결 + 전체 레이아웃 ---
+# --- 7. CSS: 헤더 고정 + 내용 정상 노출 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -96,46 +96,46 @@ st.markdown("""
         overflow-x: hidden;
     }
 
-    /* 헤더 블록 */
-    .header-block {
-        position: relative;
-        margin-top: -8.4em !important;
+    /* 고정된 헤더 (위로 3배 이동) */
+    .fixed-header {
+        position: fixed;
+        top: 10%;
+        left: 50%;
+        transform: translateX(-50%);
         text-align: center;
-        z-index: 20;
-        margin-bottom: 0 !important;
+        z-index: 100;
+        width: 90%;
+        max-width: 600px;
+        margin: 0 !important;
         padding: 0 !important;
-        line-height: 1;
     }
 
-    /* 크리스마스 아이콘 */
     .christmas-decoration {
         display: flex;
         justify-content: center;
         gap: 12px;
         pointer-events: none;
-        margin: 0 !important;
-        padding: 0 !important;
-        margin-bottom: 4px !important;
+        margin: 0 0 8px 0 !important;
     }
     .christmas-decoration i {
         color: #fff;
         text-shadow: 0 0 10px rgba(255,255,255,0.6);
         animation: float 3s ease-in-out infinite;
         opacity: 0.95;
+        font-size: 2.2em;
     }
-    .christmas-decoration i:nth-child(1) {font-size:2.1em;animation-delay:0s;}
-    .christmas-decoration i:nth-child(2) {font-size:1.9em;animation-delay:.4s;}
-    .christmas-decoration i:nth-child(3) {font-size:2.4em;animation-delay:.8s;}
-    .christmas-decoration i:nth-child(4) {font-size:2.0em;animation-delay:1.2s;}
-    .christmas-decoration i:nth-child(5) {font-size:2.5em;animation-delay:1.6s;}
-    .christmas-decoration i:nth-child(6) {font-size:1.8em;animation-delay:2.0s;}
-    .christmas-decoration i:nth-child(7) {font-size:2.3em;animation-delay:2.4s;}
+    .christmas-decoration i:nth-child(1) {animation-delay:0s;}
+    .christmas-decoration i:nth-child(2) {animation-delay:.3s;}
+    .christmas-decoration i:nth-child(3) {animation-delay:.6s;}
+    .christmas-decoration i:nth-child(4) {animation-delay:.9s;}
+    .christmas-decoration i:nth-child(5) {  {animation-delay:1.2s;}
+    .christmas-decoration i:nth-child(6) {animation-delay:1.5s;}
+    .christmas-decoration i:nth-child(7) {animation-delay:1.8s;}
     @keyframes float {
         0%, 100% {transform: translateY(0) rotate(0deg);}
-        50% {transform: translateY(-6px) rotate(4deg);}
+        50% {transform: translateY(-8px) rotate(4deg);}
     }
 
-    /* 제목 */
     .main-title {
         font-size: 2.8em !important;
         font-weight: bold;
@@ -145,37 +145,34 @@ st.markdown("""
         line-height: 1.1;
     }
 
-    /* 버튼 라인 */
     .button-row {
         display: flex;
         justify-content: center;
         gap: 20px;
-        margin: 0 auto !important;
-        padding: 5px 15px !important;
-        background: rgba(0,0,0,0.2);
-        border-radius: 25px;
+        margin: 12px auto 0 !important;
+        padding: 6px 16px !important;
+        background: rgba(0,0,0,0.3);
+        border-radius: 30px;
         width: fit-content;
     }
-
-    /* 버튼 오류 해결: use_container_width=False + width:100% 강제 */
     .tab-btn {
         background: rgba(255,255,255,0.96) !important;
         color: #c62828 !important;
         border: none !important;
-        border-radius: 20px !important;
-        padding: 8px 18px !important;
+        border-radius: 25px !important;
+        padding: 12px 24px !important;
         font-weight: bold !important;
         font-size: 1.1em !important;
         cursor: pointer !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
         transition: all 0.3s ease !important;
-        width: 100% !important;   /* 강제 전체 너비 */
+        width: 100% !important;
         text-align: center !important;
     }
     .tab-btn:hover {
         background: #d32f2f !important;
         color: white !important;
-        transform: translateY(-2px) !important;
+        transform: translateY(-3px) !important;
     }
 
     /* 눈송이 */
@@ -235,8 +232,16 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 헤더 전체 블록 ---
-st.markdown('<div class="header-block">', unsafe_allow_html=True)
+# --- 눈송이 52개 ---
+for i in range(52):
+    left = random.randint(0, 100)
+    duration = random.randint(10, 20)
+    size = random.uniform(0.8, 1.4)
+    delay = random.uniform(0, 10)
+    st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
+
+# --- 고정된 헤더 (position: fixed) ---
+st.markdown('<div class="fixed-header">', unsafe_allow_html=True)
 
 # 크리스마스 아이콘
 st.markdown('''
@@ -255,7 +260,7 @@ st.markdown('''
 title_html = f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>'
 st.markdown(title_html, unsafe_allow_html=True)
 
-# 버튼 라인 (오류 해결: use_container_width=False)
+# 버튼 라인
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col1, col2 = st.columns([1, 1])
 with col1:
@@ -270,18 +275,12 @@ with col2:
         st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
 
-st.markdown('</div>', unsafe_allow_html=True)  # .header-block 종료
+st.markdown('</div>', unsafe_allow_html=True)  # .fixed-header 종료
 
-# --- 눈송이 52개 ---
-for i in range(52):
-    left = random.randint(0, 100)
-    duration = random.randint(10, 20)
-    size = random.uniform(0.8, 1.4)
-    delay = random.uniform(0, 10)
-    st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
-
-# --- 공지 (기본 접힘) ---
+# --- 공지 (정상 노출) ---
 if st.session_state.notice_open:
+    st.markdown("<div style='margin-top: 40vh; padding: 20px; background: rgba(0,0,0,0.7); border-radius: 15px; margin: 20px;'>", unsafe_allow_html=True)
+    
     if st.session_state.admin:
         with st.expander("공지 작성"):
             with st.form("notice_form", clear_on_submit=True):
@@ -324,8 +323,10 @@ if st.session_state.notice_open:
                 data.pop(i)
                 save_json(NOTICE_FILE, data)
                 st.rerun()
+    
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# --- 지도: 전체화면 + 닫기 버튼 ---
+# --- 지도: 전체화면 ---
 if st.session_state.map_open:
     st.markdown(
         """
