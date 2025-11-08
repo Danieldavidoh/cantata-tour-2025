@@ -58,7 +58,7 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS: 전체화면 지도 + 닫기 버튼 ---
+# --- 7. CSS: 아이콘 바로 아래 제목 + 버튼 정상 작동 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -75,7 +75,7 @@ st.markdown("""
     /* 크리스마스 아이콘 */
     .christmas-decoration {
         display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; pointer-events: none;
-        margin: 0 0 10px 0;
+        margin: 0; padding: 0;
     }
     .christmas-decoration i {
         color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6);
@@ -84,21 +84,21 @@ st.markdown("""
     }
     @keyframes sparkle { 0% { text-shadow: 0 0 5px #fff; } 100% { text-shadow: 0 0 15px #fff, 0 0 30px #f00; } }
 
-    /* 제목 */
+    /* 제목: 아이콘 바로 아래 */
     .main-title {
         font-size: 2.8em !important; font-weight: bold; text-align: center;
-        text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; line-height: 1.2;
+        text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; padding: 0 !important; line-height: 1.2; z-index: 1000;
     }
 
-    /* 버튼 라인 */
+    /* 버튼 라인: 클릭 가능 */
     .button-row {
-        display: flex; justify-content: center; gap: 20px; margin: 10px 0 20px 0; padding: 0 15px;
+        display: flex; justify-content: center; gap: 20px; margin: 20px 0; padding: 0 15px; z-index: 1000; pointer-events: auto;
     }
     .tab-btn {
         background: rgba(255,255,255,0.96); color: #c62828; border: none;
         border-radius: 20px; padding: 10px 20px; font-weight: bold;
         font-size: 1.1em; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        transition: all 0.3s ease; flex: 1; max-width: 200px;
+        transition: all 0.3s ease; flex: 1; max-width: 200px; pointer-events: auto;
     }
     .tab-btn:hover { background: #d32f2f; color: white; transform: translateY(-2px); }
 
@@ -109,7 +109,7 @@ st.markdown("""
     }
     .fullscreen-map.show { display: flex; }
 
-    /* 지도 닫기 버튼 (왼쪽 아래, 투명 아이콘) */
+    /* 지도 닫기 버튼 */
     .map-close-btn {
         position: fixed; bottom: 20px; left: 20px; z-index: 1001;
         background: rgba(0,0,0,0.5); color: white; border: none;
@@ -120,7 +120,7 @@ st.markdown("""
     .map-close-btn:hover { opacity: 1; }
 
     /* 눈송이 */
-    .snowflake { position:fixed; top:-15px; color:#fff; font-size:1.1em; pointer-events:none; animation:fall linear infinite; opacity:0.3; z-index:1; }
+    .snowflake { position:fixed; top:-15px; color:#fff; font-size:1.1em; pointer-events:none; animation:fall linear infinite; opacity:0.3; z-index:-1; }
     @keyframes fall { 0% { transform:translateY(0) rotate(0deg); } 100% { transform:translateY(120vh) rotate(360deg); } }
 
     /* 모바일 햄버거 */
@@ -151,12 +151,12 @@ for i in range(52):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 (두 배 위로) ---
+# --- 제목 (아이콘 바로 아래) ---
 st.markdown('<div class="initial-screen">', unsafe_allow_html=True)
 title_html = f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>'
 st.markdown(title_html, unsafe_allow_html=True)
 
-# --- 버튼 라인 ---
+# --- 버튼 라인 (클릭 정상 작동) ---
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col1, col2 = st.columns([1, 1])
 with col1:
@@ -173,19 +173,17 @@ with col2:
 st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 전체화면 지도 (투어 경로 클릭 시) ---
+# --- 전체화면 지도 ---
 map_class = "fullscreen-map"
 if st.session_state.map_open:
     map_class += " show"
 st.markdown(f'<div class="{map_class}">', unsafe_allow_html=True)
 if st.session_state.map_open:
-    # 상단 버튼 제거
-    # 지도 닫기 버튼 (왼쪽 아래)
     st.markdown(f'''
     <button class="map-close-btn" onclick="window.location.href='?map_open=False'">✕</button>
     ''', unsafe_allow_html=True)
     cities = load_json(CITY_FILE)
-    m = folium.Map(location=[18.5204, 73.8567], zoom_start=10, tiles="OpenStreetMap")  # Pune 중심
+    m = folium.Map(location=[18.5204, 73.8567], zoom_start=10, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
         coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
         lat, lon = coords
@@ -201,4 +199,4 @@ if st.session_state.map_open:
 st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 공지/기타 (기존 코드 유지) ---
-# ... (생략, 이전 코드 그대로)
+# ... (이전 코드 그대로)
