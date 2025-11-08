@@ -11,7 +11,7 @@ from streamlit_autorefresh import st_autorefresh
 # --- 1. 페이지 설정 ---
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 if not st.session_state.get("admin", False):
-    st_autorefresh(interval=5000, key="auto_refresh_user")
+    st_autorefresh(interval=7000, key="auto_refresh_user")  # 7초로 변경
 
 # --- 2. 파일 ---
 NOTICE_FILE = "notice.json"
@@ -55,22 +55,19 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS: 닫기 버튼 제거 + 오버레이 클릭으로 닫기 ---
+# --- 7. CSS: 깜박임 제거 + 오버레이 클릭 닫기 ---
 st.markdown("""
 <style>
     [data-testid="stAppViewContainer"] {
         background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed;
         padding-top: 0 !important; margin: 0 !important;
     }
-    /* 제목 */
     .main-title {
         font-size: 2.8em !important; font-weight: bold; text-align: center;
         text-shadow: 0 3px 8px rgba(0,0,0,0.6);
         margin: 0 !important; padding: 0 !important; line-height: 1.2;
-        margin-top: 0 !important;
-        margin-bottom: 0 !important;
+        margin-top: 0 !important; margin-bottom: 0 !important;
     }
-    /* 버튼 라인 */
     .button-row {
         display: flex; justify-content: center; gap: 20px;
         margin: 0 !important; padding: 0 15px !important;
@@ -84,11 +81,11 @@ st.markdown("""
     }
     .tab-btn:hover { background: #d32f2f; color: white; transform: translateY(-2px); }
 
-    /* 전체화면 지도 오버레이 */
+    /* 지도 오버레이 */
     .map-overlay {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
         background: #000; z-index: 9999; display: none; flex-direction: column;
-        cursor: pointer; /* 오버레이 클릭 시 닫기 */
+        cursor: pointer;
     }
     .map-overlay.open { display: flex; }
     .map-container { flex: 1; position: relative; }
@@ -154,15 +151,15 @@ if st.session_state.notice_open:
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data)
 
-# --- 지도 오버레이 (닫기 버튼 제거) ---
+# --- 지도 오버레이 (깜박임 없이 + 오버레이 클릭 닫기) ---
 if st.session_state.map_open:
     st.markdown(f'''
-    <div class="map-overlay open" onclick="document.getElementById('map_open').value='False'; this.parentNode.submit();">
+    <div class="map-overlay open" onclick="document.getElementById('close_map').click();">
         <div class="map-container" id="folium-map"></div>
-        <form id="close_form" method="post" style="display:none;">
-            <input type="hidden" id="map_open" name="map_open" value="">
-        </form>
     </div>
+    <form id="close_form" method="post" style="display:none;">
+        <button id="close_map" type="submit" name="map_open" value="False"></button>
+    </form>
     ''', unsafe_allow_html=True)
 
     cities = load_json(CITY_FILE)
@@ -181,7 +178,7 @@ if st.session_state.map_open:
     
     st_folium(m, width=1200, height=800, key="tour_map_full")
 
-# --- 오버레이 클릭 처리 ---
+# --- 오버레이 닫기 처리 (깜박임 없이) ---
 if st.experimental_get_query_params().get("map_open") == ["False"]:
     st.session_state.map_open = False
     st.experimental_set_query_params()
