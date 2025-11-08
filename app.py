@@ -28,7 +28,7 @@ LANG = {
 }
 
 # --- 4. 세션 상태 ---
-defaults = { "admin": False, "lang": "ko", "tab_selection": None, "new_notice": False, "sound_played": False, "seen_notices": [], "expanded_notices": [], "expanded_cities": [], "last_tab": None, "alert_active": False, "current_alert_id": None, "password": "0009", "show_pw_form": False, "sidebar_open": False, "notice_open": False, "adding_city": False, "edit_mode": {} }
+defaults = { "admin": False, "lang": "ko", "notice_open": False, "map_open": False, "adding_city": False }
 for k, v in defaults.items():
     if k not in st.session_state: st.session_state[k] = v
 
@@ -55,24 +55,14 @@ def play_carol():
         st.session_state.sound_played = True
         st.markdown("<audio autoplay><source src='carol.wav' type='audio/wav'></audio>", unsafe_allow_html=True)
 
-# --- 8. CSS + 제목 최상단 ---
+# --- 8. CSS + 제목 상단 1/3 (모바일) ---
 st.markdown("""
 <style>
     [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding-top: 0 !important; }
-    .fixed-title { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; text-align: center; padding: 10px 0; background: rgba(0, 0, 0, 0.3); }
-    .main-title { font-size: 2.8em !important; font-weight: bold; text-shadow: 0 2px 5px rgba(0,0,0,0.3); margin: 0; }
-    .tab-container { 
-        background: rgba(255,255,255,0.9); 
-        padding: 8px; 
-        border-radius: 15px; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
-        margin: 80px 0 10px 0 !important; 
-        position: relative; 
-        z-index: 10; 
-        border: none !important;
-        -webkit-appearance: none !important;
-    }
-    .content-area { margin-top: 0; }
+    .title-container { height: 33vh; display: flex; align-items: center; justify-content: center; position: relative; z-index: 10; }
+    .main-title { font-size: 2.8em !important; font-weight: bold; text-shadow: 0 2px 5px rgba(0,0,0,0.3); margin: 0; text-align: center; }
+    .tab-button { background: rgba(255,255,255,0.95); padding: 12px; border-radius: 15px; margin: 10px 0; text-align: center; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.1); font-weight: bold; }
+    .content-area { margin-top: 20px; }
     .snowflake { position: fixed; top: -15px; color: white; font-size: 1.1em; pointer-events: none; animation: fall linear infinite; opacity: 0.3 !important; text-shadow: 0 0 4px rgba(255,255,255,0.6); z-index: 1; }
     @keyframes fall { 0% { transform: translateY(0) rotate(0deg); } 100% { transform: translateY(120vh) rotate(360deg); } }
     .hamburger { position: fixed; top: 15px; left: 15px; z-index: 10000; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
@@ -80,7 +70,6 @@ st.markdown("""
     .sidebar-mobile.open { left: 0; }
     .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9998; display: none; }
     .overlay.open { display: block; }
-    .notice-title-bar { background: rgba(255,255,255,0.95); padding: 12px; border-radius: 10px; margin: 8px 0; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
     @media (min-width: 769px) {
         .hamburger, .sidebar-mobile, .overlay { display: none !important; }
         section[data-testid="stSidebar"] { display: block !important; }
@@ -97,8 +86,8 @@ for i in range(26):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 (최상단) ---
-st.markdown('<div class="fixed-title">', unsafe_allow_html=True)
+# --- 제목 (상단 1/3) ---
+st.markdown('<div class="title-container">', unsafe_allow_html=True)
 title_html = f'<span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span>'
 st.markdown(f'<h1 class="main-title">{title_html}</h1>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
@@ -123,15 +112,12 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-# --- 탭 + 내용 (공지 버튼 아래에 내용, 투어 경로 버튼은 사라짐) ---
-st.markdown('<div class="content-area">', unsafe_allow_html=True)
+# --- 공지 버튼 (토글) ---
+if st.button(_(f"tab_notice"), key="notice_toggle_btn", use_container_width=True):
+    st.session_state.notice_open = not st.session_state.notice_open
+    st.session_state.map_open = False  # 공지 열리면 투어 경로 닫기
 
-# 공지 버튼
-notice_btn = st.button(_(f"tab_notice"), use_container_width=True, key="tab_notice_btn")
-
-# 공지 클릭 시 내용 + 투어 경로 버튼 사라짐
-if notice_btn or st.session_state.tab_selection == _(f"tab_notice"):
-    st.session_state.tab_selection = _(f"tab_notice")
+if st.session_state.notice_open:
     if st.session_state.admin:
         with st.expander("공지 작성"):
             with st.form("notice_form", clear_on_submit=True):
@@ -165,63 +151,62 @@ if notice_btn or st.session_state.tab_selection == _(f"tab_notice"):
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
 
-# 투어 경로 버튼 (공지 클릭 시 사라짐)
-else:
-    map_btn = st.button(_(f"tab_map"), use_container_width=True, key="tab_map_btn")
-    if map_btn or st.session_state.tab_selection == _(f"tab_map"):
-        st.session_state.tab_selection = _(f"tab_map")
-        if st.session_state.admin:
-            if st.button(_("add_city"), key="add_city_btn"):
-                st.session_state.adding_city = True
+# --- 투어 경로 버튼 (토글) ---
+if st.button(_(f"tab_map"), key="map_toggle_btn", use_container_width=True):
+    st.session_state.map_open = not st.session_state.map_open
+    st.session_state.notice_open = False  # 투어 경로 열리면 공지 닫기
 
-            if st.session_state.get("adding_city", False):
-                with st.container():
-                    city_name = st.text_input("새 도시 입력", key="new_city_name")
-                    if city_name:
-                        with st.form("city_form_add"):
-                            perf_date = st.date_input(_("perf_date"), key="add_perf_date")
-                            venue = st.text_input(_("venue"), key="add_venue")
-                            seats = st.number_input(_("seats"), min_value=0, value=500, step=50, key="add_seats")
-                            indoor = st.radio("실내인지 실외인지", [_(f"indoor"), _(f"outdoor")], key="add_indoor")
-                            google_link = st.text_input(_("google_link"), key="add_link")
-                            note = st.text_area(_("note"), key="add_note")
+if st.session_state.map_open:
+    if st.session_state.admin:
+        if st.button(_("add_city"), key="add_city_btn"):
+            st.session_state.adding_city = True
 
-                            col1, col2, col3 = st.columns(3)
-                            with col1:
-                                if st.form_submit_button(_("edit"), key="edit_city_btn"):
-                                    st.session_state.edit_mode = True
-                                    st.rerun()
-                            with col2:
-                                if st.form_submit_button(_("save"), key="save_city_btn"):
-                                    new_city = { "city": city_name, "venue": venue, "seats": str(seats), "indoor": indoor == _(f"indoor"), "note": note, "google_link": google_link, "perf_date": str(perf_date), "date": datetime.now().strftime("%m/%d %H:%M") }
-                                    data = load_json(CITY_FILE)
-                                    data.append(new_city)
-                                    save_json(CITY_FILE, data)
-                                    st.session_state.adding_city = False
-                                    st.success("도시 추가 완료!")
-                                    st.rerun()
-                            with col3:
-                                if st.form_submit_button(_("delete"), key="remove_city_btn"):
-                                    st.session_state.adding_city = False
-                                    st.rerun()
+        if st.session_state.get("adding_city", False):
+            with st.container():
+                city_name = st.text_input("새 도시 입력", key="new_city_name")
+                if city_name:
+                    with st.form("city_form_add"):
+                        perf_date = st.date_input(_("perf_date"), key="add_perf_date")
+                        venue = st.text_input(_("venue"), key="add_venue")
+                        seats = st.number_input(_("seats"), min_value=0, value=500, step=50, key="add_seats")
+                        indoor = st.radio("실내인지 실외인지", [_(f"indoor"), _(f"outdoor")], key="add_indoor")
+                        google_link = st.text_input(_("google_link"), key="add_link")
+                        note = st.text_area(_("note"), key="add_note")
 
-        # --- 지도 ---
-        cities = load_json(CITY_FILE)
-        m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
-        for i, c in enumerate(cities):
-            coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
-            lat, lon = coords
-            is_future = c.get("perf_date", "9999-12-31") >= str(date.today())
-            color = "red" if is_future else "gray"
-            indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
-            popup_html = f"<div style='font-size:14px; line-height:1.6;'><b>{c['city']}</b><br>{_('perf_date')}: {c.get('perf_date','미정')}<br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br><a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving' target='_blank'>{_('google_link')}</a></div>"
-            folium.Marker(coords, popup=folium.Popup(popup_html, max_width=300), icon=folium.Icon(color=color, icon="music", prefix="fa")).add_to(m)
-            if i < len(cities) - 1:
-                nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
-                AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
-        st_folium(m, width=900, height=550, key="tour_map")
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            if st.form_submit_button(_("edit"), key="edit_city_btn"):
+                                st.session_state.edit_mode = True
+                                st.rerun()
+                        with col2:
+                            if st.form_submit_button(_("save"), key="save_city_btn"):
+                                new_city = { "city": city_name, "venue": venue, "seats": str(seats), "indoor": indoor == _(f"indoor"), "note": note, "google_link": google_link, "perf_date": str(perf_date), "date": datetime.now().strftime("%m/%d %H:%M") }
+                                data = load_json(CITY_FILE)
+                                data.append(new_city)
+                                save_json(CITY_FILE, data)
+                                st.session_state.adding_city = False
+                                st.success("도시 추가 완료!")
+                                st.rerun()
+                        with col3:
+                            if st.form_submit_button(_("delete"), key="remove_city_btn"):
+                                st.session_state.adding_city = False
+                                st.rerun()
 
-st.markdown('</div>', unsafe_allow_html=True)
+    # --- 지도 ---
+    cities = load_json(CITY_FILE)
+    m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
+    for i, c in enumerate(cities):
+        coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
+        lat, lon = coords
+        is_future = c.get("perf_date", "9999-12-31") >= str(date.today())
+        color = "red" if is_future else "gray"
+        indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
+        popup_html = f"<div style='font-size:14px; line-height:1.6;'><b>{c['city']}</b><br>{_('perf_date')}: {c.get('perf_date','미정')}<br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br><a href='https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving' target='_blank'>{_('google_link')}</a></div>"
+        folium.Marker(coords, popup=folium.Popup(popup_html, max_width=300), icon=folium.Icon(color=color, icon="music", prefix="fa")).add_to(m)
+        if i < len(cities) - 1:
+            nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
+            AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
+    st_folium(m, width=900, height=550, key="tour_map")
 
 # --- 사이드바 (PC) ---
 with st.sidebar:
@@ -264,8 +249,3 @@ with st.sidebar:
                             st.error(_("pw_mismatch"))
                     else:
                         st.error(_("pw_error"))
-
-# --- 탭 전환 ---
-if st.session_state.tab_selection != st.session_state.get("last_tab"):
-    st.session_state.last_tab = st.session_state.tab_selection
-    st.rerun()
