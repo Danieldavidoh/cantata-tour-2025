@@ -1,171 +1,179 @@
-import json, os, uuid, base64, random
 import streamlit as st
-from datetime import datetime
+import json, os, uuid
+from datetime import datetime, date
+from pytz import timezone
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
-from pytz import timezone
 from streamlit_autorefresh import st_autorefresh
 
-# --- 기본 설정 ---
+# =============================================
+# 기본 설정
+# =============================================
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
-if not st.session_state.get("admin", False):
-    st_autorefresh(interval=5000, key="auto_refresh_user")
 
-NOTICE_FILE = "notice.json"
 CITY_FILE = "cities.json"
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+NOTICE_FILE = "notice.json"
 
-LANG = {
-    "ko": {"title_cantata": "칸타타 투어", "title_year": "2025", "title_region": "마하라스트라",
-           "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
-           "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵",
-           "warning": "도시와 장소를 입력하세요", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃"},
-}
+# =============================================
+# 유틸
+# =============================================
+def load_json(path, default):
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            return default
+    return default
 
-defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False}
-for k, v in defaults.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
-_ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
+def save_json(path, data):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
-# --- 파일 유틸 ---
-def load_json(f):
-    try:
-        if os.path.exists(f):
-            return json.load(open(f, "r", encoding="utf-8"))
-    except Exception:
-        pass
-    return []
-
-def save_json(f, d):
-    json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
-
-# --- 기본 도시 데이터 ---
-CITY_OPTIONS = ["Mumbai", "Pune", "Nagpur"]
+# =============================================
+# 기본 데이터
+# =============================================
 CITY_COORDS = {
     "Mumbai": (19.07609, 72.877426),
     "Pune": (18.52043, 73.856743),
     "Nagpur": (21.1458, 79.088154),
 }
 DEFAULT_CITIES = [
-    {"city": city, "venue": "공연 없음", "seats": "", "note": "", "google_link": "",
-     "indoor": False, "date": "", "perf_date": "공연 없음",
-     "lat": CITY_COORDS[city][0], "lon": CITY_COORDS[city][1]}
-    for city in CITY_OPTIONS
+    {"city": k, "venue": "", "seats": "", "note": "", "google_link": "", "indoor": False,
+     "date": "", "perf_date": "", "lat": v[0], "lon": v[1]}
+    for k, v in CITY_COORDS.items()
 ]
 
-# --- 도시 데이터 로드 (문제 자동 복구) ---
-def load_cities():
-    cities = load_json(CITY_FILE)
-    if not isinstance(cities, list) or not cities:
-        save_json(CITY_FILE, DEFAULT_CITIES)
-        return DEFAULT_CITIES
-    fixed = []
-    for c in cities:
-        if not isinstance(c, dict) or "city" not in c:
-            continue
-        city = c.get("city")
-        if not city or city not in CITY_COORDS:
-            continue
-        fixed.append({
-            "city": city,
-            "venue": c.get("venue", "공연 없음"),
-            "seats": c.get("seats", ""),
-            "note": c.get("note", ""),
-            "google_link": c.get("google_link", ""),
-            "indoor": c.get("indoor", False),
-            "date": c.get("date", ""),
-            "perf_date": c.get("perf_date", "공연 없음"),
-            "lat": c.get("lat", CITY_COORDS[city][0]),
-            "lon": c.get("lon", CITY_COORDS[city][1])
-        })
-    if not fixed:
-        fixed = DEFAULT_CITIES
-    save_json(CITY_FILE, fixed)
-    return fixed
+# =============================================
+# 데이터 로드
+# =============================================
+cities = load_json(CITY_FILE, DEFAULT_CITIES)
+notices = load_json(NOTICE_FILE, [])
 
-# --- CSS & 눈 효과 ---
-st.markdown("""
-<style>
-[data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; }
-.main-title { font-size: 2.8em; text-align: center; font-weight: bold; text-shadow: 0 3px 8px rgba(0,0,0,0.6); }
-.button-row { display: flex; justify-content: center; gap: 20px; margin-top: 0 !important; }
-.tab-btn { background: rgba(255,255,255,0.95); color: #c62828; border-radius: 20px; padding: 10px 20px; font-weight: bold; cursor: pointer; }
-</style>
-""", unsafe_allow_html=True)
-for i in range(40):
-    st.markdown(f"<div style='position:fixed; top:-10px; left:{random.randint(0,100)}vw; color:white; opacity:0.4; animation:fall {random.randint(10,18)}s linear infinite;'>❄</div>", unsafe_allow_html=True)
+# =============================================
+# 관리자 모드 여부
+# =============================================
+is_admin = st.sidebar.checkbox("관리자 모드", False)
 
-# --- 헤더 ---
-st.markdown(f"<h1 class='main-title'>{_('title_cantata')} {_('title_year')} {_('title_region')}</h1>", unsafe_allow_html=True)
+# =============================================
+# 상단 타이틀
+# =============================================
+st.title("칸타타 투어 2025")
+st.markdown("---")
 
-# --- 탭 버튼 ---
-st.markdown('<div class="button-row">', unsafe_allow_html=True)
-c1, c2 = st.columns(2)
-with c1:
-    if st.button(_("tab_notice")):
-        st.session_state.notice_open = not st.session_state.notice_open
-        st.session_state.map_open = False
-        st.rerun()
-with c2:
-    if st.button(_("tab_map")):
-        st.session_state.map_open = not st.session_state.map_open
-        st.session_state.notice_open = False
-        st.rerun()
-st.markdown('</div>', unsafe_allow_html=True)
+# =============================================
+# 공지 영역
+# =============================================
+if notices:
+    st.subheader("📢 공지사항")
+    for n in reversed(notices):
+        st.markdown(f"**[{n['time']}]** {n['text']}")
+else:
+    st.info("현재 등록된 공지가 없습니다.")
 
-# --- 공지 탭 ---
-if st.session_state.notice_open:
-    if st.session_state.admin:
-        with st.form("notice_form", clear_on_submit=True):
-            title = st.text_input("제목")
-            content = st.text_area("내용")
-            if st.form_submit_button("등록"):
-                if title.strip() and content.strip():
-                    notices = load_json(NOTICE_FILE)
-                    notices.insert(0, {
-                        "id": str(uuid.uuid4()),
-                        "title": title,
-                        "content": content,
-                        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M")
-                    })
-                    save_json(NOTICE_FILE, notices)
-                    st.success("등록 완료")
-                    st.rerun()
-    for n in load_json(NOTICE_FILE):
-        with st.expander(f"{n['date']} | {n['title']}"):
-            st.markdown(n["content"])
+# =============================================
+# 관리자: 공지 관리
+# =============================================
+if is_admin:
+    st.markdown("### 📋 공지 추가 / 관리")
+    new_notice = st.text_area("새 공지 작성", "")
+    if st.button("공지 등록"):
+        if new_notice.strip():
+            tz = timezone("Asia/Kolkata")
+            now = datetime.now(tz)
+            formatted = now.strftime("%m/%d %H:%M")
+            notices.append({"id": str(uuid.uuid4()), "text": new_notice.strip(), "time": formatted})
+            save_json(NOTICE_FILE, notices)
+            st.success("공지 등록 완료!")
+            st.experimental_rerun()
 
-# --- 지도 탭 ---
-if st.session_state.map_open:
-    cities = load_cities()
-    m = folium.Map(location=[18.52, 73.85], zoom_start=7)
+    if notices:
+        if st.button("모든 공지 삭제"):
+            save_json(NOTICE_FILE, [])
+            st.warning("모든 공지가 삭제되었습니다.")
+            st.experimental_rerun()
+
+st.markdown("---")
+
+# =============================================
+# 도시 선택
+# =============================================
+city_names = [c["city"] for c in cities]
+selected_city = st.selectbox("도시 선택", ["공연 없음"] + city_names, index=0)
+st.markdown("---")
+
+# =============================================
+# 관리자 모드: 도시 추가/관리
+# =============================================
+if is_admin:
+    st.subheader("🗺️ 투어 경로 관리")
+
+    # 도시 목록 표시
+    st.markdown("#### 현재 등록된 도시")
+    if cities:
+        for c in cities:
+            st.write(f"- **{c['city']}** | 공연일자: {c['perf_date']} | 장소: {c['venue']}")
+    else:
+        st.info("등록된 도시가 없습니다.")
+
+    st.markdown("#### 도시 추가 (도시 이름 제외됨)")
+    # 도시 이름 입력 필드를 제거하고 나머지만 유지
+    with st.form("add_city_form"):
+        perf_date = st.date_input("공연 날짜", date.today())
+        venue = st.text_input("공연 장소")
+        seats = st.text_input("좌석 수")
+        note = st.text_area("비고")
+        google_link = st.text_input("구글 지도 링크")
+        indoor = st.checkbox("실내 공연")
+        lat = st.number_input("위도 (Latitude)", value=18.52043, format="%.6f")
+        lon = st.number_input("경도 (Longitude)", value=73.856743, format="%.6f")
+
+        submitted = st.form_submit_button("도시 추가")
+        if submitted:
+            # 도시명은 입력하지 않으므로 자동 생성
+            new_city = {
+                "city": f"City-{len(cities) + 1}",
+                "venue": venue,
+                "seats": seats,
+                "note": note,
+                "google_link": google_link,
+                "indoor": indoor,
+                "date": str(perf_date),
+                "perf_date": perf_date.strftime("%m/%d"),
+                "lat": lat,
+                "lon": lon
+            }
+            cities.append(new_city)
+            save_json(CITY_FILE, cities)
+            st.success(f"{new_city['city']} 추가 완료!")
+            st.experimental_rerun()
+
+st.markdown("---")
+
+# =============================================
+# 지도 표시
+# =============================================
+st.subheader("📍 투어 경로")
+if not cities:
+    st.info("등록된 도시가 없습니다.")
+else:
+    m = folium.Map(location=[18.52043, 73.856743], zoom_start=6)
     for i, c in enumerate(cities):
-        color = "gray" if c.get("perf_date") and c["perf_date"] != "공연 없음" else "red"
+        popup_text = f"{c['city']}<br>{c['perf_date']}<br>{c['venue']}"
         folium.Marker(
-            (c["lat"], c["lon"]),
-            popup=f"<b>{c['city']}</b><br>{_('venue')}: {c['venue']}<br>{_('seats')}: {c['seats'] or '—'}<br>{_('note')}: {c['note'] or '—'}",
-            icon=folium.Icon(color=color, icon="music", prefix="fa")
+            [c["lat"], c["lon"]],
+            popup=popup_text,
+            icon=folium.Icon(color="red", icon="music", prefix="fa")
         ).add_to(m)
         if i < len(cities) - 1:
-            nxt = cities[i + 1]
-            AntPath([(c["lat"], c["lon"]), (nxt["lat"], nxt["lon"])], color="#e74c3c", weight=5).add_to(m)
-    st_folium(m, width=900, height=550)
+            next_c = cities[i + 1]
+            AntPath([[c["lat"], c["lon"]], [next_c["lat"], next_c["lon"]]],
+                    color="#e74c3c", weight=4).add_to(m)
 
-# --- 사이드바 ---
-with st.sidebar:
-    if not st.session_state.admin:
-        pw = st.text_input("관리자 비밀번호", type="password")
-        if st.button("로그인"):
-            if pw == "0009":
-                st.session_state.admin = True
-                st.rerun()
-            else:
-                st.error("비밀번호 오류")
-    else:
-        st.success("관리자 모드")
-        if st.button("로그아웃"):
-            st.session_state.admin = False
-            st.rerun()
+    st_folium(m, width=900, height=500)
+
+# =============================================
+# 자동 새로고침
+# =============================================
+st_autorefresh(interval=60 * 1000, key="data_refresh")
