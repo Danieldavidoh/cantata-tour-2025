@@ -54,7 +54,7 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS: 제목 아래 + 아이콘 잘림 방지 + 버튼만 남김 ---
+# --- 7. CSS: 제목 가까이 + 지도 버튼 아래 + 아이콘 잘림 방지 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -89,9 +89,15 @@ st.markdown("""
         50% { transform: translateY(-6px) rotate(4deg); } 
     }
 
-    /* 제목: 아이콘 바로 아래 */
-    .fixed-title { position: fixed; top: 18vh; left: 0; width: 100%; z-index: 1000; text-align: center; }
-    .main-title { font-size: 2.8em !important; font-weight: bold; text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; line-height: 1.2; }
+    /* 제목: 아이콘 바로 아래 (가까이) */
+    .fixed-title { 
+        position: fixed; top: 16vh; left: 0; width: 100%; z-index: 1000; 
+        text-align: center; margin-top: 5px;
+    }
+    .main-title { 
+        font-size: 2.8em !important; font-weight: bold; 
+        text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; line-height: 1.1; 
+    }
 
     /* 버튼: 작게, 위치 유지 */
     .btn-notice {
@@ -112,10 +118,10 @@ st.markdown("""
     }
     .btn-map:hover { background: #d32f2f; color: white; transform: scale(1.05); }
 
-    /* 지도: 고정 */
+    /* 지도: 버튼 바로 아래 (top: 42vh) */
     .fixed-map {
-        position: fixed; top: 44vh; left: 0; width: 100%; height: 56vh; z-index: 900;
-        visibility: hidden; opacity: 0; transition: all 0.5s ease;
+        position: fixed; top: 42vh; left: 0; width: 100%; height: 58vh; z-index: 900;
+        visibility: hidden; opacity: 0; transition: all 0.5s ease; margin-top: 0;
     }
     .fixed-map.show { visibility: visible; opacity: 1; }
 
@@ -154,7 +160,7 @@ for i in range(26):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 (아이콘 아래) ---
+# --- 제목 (아이콘 바로 아래) ---
 st.markdown('<div class="fixed-title">', unsafe_allow_html=True)
 title_html = f'<span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span>'
 st.markdown(f'<h1 class="main-title">{title_html}</h1>', unsafe_allow_html=True)
@@ -162,29 +168,19 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 공지 버튼 (왼쪽) ---
 st.markdown(f'<button class="btn-notice">{_("tab_notice")}</button>', unsafe_allow_html=True)
-if st.session_state.get("notice_open", False):
+if st.button("", key="trigger_notice", help="공지 열기"):
     st.session_state.notice_open = True
-else:
-    if "btn_notice" not in st.session_state:
-        st.session_state.btn_notice = False
-    if st.button("", key="hidden_notice_trigger"):
-        st.session_state.notice_open = True
-        st.session_state.map_open = False
-        st.rerun()
+    st.session_state.map_open = False
+    st.rerun()
 
 # --- 투어 경로 버튼 (오른쪽) ---
 st.markdown(f'<button class="btn-map">{_("tab_map")}</button>', unsafe_allow_html=True)
-if st.session_state.get("map_open", False):
+if st.button("", key="trigger_map", help="투어 경로 열기"):
     st.session_state.map_open = True
-else:
-    if "btn_map" not in st.session_state:
-        st.session_state.btn_map = False
-    if st.button("", key="hidden_map_trigger"):
-        st.session_state.map_open = True
-        st.session_state.notice_open = False
-        st.rerun()
+    st.session_state.notice_open = False
+    st.rerun()
 
-# --- 지도 (고정) ---
+# --- 지도 (버튼 바로 아래) ---
 map_class = "fixed-map"
 if st.session_state.map_open:
     map_class += " show"
@@ -208,7 +204,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 공지 내용 (지도 아래) ---
 if st.session_state.notice_open:
-    st.markdown('<div style="position:fixed; top:44vh; left:0; width:100%; height:56vh; overflow-y:auto; padding:15px; background:rgba(255,255,255,0.9); z-index:800;">', unsafe_allow_html=True)
+    st.markdown('<div style="position:fixed; top:42vh; left:0; width:100%; height:58vh; overflow-y:auto; padding:15px; background:rgba(255,255,255,0.9); z-index:800;">', unsafe_allow_html=True)
     if st.session_state.admin:
         with st.expander("공지 작성"):
             with st.form("notice_form", clear_on_submit=True):
