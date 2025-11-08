@@ -34,7 +34,7 @@ LANG = {
             "add_city": "शहर जोड़ें", "city": "शहर", "latitude": "अक्षांश", "longitude": "देशांतर" }
 }
 # --- 4. 세션 상태 ---
-defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "adding_city": False}
+defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False}
 for k, v in defaults.items():
     if k not in st.session_state: st.session_state[k] = v
 _ = lambda k: LANG.get(st.session_state.lang, LANG["ko"]).get(k, k)
@@ -191,37 +191,37 @@ if st.session_state.notice_open:
 if st.session_state.map_open:
     cities = load_json(CITY_FILE)
     if st.session_state.admin:
-        with st.expander(_("add_city")):
-            with st.form("city_form", clear_on_submit=True):
-                city = st.text_input(_("city"))
-                venue = st.text_input(_("venue"))
-                seats = st.text_input(_("seats"))
-                note = st.text_input(_("note"))
-                google_link = st.text_input(_("google_link"))
-                indoor = st.checkbox(_("indoor"))
-                perf_date = st.date_input(_("perf_date"))
-                lat = st.number_input(_("latitude"), format="%.4f")
-                lon = st.number_input(_("longitude"), format="%.4f")
-                if st.form_submit_button("추가"):
-                    if city and venue:
-                        new_city = {
-                            "city": city,
-                            "venue": venue,
-                            "seats": seats,
-                            "note": note,
-                            "google_link": google_link,
-                            "indoor": indoor,
-                            "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
-                            "perf_date": str(perf_date),
-                            "lat": lat,
-                            "lon": lon
-                        }
-                        cities.append(new_city)
-                        save_json(CITY_FILE, cities)
-                        st.success("도시 추가 완료!")
-                        st.rerun()
-                    else:
-                        st.warning("도시와 공연 장소를 입력하세요.")
+        st.header(_("add_city"))
+        with st.form("city_form", clear_on_submit=True):
+            city = st.text_input(_("city"))
+            venue = st.text_input(_("venue"))
+            seats = st.text_input(_("seats"))
+            note = st.text_input(_("note"))
+            google_link = st.text_input(_("google_link"))
+            indoor = st.checkbox(_("indoor"))
+            perf_date = st.date_input(_("perf_date"))
+            lat = st.number_input(_("latitude"), format="%.4f")
+            lon = st.number_input(_("longitude"), format="%.4f")
+            if st.form_submit_button("추가"):
+                if city and venue:
+                    new_city = {
+                        "city": city,
+                        "venue": venue,
+                        "seats": seats,
+                        "note": note,
+                        "google_link": google_link,
+                        "indoor": indoor,
+                        "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
+                        "perf_date": str(perf_date),
+                        "lat": lat,
+                        "lon": lon
+                    }
+                    cities.append(new_city)
+                    save_json(CITY_FILE, cities)
+                    st.success("도시 추가 완료!")
+                    st.rerun()
+                else:
+                    st.warning("도시와 공연 장소를 입력하세요.")
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
         lat = c.get("lat", 18.5204)
