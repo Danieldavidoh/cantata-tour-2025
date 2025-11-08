@@ -143,23 +143,36 @@ if st.session_state.notice_open:
                 save_json(NOTICE_FILE, data)
                 st.rerun()
 
-# --- 지도 ---
+# --- 지도 (관리자 편집 기능 제거) ---
 if st.session_state.map_open:
     cities = load_json(CITY_FILE)
 
-    # 이전에 있던 '도시 추가' 및 '도시 목록 관리' 기능이 모두 삭제되었습니다.
+    # 이전에 있던 '도시 추가' 및 '도시 목록 관리' 기능은 관리자 요청에 따라 완전히 제거되었습니다.
 
     # --- 지도 렌더링 ---
+    # 지도의 중심 좌표는 Pune (18.5204, 73.8567)로 설정됩니다.
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
         lat, lon = c["lat"], c["lon"]
+        # perf_date가 없으면 'red'로 표시 (미정), 있으면 'gray'로 표시
         color = "red" if not c.get("perf_date") else "gray"
         indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
+        # 마커 팝업 내용 구성
         popup_html = f"<b>{c['city']}</b><br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}"
-        folium.Marker((lat, lon), popup=folium.Popup(popup_html, max_width=300), icon=folium.Icon(color=color, icon="music", prefix="fa")).add_to(m)
+        
+        # 마커 추가
+        folium.Marker(
+            (lat, lon), 
+            popup=folium.Popup(popup_html, max_width=300), 
+            icon=folium.Icon(color=color, icon="music", prefix="fa")
+        ).add_to(m)
+        
+        # 도시 간 이동 경로(개미선) 추가
         if i < len(cities) - 1:
             nxt = cities[i+1]
             AntPath([(lat, lon), (nxt["lat"], nxt["lon"])], color="#e74c3c", weight=6, opacity=0.7).add_to(m)
+            
+    # Streamlit에 Folium 지도 표시
     st_folium(m, width=900, height=550, key="tour_map")
 
 
