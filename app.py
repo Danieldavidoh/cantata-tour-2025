@@ -54,7 +54,7 @@ DEFAULT_CITIES = [
 if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 CITY_COORDS = { "Mumbai": (19.0760, 72.8777), "Pune": (18.5204, 73.8567), "Nagpur": (21.1458, 79.0882) }
 
-# --- 7. CSS + 제목 위 여백 최대 (모바일 기준 중간 위치) ---
+# --- 7. CSS: 제목과 공지 사이 공간 0 ---
 st.markdown("""
 <style>
     [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-position: center; background-attachment: fixed; padding-top: 0 !important; margin: 0 !important; }
@@ -76,7 +76,11 @@ st.markdown("""
         margin: 0 !important;
         line-height: 1.2;
     }
-    .content-area { margin-top: 40vh !important; padding: 0 15px; }
+    .content-area { 
+        margin-top: 0 !important; 
+        padding-top: 0 !important; 
+        padding: 10px 15px;
+    }
     .tab-button {
         background: rgba(255,255,255,0.95);
         padding: 16px;
@@ -103,7 +107,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 눈송이 (52개로 배증 - 끊김 없이) ---
+# --- 눈송이 (52개) ---
 for i in range(52):
     left = random.randint(0, 100)
     duration = random.randint(10, 20)
@@ -111,35 +115,16 @@ for i in range(52):
     delay = random.uniform(0, 10)
     st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
-# --- 제목 (최상단, 여백 최대) ---
+# --- 제목 (최상단) ---
 st.markdown('<div class="fixed-title">', unsafe_allow_html=True)
 title_html = f'<span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span>'
 st.markdown(f'<h1 class="main-title">{title_html}</h1>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 모바일 햄버거 메뉴 ---
-st.markdown(f'''
-<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.query_selector('.overlay').classList.toggle('open');">☰</button>
-<div class="overlay" onclick="document.querySelector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
-<div class="sidebar-mobile">
-    <h3 style="color:white;">{_("menu")}</h3>
-    <select onchange="window.location.href='?lang='+this.value" style="width:100%; padding:8px; margin:10px 0;">
-        <option value="ko" {'selected' if st.session_state.lang=='ko' else ''}>한국어</option>
-        <option value="en" {'selected' if st.session_state.lang=='en' else ''}>English</option>
-        <option value="hi" {'selected' if st.session_state.lang=='hi' else ''}>हिंदी</option>
-    </select>
-    {'''
-        <input type="password" placeholder="비밀번호" id="mobile_pw" style="width:100%; padding:8px; margin:10px 0;">
-        <button onclick="if(document.getElementById(\'mobile_pw\').value==\'0009\') window.location.href=\'?admin=true\'; else alert(\'비밀번호 오류\');" style="width:100%; padding:10px; background:#e74c3c; color:white; border:none; border-radius:8px;">{_("login")}</button>
-    ''' if not st.session_state.admin else f'''
-        <button onclick="window.location.href=\'?admin=false\'" style="width:100%; padding:10px; background:#27ae60; color:white; border:none; border-radius:8px; margin:10px 0;">{_("logout")}</button>
-    ''' }
-</div>
-''', unsafe_allow_html=True)
-
-# --- 내용 시작 ---
+# --- 내용 시작 (제목 바로 아래) ---
 st.markdown('<div class="content-area">', unsafe_allow_html=True)
-# --- 공지 버튼 (토글) ---
+
+# --- 공지 버튼 ---
 if st.button(_(f"tab_notice"), key="notice_toggle_btn", use_container_width=True):
     st.session_state.notice_open = not st.session_state.notice_open
     st.session_state.map_open = False
@@ -151,7 +136,7 @@ if st.session_state.notice_open:
                 content = st.text_area("내용", key="notice_content")
                 img = st.file_uploader("이미지", type=["png", "jpg", "jpeg"], key="notice_img")
                 file = st.file_uploader("첨부 파일", key="notice_file")
-                if st.form_submit_button("등록", key="notice_submit"):
+                if st.form_submit_button("등록"):
                     if title.strip() and content.strip():
                         img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{img.name}") if img else None
                         file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.name}") if file else None
@@ -175,13 +160,14 @@ if st.session_state.notice_open:
                 st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">다운로드</a>', unsafe_allow_html=True)
             if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
                 data.pop(i); save_json(NOTICE_FILE, data); st.rerun()
-# --- 투어 경로 버튼 (토글) ---
+
+# --- 투어 경로 버튼 ---
 if st.button(_(f"tab_map"), key="map_toggle_btn", use_container_width=True):
     st.session_state.map_open = not st.session_state.map_open
     st.session_state.notice_open = False
 if st.session_state.map_open:
     if st.session_state.admin:
-        if st.button(_("add_city"), key="add_city_btn"):
+        if st.button(_("add_city")):
             st.session_state.adding_city = True
         if st.session_state.get("adding_city", False):
             with st.container():
@@ -196,11 +182,11 @@ if st.session_state.map_open:
                         note = st.text_area(_("note"), key="add_note")
                         col1, col2, col3 = st.columns(3)
                         with col1:
-                            if st.form_submit_button(_("edit"), key="edit_city_btn"):
+                            if st.form_submit_button(_("edit")):
                                 st.session_state.edit_mode = True
                                 st.rerun()
                         with col2:
-                            if st.form_submit_button(_("save"), key="save_city_btn"):
+                            if st.form_submit_button(_("save")):
                                 new_city = { "city": city_name, "venue": venue, "seats": str(seats), "indoor": indoor == _(f"indoor"), "note": note, "google_link": google_link, "perf_date": str(perf_date), "date": datetime.now().strftime("%m/%d %H:%M") }
                                 data = load_json(CITY_FILE)
                                 data.append(new_city)
@@ -209,10 +195,9 @@ if st.session_state.map_open:
                                 st.success("도시 추가 완료!")
                                 st.rerun()
                         with col3:
-                            if st.form_submit_button(_("delete"), key="remove_city_btn"):
+                            if st.form_submit_button(_("cancel")):
                                 st.session_state.adding_city = False
                                 st.rerun()
-    # --- 지도 ---
     cities = load_json(CITY_FILE)
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
     for i, c in enumerate(cities):
@@ -227,7 +212,28 @@ if st.session_state.map_open:
             nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
             AntPath([coords, nxt_coords], color="#e74c3c", weight=6, opacity=0.3 if not is_future else 1.0).add_to(m)
     st_folium(m, width=900, height=550, key="tour_map")
+
 st.markdown('</div>', unsafe_allow_html=True)
+
+# --- 모바일 햄버거 메뉴 ---
+st.markdown(f'''
+<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">☰</button>
+<div class="overlay" onclick="document.querySelector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
+<div class="sidebar-mobile">
+    <h3 style="color:white;">{_("menu")}</h3>
+    <select onchange="window.location.href='?lang='+this.value" style="width:100%; padding:8px; margin:10px 0;">
+        <option value="ko" {'selected' if st.session_state.lang=="ko" else ''}>한국어</option>
+        <option value="en" {'selected' if st.session_state.lang=="en" else ''}>English</option>
+        <option value="hi" {'selected' if st.session_state.lang=="hi" else ''}>हिंदी</option>
+    </select>
+    {'''
+        <input type="password" placeholder="비밀번호" id="mobile_pw" style="width:100%; padding:8px; margin:10px 0;">
+        <button onclick="if(document.getElementById(\'mobile_pw\').value==\'0009\') window.location.href=\'?admin=true\'; else alert(\'비밀번호 오류\');" style="width:100%; padding:10px; background:#e74c3c; color:white; border:none; border-radius:8px;">{_("login")}</button>
+    ''' if not st.session_state.admin else f'''
+        <button onclick="window.location.href=\'?admin=false\'" style="width:100%; padding:10px; background:#27ae60; color:white; border:none; border-radius:8px; margin:10px 0;">{_("logout")}</button>
+    ''' }
+</div>
+''', unsafe_allow_html=True)
 
 # --- 사이드바 (PC) ---
 with st.sidebar:
