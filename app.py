@@ -82,7 +82,7 @@ CITY_COORDS = {
     "Nagpur": (21.1458, 79.0882)
 }
 
-# --- 7. CSS: 제목 3배 위로 + 아이콘 밀착 ---
+# --- 7. CSS: 헤더 전체 (아이콘 + 제목 + 버튼) 완전 밀착 + 위로 3배 이동 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -96,19 +96,26 @@ st.markdown("""
         overflow-x: hidden;
     }
 
-    /* 크리스마스 아이콘 - 위로 올리기 */
+    /* 헤더 전체 블록: 아이콘 + 제목 + 버튼 → 완전 밀착 + 위로 3배 이동 */
+    .header-block {
+        position: relative;
+        margin-top: -8.4em !important;   /* 2.8em × 3 = 8.4em 위로 */
+        text-align: center;
+        z-index: 20;
+        margin-bottom: 0 !important;
+        padding: 0 !important;
+        line-height: 1;
+    }
+
+    /* 크리스마스 아이콘 */
     .christmas-decoration {
-        position: absolute;
-        top: -6vh !important;
-        left: 0;
-        width: 100%;
-        z-index: 999;
         display: flex;
         justify-content: center;
         gap: 12px;
         pointer-events: none;
         margin: 0 !important;
         padding: 0 !important;
+        margin-bottom: 4px !important;
     }
     .christmas-decoration i {
         color: #fff;
@@ -128,45 +135,41 @@ st.markdown("""
         50% {transform: translateY(-6px) rotate(4deg);}
     }
 
-    /* 제목 - 3배 위로 이동 (2.8em × 3 = 8.4em) */
+    /* 제목 */
     .main-title {
         font-size: 2.8em !important;
         font-weight: bold;
-        text-align: center;
         text-shadow: 0 3px 8px rgba(0,0,0,0.6);
         margin: 0 !important;
         padding: 0 !important;
         line-height: 1.1;
-        position: relative;
-        z-index: 20;
-        margin-top: -8.4em !important;   /* 3배 위로 */
     }
 
-    /* 버튼 라인 - 제목 아래 딱 붙음 */
+    /* 버튼 라인 - 제목 바로 아래 딱 붙음 */
     .button-row {
         display: flex;
         justify-content: center;
         gap: 20px;
-        margin: 0 !important;
+        margin: 0 auto !important;
         padding: 5px 15px !important;
         background: rgba(0,0,0,0.2);
         border-radius: 25px;
         width: fit-content;
-        margin: 0 auto !important;
+        line-height: 1;
     }
     .tab-btn {
         background: rgba(255,255,255,0.96);
         color: #c62828;
         border: none;
         border-radius: 20px;
-        padding: 10px 20px;
+        padding: 8px 18px;
         font-weight: bold;
         font-size: 1.1em;
         cursor: pointer;
         box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         transition: all 0.3s ease;
         flex: 1;
-        max-width: 200px;
+        max-width: 180px;
     }
     .tab-btn:hover {
         background: #d32f2f;
@@ -231,7 +234,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 크리스마스 아이콘 (위로 올림) ---
+# --- 헤더 전체 블록: 아이콘 + 제목 + 버튼 (완전 밀착 + 위로 3배 이동) ---
+st.markdown('<div class="header-block">', unsafe_allow_html=True)
+
+# 크리스마스 아이콘
 st.markdown('''
 <div class="christmas-decoration">
     <i class="fas fa-gift"></i>
@@ -244,19 +250,11 @@ st.markdown('''
 </div>
 ''', unsafe_allow_html=True)
 
-# --- 눈송이 52개 ---
-for i in range(52):
-    left = random.randint(0, 100)
-    duration = random.randint(10, 20)
-    size = random.uniform(0.8, 1.4)
-    delay = random.uniform(0, 10)
-    st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
-
-# --- 제목 (3배 위로 이동) ---
+# 제목
 title_html = f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>'
 st.markdown(title_html, unsafe_allow_html=True)
 
-# --- 버튼 라인 ---
+# 버튼 라인
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col1, col2 = st.columns([1, 1])
 with col1:
@@ -270,6 +268,16 @@ with col2:
         st.session_state.notice_open = False
         st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)  # .header-block 종료
+
+# --- 눈송이 52개 ---
+for i in range(52):
+    left = random.randint(0, 100)
+    duration = random.randint(10, 20)
+    size = random.uniform(0.8, 1.4)
+    delay = random.uniform(0, 10)
+    st.markdown(f"<div class='snowflake' style='left:{left}vw; animation-duration:{duration}s; font-size:{size}em; animation-delay:{delay}s;'>❄</div>", unsafe_allow_html=True)
 
 # --- 공지 (기본 접힘) ---
 if st.session_state.notice_open:
