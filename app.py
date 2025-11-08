@@ -88,7 +88,8 @@ st.markdown("""
         font-size: 2.8em !important; font-weight: bold; text-align: center;
         text-shadow: 0 3px 8px rgba(0,0,0,0.6); 
         margin: 0 !important; padding: 0 !important; line-height: 1.2;
-        margin-top: 0 !important;  /* 아이콘과 간격 0 */
+        margin-top: 0 !important;      /* 아이콘과 간격 0 */
+        margin-bottom: 0 !important;   /* 버튼과 간격 0 */
     }
 
     /* 버튼 라인 - 제목 바로 아래 딱 붙음 */
