@@ -82,7 +82,7 @@ CITY_COORDS = {
     "Nagpur": (21.1458, 79.0882)
 }
 
-# --- 7. CSS: 헤더 전체 (아이콘 + 제목 + 버튼) 완전 밀착 + 위로 3배 이동 ---
+# --- 7. CSS: 버튼 오류 해결 + 전체 레이아웃 ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -96,10 +96,10 @@ st.markdown("""
         overflow-x: hidden;
     }
 
-    /* 헤더 전체 블록: 아이콘 + 제목 + 버튼 → 완전 밀착 + 위로 3배 이동 */
+    /* 헤더 블록 */
     .header-block {
         position: relative;
-        margin-top: -8.4em !important;   /* 2.8em × 3 = 8.4em 위로 */
+        margin-top: -8.4em !important;
         text-align: center;
         z-index: 20;
         margin-bottom: 0 !important;
@@ -145,7 +145,7 @@ st.markdown("""
         line-height: 1.1;
     }
 
-    /* 버튼 라인 - 제목 바로 아래 딱 붙음 */
+    /* 버튼 라인 */
     .button-row {
         display: flex;
         justify-content: center;
@@ -155,26 +155,27 @@ st.markdown("""
         background: rgba(0,0,0,0.2);
         border-radius: 25px;
         width: fit-content;
-        line-height: 1;
     }
+
+    /* 버튼 오류 해결: use_container_width=False + width:100% 강제 */
     .tab-btn {
-        background: rgba(255,255,255,0.96);
-        color: #c62828;
-        border: none;
-        border-radius: 20px;
-        padding: 8px 18px;
-        font-weight: bold;
-        font-size: 1.1em;
-        cursor: pointer;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        transition: all 0.3s ease;
-        flex: 1;
-        max-width: 180px;
+        background: rgba(255,255,255,0.96) !important;
+        color: #c62828 !important;
+        border: none !important;
+        border-radius: 20px !important;
+        padding: 8px 18px !important;
+        font-weight: bold !important;
+        font-size: 1.1em !important;
+        cursor: pointer !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+        transition: all 0.3s ease !important;
+        width: 100% !important;   /* 강제 전체 너비 */
+        text-align: center !important;
     }
     .tab-btn:hover {
-        background: #d32f2f;
-        color: white;
-        transform: translateY(-2px);
+        background: #d32f2f !important;
+        color: white !important;
+        transform: translateY(-2px) !important;
     }
 
     /* 눈송이 */
@@ -234,7 +235,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 헤더 전체 블록: 아이콘 + 제목 + 버튼 (완전 밀착 + 위로 3배 이동) ---
+# --- 헤더 전체 블록 ---
 st.markdown('<div class="header-block">', unsafe_allow_html=True)
 
 # 크리스마스 아이콘
@@ -254,16 +255,16 @@ st.markdown('''
 title_html = f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>'
 st.markdown(title_html, unsafe_allow_html=True)
 
-# 버튼 라인
+# 버튼 라인 (오류 해결: use_container_width=False)
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col1, col2 = st.columns([1, 1])
 with col1:
-    if st.button(_("tab_notice"), key="btn_notice", use_container_width=True):
+    if st.button(_("tab_notice"), key="btn_notice", use_container_width=False):
         st.session_state.notice_open = not st.session_state.notice_open
         st.session_state.map_open = False
         st.rerun()
 with col2:
-    if st.button(_("tab_map"), key="btn_map", use_container_width=True):
+    if st.button(_("tab_map"), key="btn_map", use_container_width=False):
         st.session_state.map_open = not st.session_state.map_open
         st.session_state.notice_open = False
         st.rerun()
@@ -335,10 +336,8 @@ if st.session_state.map_open:
         """,
         unsafe_allow_html=True,
     )
-
     cities = load_json(CITY_FILE)
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
-
     for i, c in enumerate(cities):
         coords = CITY_COORDS.get(c["city"], (18.5204, 73.8567))
         lat, lon = coords
@@ -358,12 +357,10 @@ if st.session_state.map_open:
             popup=folium.Popup(popup_html, max_width=300),
             icon=folium.Icon(color=color, icon="music", prefix="fa")
         ).add_to(m)
-
         if i < len(cities) - 1:
             nxt_coords = CITY_COORDS.get(cities[i+1]["city"], (18.5204, 73.8567))
             AntPath([coords, nxt_coords], color="#e74c3c", weight=6,
                     opacity=0.3 if not is_future else 1.0).add_to(m)
-
     st_folium(m, width=1200, height=800, key="tour_map_full", returned_objects=[])
 
 # --- 모바일 햄버거 메뉴 ---
@@ -393,7 +390,6 @@ with st.sidebar:
     if lang_map[sel] != st.session_state.lang:
         st.session_state.lang = lang_map[sel]
         st.rerun()
-
     if not st.session_state.admin:
         pw = st.text_input("비밀번호", type="password", key="pw_input")
         if st.button("로그인", key="login_btn"):
