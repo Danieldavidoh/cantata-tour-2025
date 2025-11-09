@@ -32,7 +32,7 @@ if not st.session_state.get("admin", False):
 # --- 파일 경로 ---
 NOTICE_FILE = "notice.json"
 CITY_FILE = "cities.json"
-USER_POST_FILE = "user_posts.json" # <-- 새 파일 구조
+USER_POST_FILE = "user_posts.json" # <-- 사용자 포스트 저장소
 
 # --- 다국어 설정 ---
 LANG = {
@@ -85,7 +85,8 @@ LANG = {
         "post_content": "포스트 내용", # <-- 추가
         "media_attachment": "사진/동영상 첨부", # <-- 추가
         "post_success": "포스트가 성공적으로 업로드되었습니다!", # <-- 추가
-        "no_posts": "현재 포스트가 없습니다." # <-- 추가
+        "no_posts": "현재 포스트가 없습니다.", # <-- 추가
+        "admin_only_files": "첨부 파일은 관리자만 확인 가능합니다." # <-- 추가
     },
     "en": {
         "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
@@ -136,7 +137,8 @@ LANG = {
         "post_content": "Post Content",
         "media_attachment": "Attach Photo/Video",
         "post_success": "Post uploaded successfully!",
-        "no_posts": "No posts available."
+        "no_posts": "No posts available.",
+        "admin_only_files": "Attached files can only be viewed by Admin."
     },
     "hi": {
         "title_cantata": "कैंटाटा टूर", "title_year": "२०२५", "title_region": "महाराष्ट्र",
@@ -187,7 +189,8 @@ LANG = {
         "post_content": "पोस्ट सामग्री",
         "media_attachment": "फोटो/वीडियो संलग्न करें",
         "post_success": "पोस्ट सफलतापूर्वक अपलोड हुई!",
-        "no_posts": "कोई पोस्ट उपलब्ध नहीं है।"
+        "no_posts": "कोई पोस्ट उपलब्ध नहीं है।",
+        "admin_only_files": "संलग्न फ़ाइलें केवल व्यवस्थापक द्वारा देखी जा सकती हैं।"
     }
 }
 
@@ -228,7 +231,7 @@ def save_uploaded_files(uploaded_files):
                 "size": uploaded_file.size
             })
         except Exception as e:
-            st.error(f"파일 저장 오류: {e}")
+            # Streamlit Alert 메시지 숨김 처리
             pass
             
     return file_info_list
@@ -246,15 +249,20 @@ def get_file_as_base64(file_path):
         return None
 
 # --- 미디어 인라인 표시 및 다운로드 헬퍼 함수 (재사용성을 위해 별도 정의) ---
-def display_and_download_file(file_info, notice_id, is_admin=False):
+def display_and_download_file(file_info, notice_id, is_admin=False, is_user_post=False):
     file_size_kb = round(file_info['size'] / 1024, 1)
     file_type = file_info['type']
     file_path = file_info['path']
     file_name = file_info['name']
     key_prefix = "admin" if is_admin else "user"
+    
+    if is_user_post and not is_admin:
+        # 사용자 포스트의 파일은 일반 모드에서 숨김 (관리자만 확인 가능)
+        st.markdown(f"**{_('admin_only_files')}**")
+        return
 
     if os.path.exists(file_path):
-        # 1. 이미지 또는 비디오 파일은 인라인으로 표시
+        # 1. 이미지 파일은 인라인으로 표시
         if file_type.startswith('image/'):
             base64_data = get_file_as_base64(file_path)
             if base64_data:
@@ -266,20 +274,24 @@ def display_and_download_file(file_info, notice_id, is_admin=False):
             else:
                 # Base64 인코딩 실패 시 다운로드 버튼 표시
                 st.markdown(f"**🖼️ {file_name} ({file_size_kb} KB)** (다운로드 버튼)")
-                st.download_button(
-                    label=f"⬇️ {file_name} 다운로드",
-                    data=open(file_path, "rb").read(),
-                    file_name=file_name,
-                    mime=file_type,
-                    key=f"{key_prefix}_download_{notice_id}_{file_name}_fallback"
-                )
+                try:
+                    with open(file_path, "rb") as f:
+                        st.download_button(
+                            label=f"⬇️ {file_name} 다운로드 (인라인 실패)",
+                            data=f.read(),
+                            file_name=file_name,
+                            mime=file_type,
+                            key=f"{key_prefix}_download_{notice_id}_{file_name}_imgfallback"
+                        )
+                except Exception:
+                    pass
         
+        # 2. 비디오 파일은 st.video로 표시
         elif file_type.startswith('video/'):
-            # 비디오 파일은 st.video로 표시
             st.video(open(file_path, 'rb').read(), format=file_type, start_time=0)
             st.markdown(f"**🎬 {file_name} ({file_size_kb} KB)**")
             
-        # 2. 기타 파일은 다운로드 버튼으로 표시
+        # 3. 기타 파일은 다운로드 버튼으로 표시
         else:
             icon = "📄"
             try:
@@ -627,7 +639,7 @@ with tab1:
                     if attached_files:
                         st.markdown(f"**{_('attached_files')}:**")
                         for file_info in attached_files:
-                            display_and_download_file(file_info, notice_id, is_admin=True)
+                            display_and_download_file(file_info, notice_id, is_admin=True, is_user_post=False)
                     else:
                         st.markdown(f"**{_('attached_files')}:** {_('no_files')}")
                 
@@ -647,8 +659,8 @@ with tab1:
                                 play_alert_sound()
                                 safe_rerun()
         
-    else:
-        # 2. 일반 사용자 공지사항 & 포스트 보기
+    # 2. 일반 사용자 공지사항 & 포스트 보기
+    if not st.session_state.admin:
         st.subheader(f"📢 {_('tab_notice')}")
         
         # --- 공지사항 목록 ---
@@ -678,59 +690,84 @@ with tab1:
                     if attached_files:
                         st.markdown(f"**{_('attached_files')}:**")
                         for file_info in attached_files:
-                            display_and_download_file(file_info, notice_id, is_admin=False)
+                            display_and_download_file(file_info, notice_id, is_admin=False, is_user_post=False)
 
         st.markdown("---")
-        st.subheader(f"📸 {_('user_posts')}") # <-- 사용자 포스트 섹션
-        
-        # --- 사용자 포스트 작성 폼 (일반 사용자 모두 허용) ---
-        with st.expander(_("new_post"), expanded=False):
-            with st.form("user_post_form", clear_on_submit=True):
-                post_content = st.text_area(_("post_content"), placeholder="여행 후기, 사진 공유 등 자유롭게 작성하세요.")
-                uploaded_media = st.file_uploader(
-                    _("media_attachment"),
-                    type=["png", "jpg", "jpeg", "mp4", "mov"], # 이미지 및 동영상 허용
-                    accept_multiple_files=True,
-                    key="user_media_uploader"
-                )
-                
-                post_submitted = st.form_submit_button(_("register"))
-                
-                if post_submitted and (post_content or uploaded_media):
-                    media_info_list = save_uploaded_files(uploaded_media)
-                    
-                    new_post = {
-                        "id": str(uuid.uuid4()),
-                        "content": post_content,
-                        "files": media_info_list, 
-                        "date": datetime.now(timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S")
-                    }
-                    user_posts.insert(0, new_post)
-                    save_json(USER_POST_FILE, user_posts)
-                    play_alert_sound()
-                    safe_rerun()
-                elif post_submitted:
-                    # st.warning("내용 또는 파일을 첨부해야 합니다.") # 숨김 처리
-                    pass
-        
-        # --- 사용자 포스트 목록 표시 ---
-        valid_posts = [p for p in user_posts if isinstance(p, dict) and (p.get('content') or p.get('files'))]
-        if not valid_posts:
-            st.write(_("no_posts")) # st.write로 변경하여 CSS에 숨겨지지 않도록 함
-        else:
-            posts_to_display = sorted(valid_posts, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
+    
+    # 3. 사용자 포스트 섹션 (관리자/일반 사용자 공통)
+    st.subheader(f"📸 {_('user_posts')}") 
+    
+    # --- 사용자 포스트 작성 폼 (일반 사용자 모두 허용) ---
+    with st.expander(_("new_post"), expanded=False):
+        with st.form("user_post_form", clear_on_submit=True):
+            post_content = st.text_area(_("post_content"), placeholder="여행 후기, 사진 공유 등 자유롭게 작성하세요.")
+            uploaded_media = st.file_uploader(
+                _("media_attachment"),
+                type=["png", "jpg", "jpeg", "mp4", "mov"], # 이미지 및 동영상 허용
+                accept_multiple_files=True,
+                key="user_media_uploader"
+            )
             
+            post_submitted = st.form_submit_button(_("register"))
+            
+            if post_submitted and (post_content or uploaded_media):
+                # 파일 저장 및 정보 수집 (클라우드 저장소에 저장된다고 가정)
+                media_info_list = save_uploaded_files(uploaded_media) 
+                
+                new_post = {
+                    "id": str(uuid.uuid4()),
+                    "content": post_content,
+                    "files": media_info_list, 
+                    "date": datetime.now(timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S")
+                }
+                user_posts.insert(0, new_post)
+                save_json(USER_POST_FILE, user_posts)
+                play_alert_sound()
+                safe_rerun()
+            elif post_submitted:
+                pass
+    
+    # --- 사용자 포스트 목록 표시 ---
+    valid_posts = [p for p in user_posts if isinstance(p, dict) and (p.get('content') or p.get('files'))]
+    
+    if st.session_state.admin:
+        # 관리자 모드: 모든 포스트 표시
+        posts_to_display = sorted(valid_posts, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
+        st.markdown("---")
+        st.markdown(f"**관리자**는 총 {len(posts_to_display)}개의 사용자 포스트를 확인할 수 있습니다.")
+        for post in posts_to_display:
+            post_id = post['id']
+            
+            with st.expander(f"익명 사용자 포스트 - *{post.get('date', 'N/A')[:16]}*", expanded=False):
+                st.markdown(f'<div class="notice-content-box">{post.get("content", _("no_content"))}</div>', unsafe_allow_html=True)
+                
+                attached_media = post.get('files', [])
+                if attached_media:
+                    st.markdown(f"**{_('attached_files')} (클라우드 저장소)**:")
+                    for file_info in attached_media:
+                        # 관리자는 파일 확인 가능
+                        display_and_download_file(file_info, post_id, is_admin=True, is_user_post=True)
+                else:
+                    st.markdown(f"**{_('attached_files')}:** {_('no_files')}")
+                    
+                st.markdown("---")
+    
+    else:
+        # 일반 사용자 모드: 포스트 목록만 표시 (첨부 파일은 관리자만 확인 가능)
+        posts_to_display = sorted(valid_posts, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
+        
+        if not posts_to_display:
+            st.write(_("no_posts"))
+        else:
             for post in posts_to_display:
                 post_id = post['id']
                 
                 st.markdown(f"**익명 사용자** - *{post.get('date', 'N/A')[:16]}*")
                 st.markdown(f'<div class="notice-content-box">{post.get("content", _("no_content"))}</div>', unsafe_allow_html=True)
                 
-                # --- 미디어 파일 표시 (이미지/비디오 인라인) ---
-                attached_media = post.get('files', [])
-                if attached_media:
-                    for file_info in attached_media:
-                        display_and_download_file(file_info, post_id, is_admin=False)
+                # 일반 사용자는 파일이 첨부되었는지 여부와 함께 경고 메시지 표시
+                if post.get('files'):
+                    st.markdown(f"**{_('attached_files')}:** {_('admin_only_files')}")
                 
                 st.markdown("---")
 
@@ -1054,21 +1091,6 @@ with tab2:
     st_folium(m, width=1000, height=600)
     
     # 지도 아래 텍스트 제거 완료
-
-
-# --- 알림음 재생 스크립트 ---
-# (알림음 재생 기능은 유지되며, UI에 텍스트를 출력하지 않습니다.)
-if st.session_state.play_sound:
-    # 플래그를 즉시 재설정
-    st.session_state.play_sound = False
-    
-    # 크리스마스 캐롤 링크로 변경
-    st.markdown("""
-        <audio autoplay>
-            <source src="https://assets.mixkit.co/sfx/preview/mixkit-carol-of-the-bells-christmas-music-1447.mp3" type="audio/mp3">
-            Your browser does not support the audio element.
-        </audio>
-    """, unsafe_allow_html=True)
 
 
 # --- CSS 적용 (최하단에 위치시켜야 함) ---
