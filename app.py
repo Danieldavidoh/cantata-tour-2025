@@ -23,15 +23,6 @@ except ImportError:
 
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
-# --- 자동 새로고침 ---
-if not st.session_state.get("admin", False):
-    st_autorefresh(interval=10000, key="auto_refresh_user")
-
-# --- 파일 경로 ---
-NOTICE_FILE = "notice.json"
-CITY_FILE = "cities.json"
-USER_POST_FILE = "user_posts.json"
-
 # --- 다국어 설정 ---
 LANG = {
     "ko": {
@@ -206,6 +197,7 @@ for k, v in defaults.items():
 # --- 번역 함수 ---
 def _(key):
     lang = st.session_state.lang if isinstance(st.session_state.lang, str) else "ko"
+    # 수정: LANG 딕셔너리에서 키를 찾지 못할 경우 대비
     return LANG.get(lang, LANG["ko"]).get(key, key)
 
 # --- 파일 첨부/저장 함수 ---
@@ -503,7 +495,7 @@ def safe_rerun():
     else:
         pass
 
-# 요청 반영: 제목 위에 크리스마스 아이콘 추가 (SyntaxError 수정)
+# 요청 반영: 제목 위에 크리스마스 아이콘 추가
 christmas_icons = {
     "gift": "🎁", 
     "candy": "🍭", 
@@ -537,7 +529,7 @@ for _ in range(7): # 7개의 아이콘 생성
             z-index: 101; /* 제목 위에 오도록 */
         ">{icon_char}</span>
     """
-# f-string 오류 수정을 위해 title_html을 일반 문자열로 변환
+# 오류 수정: f-string 대신 .format()을 사용하여 변수를 안전하게 삽입
 title_html = """
     <div class="header-container" style="position: relative; overflow: visible; height: 100px;">
         {icon_html} 
