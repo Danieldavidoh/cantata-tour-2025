@@ -594,7 +594,7 @@ if st.session_state.admin:
             change_submitted = st.form_submit_button(_("update"))
 
             if change_submitted:
-                # 🚨 오류 수정: global 선언을 블록 최상단으로 이동하여 읽기/쓰기 오류 해결
+                # 🚨 오류 수정: global 선언을 블록 최상단으로 이동
                 global ADMIN_PASS
                 
                 if current_pass == ADMIN_PASS:
