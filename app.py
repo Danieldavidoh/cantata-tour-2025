@@ -33,6 +33,7 @@ if not st.session_state.get("admin", False):
 NOTICE_FILE = "notice.json"
 CITY_FILE = "cities.json"
 USER_POST_FILE = "user_posts.json" # <-- 사용자 포스트 저장소
+ADMIN_PASS_FILE = "admin_pass.json" # <-- 관리자 비밀번호 파일 (NEW)
 
 # --- 다국어 설정 ---
 LANG = {
@@ -88,7 +89,13 @@ LANG = {
         "no_posts": "현재 포스트가 없습니다.", # <-- 추가
         "admin_only_files": "첨부 파일은 관리자만 확인 가능합니다.", # <-- 추가
         "probability": "가능성 (%)", # <-- NEW: 가능성 필드 추가
-        "schedule_list": "등록된 일정 목록" # <-- NEW: 일정 목록 제목 추가
+        "schedule_list": "등록된 일정 목록", # <-- NEW
+        "delete_all": "전체 삭제", # <-- NEW
+        "password_change": "비밀번호 변경", # <-- NEW
+        "current_password": "현재 비밀번호", # <-- NEW
+        "new_password": "새 비밀번호", # <-- NEW
+        "password_changed_success": "비밀번호가 성공적으로 변경되었습니다!", # <-- NEW
+        "delete_confirmation": "삭제 확인" # <-- NEW
     },
     "en": {
         "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
@@ -142,7 +149,13 @@ LANG = {
         "no_posts": "No posts available.",
         "admin_only_files": "Attached files can only be viewed by Admin.",
         "probability": "Probability (%)", # <-- NEW
-        "schedule_list": "Registered Schedule List" # <-- NEW
+        "schedule_list": "Registered Schedule List", # <-- NEW
+        "delete_all": "Delete All", # <-- NEW
+        "password_change": "Change Password", # <-- NEW
+        "current_password": "Current Password", # <-- NEW
+        "new_password": "New Password", # <-- NEW
+        "password_changed_success": "Password changed successfully!", # <-- NEW
+        "delete_confirmation": "Delete Confirmation" # <-- NEW
     },
     "hi": {
         "title_cantata": "कैंटाटा टूर", "title_year": "२०२५", "title_region": "महाराष्ट्र",
@@ -196,7 +209,13 @@ LANG = {
         "no_posts": "कोई पोस्ट उपलब्ध नहीं है।",
         "admin_only_files": "संलग्न फ़ाइलें केवल व्यवस्थापक द्वारा देखी जा सकती हैं।",
         "probability": "संभावना (%)", # <-- NEW
-        "schedule_list": "पंजीकृत अनुसूची सूची" # <-- NEW
+        "schedule_list": "पंजीकृत अनुसूची सूची", # <-- NEW
+        "delete_all": "सभी हटाएं", # <-- NEW
+        "password_change": "पासवर्ड बदलें", # <-- NEW
+        "current_password": "वर्तमान पासवर्ड", # <-- NEW
+        "new_password": "नया पासवर्ड", # <-- NEW
+        "password_changed_success": "पासवर्ड सफलतापूर्वक बदला गया!", # <-- NEW
+        "delete_confirmation": "हटाने की पुष्टि" # <-- NEW
     }
 }
 
@@ -453,6 +472,18 @@ tour_notices = load_json(NOTICE_FILE)
 tour_schedule = load_json(CITY_FILE) 
 user_posts = load_json(USER_POST_FILE) # <-- 사용자 포스트 로드
 
+# 관리자 비밀번호 로드 및 초기 설정 (0691)
+# ADMIN_PASS = "0009" # 이전 비밀번호
+ADMIN_PASS_DEFAULT = "0691" # 요청된 새 비밀번호
+admin_pass_data = load_json(ADMIN_PASS_FILE)
+
+# ADMIN_PASS를 파일에서 로드하거나, 파일이 없으면 0691로 설정 후 저장
+if isinstance(admin_pass_data, dict) and 'password' in admin_pass_data:
+    ADMIN_PASS = admin_pass_data['password']
+else:
+    ADMIN_PASS = ADMIN_PASS_DEFAULT
+    save_json(ADMIN_PASS_FILE, {"password": ADMIN_PASS})
+
 # 만약 city_dict에 있는 도시 정보가 없다면 초기화
 if not tour_schedule:
     # 초기 도시 데이터를 지도 경로를 위해 포맷팅하여 저장
@@ -477,8 +508,6 @@ if not tour_schedule:
 
 
 # --- 관리자 및 UI 설정 ---
-ADMIN_PASS = "0009" # 비밀번호: '0009'
-
 # 요청 반영: 제목 스타일 (아이콘 제거, 기본 스타일 유지)
 title_html = f"""
     <div class="header-container">
@@ -514,15 +543,12 @@ with col_lang:
         st.rerun()
 
 # --- 로그인 / 로그아웃 로직 (버튼 문제 수정) ---
-# st.rerun() 대신 st.experimental_rerun()의 대체 함수를 사용합니다.
-# Streamlit 1.29.0+ 버전에서는 st.rerun()을 사용해야 합니다.
 def safe_rerun():
     if hasattr(st, 'rerun'):
         st.rerun()
     elif hasattr(st, 'experimental_rerun'):
         st.experimental_rerun()
     else:
-        # Fallback for very old versions or other environments
         pass
 
 def handle_login_button_click():
@@ -559,6 +585,28 @@ with col_auth:
                         # 오류 메시지 숨김 처리
                         pass
 
+# --- 관리자 메뉴 (비밀번호 변경) ---
+if st.session_state.admin:
+    with st.expander(_("password_change"), expanded=False):
+        with st.form("password_change_form", clear_on_submit=True):
+            current_pass = st.text_input(_("current_password"), type="password", key="current_pass_input")
+            new_pass = st.text_input(_("new_password"), type="password", key="new_pass_input")
+            change_submitted = st.form_submit_button(_("update"))
+
+            if change_submitted:
+                if current_pass == ADMIN_PASS:
+                    if new_pass:
+                        save_json(ADMIN_PASS_FILE, {"password": new_pass})
+                        # 세션 변수와 전역 변수 업데이트
+                        global ADMIN_PASS
+                        ADMIN_PASS = new_pass 
+                        st.success(_("password_changed_success"))
+                        safe_rerun()
+                    else:
+                        st.error("새 비밀번호를 입력해주세요.")
+                else:
+                    st.error(_("incorrect_password"))
+
 
 # --- 탭 구성 ---
 tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
@@ -570,7 +618,41 @@ with tab1:
     
     # 1. 관리자 공지사항 관리
     if st.session_state.admin:
+        
+        # --- 관리자: 공지사항 목록 및 전체 삭제 ---
         st.subheader(f"🔔 {_('existing_notices')} (관리자 모드)")
+
+        # **요청 반영: 공지사항 전체 삭제 버튼**
+        col_notice_title, col_notice_delete = st.columns([5, 1])
+        with col_notice_title:
+            st.markdown(f"**{_('existing_notices')}**")
+        with col_notice_delete:
+            if st.button(_("delete_all"), key="delete_all_notices_btn"):
+                st.session_state["show_notice_delete_conf"] = True
+                safe_rerun()
+
+        if st.session_state.get("show_notice_delete_conf"):
+            with st.form("notice_delete_confirmation_form", clear_on_submit=True):
+                st.warning(f"**{_('delete_confirmation')}** : 모든 공지사항을 영구적으로 삭제합니다. 관리자 비밀번호({ADMIN_PASS})를 입력하세요.")
+                confirm_pass = st.text_input(_("admin_login"), type="password", key="notice_delete_confirm_pass")
+                col_y, col_n = st.columns(2)
+                
+                if col_y.form_submit_button(_("delete_all"), help="모든 공지사항과 첨부 파일을 영구 삭제합니다."):
+                    if confirm_pass == ADMIN_PASS:
+                        for notice in tour_notices:
+                            for file_info in notice.get('files', []):
+                                if os.path.exists(file_info['path']):
+                                    os.remove(file_info['path'])
+                        tour_notices.clear()
+                        save_json(NOTICE_FILE, tour_notices)
+                        st.session_state["show_notice_delete_conf"] = False
+                        safe_rerun()
+                    else:
+                        st.error(_("incorrect_password"))
+                
+                if col_n.form_submit_button("취소"):
+                    st.session_state["show_notice_delete_conf"] = False
+                    safe_rerun()
         
         # --- 관리자: 공지사항 등록/수정 폼 ---
         with st.expander(_("register"), expanded=False):
@@ -608,7 +690,7 @@ with tab1:
                 elif submitted:
                     pass
         
-        # --- 관리자: 공지사항 목록 및 수정/삭제 ---
+        # --- 관리자: 개별 공지사항 수정/삭제 ---
         valid_notices = [n for n in tour_notices if isinstance(n, dict) and n.get('id') and n.get('title')]
         notices_to_display = sorted(valid_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
         type_options_rev = {"General": _("general"), "Urgent": _("urgent")}
@@ -661,7 +743,8 @@ with tab1:
                                 n['type'] = updated_type_key
                                 save_json(NOTICE_FILE, tour_notices)
                                 safe_rerun()
-        
+                # --- 공지사항 끝 ---
+
     # 2. 일반 사용자 공지사항 & 포스트 보기
     if not st.session_state.admin:
         st.subheader(f"📢 {_('tab_notice')}")
@@ -854,18 +937,34 @@ with tab2:
         if valid_schedule:
             st.subheader(_("tour_schedule_management"))
             
-            # **수정된 부분: 전체 삭제 버튼 추가**
+            # **요청 반영: 일정 전체 삭제 버튼**
             col_manage_title, col_manage_delete = st.columns([5, 1])
             with col_manage_title:
                 st.markdown(f"**{_('schedule_list')}**") # 일정 목록 제목
             with col_manage_delete:
-                # 전체 일정 제거 버튼 (확인 절차 없이 즉시 제거)
-                if st.button(_("remove"), help="전체 투어 일정을 제거합니다.", key="delete_all_schedule"):
-                    tour_schedule.clear()
-                    save_json(CITY_FILE, tour_schedule)
+                if st.button(_("delete_all"), key="delete_all_schedule_btn"):
+                    st.session_state["show_schedule_delete_conf"] = True
                     safe_rerun()
 
+            if st.session_state.get("show_schedule_delete_conf"):
+                with st.form("schedule_delete_confirmation_form", clear_on_submit=True):
+                    st.warning(f"**{_('delete_confirmation')}** : 모든 일정을 영구적으로 삭제합니다. 관리자 비밀번호({ADMIN_PASS})를 입력하세요.")
+                    confirm_pass = st.text_input(_("admin_login"), type="password", key="schedule_delete_confirm_pass")
+                    col_y, col_n = st.columns(2)
 
+                    if col_y.form_submit_button(_("delete_all"), help="모든 일정을 영구 삭제합니다."):
+                        if confirm_pass == ADMIN_PASS:
+                            tour_schedule.clear()
+                            save_json(CITY_FILE, tour_schedule)
+                            st.session_state["show_schedule_delete_conf"] = False
+                            safe_rerun()
+                        else:
+                            st.error(_("incorrect_password"))
+
+                    if col_n.form_submit_button("취소"):
+                        st.session_state["show_schedule_delete_conf"] = False
+                        safe_rerun()
+            
             schedule_dict = {item['id']: item for item in valid_schedule}
             sorted_schedule_items = sorted(schedule_dict.items(), key=lambda x: x[1].get('date', '9999-12-31'))
             type_options_map_rev = {"indoor": _("indoor"), "outdoor": _("outdoor")} # Internal Key -> Display
@@ -877,14 +976,14 @@ with tab2:
                 header_text = f"[{item.get('date', 'N/A')}] {item['city']} - {item['venue']} ({translated_type}) | {_('probability')}: {probability_val}%"
 
                 with st.expander(header_text, expanded=False):
-                    # **수정된 부분: 수정/삭제 버튼 레이아웃 조정**
+                    # **요청 반영: 개별 일정 제거 버튼은 전체 삭제가 아님**
                     col_u, col_d = st.columns([1, 5])
                     
                     with col_u:
                         if st.button(_("update"), key=f"upd_s_{item_id}"):
                             st.session_state[f"edit_mode_{item_id}"] = True
                             safe_rerun()
-                        if st.button(_("remove"), key=f"del_s_{item_id}"):
+                        if st.button(_("remove"), key=f"del_s_{item_id}"): # 개별 제거 기능
                             tour_schedule[:] = [s for s in tour_schedule if s.get('id') != item_id]
                             save_json(CITY_FILE, tour_schedule)
                             safe_rerun()
