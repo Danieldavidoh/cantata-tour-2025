@@ -9,7 +9,6 @@ import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
 from pytz import timezone
-from math import radians, cos, sin, asin, sqrt # <-- 거리 계산을 위해 추가
 
 # --- 파일 저장 경로 설정 ---
 UPLOAD_DIR = "uploads"
@@ -32,7 +31,6 @@ if not st.session_state.get("admin", False):
 # --- 파일 경로 ---
 NOTICE_FILE = "notice.json"
 CITY_FILE = "cities.json"
-USER_POST_FILE = "user_posts.json" # <-- 사용자 포스트 저장소
 
 # --- 다국어 설정 ---
 LANG = {
@@ -79,14 +77,7 @@ LANG = {
         "seats_tooltip": "예상 관객 인원",
         "file_attachment": "파일 첨부",
         "attached_files": "첨부 파일",
-        "no_files": "없음",
-        "user_posts": "사용자 포스트", # <-- 추가
-        "new_post": "새 포스트 작성", # <-- 추가
-        "post_content": "포스트 내용", # <-- 추가
-        "media_attachment": "사진/동영상 첨부", # <-- 추가
-        "post_success": "포스트가 성공적으로 업로드되었습니다!", # <-- 추가
-        "no_posts": "현재 포스트가 없습니다.", # <-- 추가
-        "admin_only_files": "첨부 파일은 관리자만 확인 가능합니다." # <-- 추가
+        "no_files": "없음"
     },
     "en": {
         "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
@@ -131,14 +122,7 @@ LANG = {
         "seats_tooltip": "Expected audience count",
         "file_attachment": "File Attachment",
         "attached_files": "Attached Files",
-        "no_files": "None",
-        "user_posts": "User Posts",
-        "new_post": "Create New Post",
-        "post_content": "Post Content",
-        "media_attachment": "Attach Photo/Video",
-        "post_success": "Post uploaded successfully!",
-        "no_posts": "No posts available.",
-        "admin_only_files": "Attached files can only be viewed by Admin."
+        "no_files": "None"
     },
     "hi": {
         "title_cantata": "कैंटाटा टूर", "title_year": "२०२५", "title_region": "महाराष्ट्र",
@@ -183,14 +167,7 @@ LANG = {
         "seats_tooltip": "अपेक्षित दर्शक संख्या",
         "file_attachment": "फ़ाइल संलग्नक",
         "attached_files": "संलग्न फ़ाइलें",
-        "no_files": "कोई नहीं",
-        "user_posts": "उपयोगकर्ता पोस्ट",
-        "new_post": "नई पोस्ट बनाएं",
-        "post_content": "पोस्ट सामग्री",
-        "media_attachment": "फोटो/वीडियो संलग्न करें",
-        "post_success": "पोस्ट सफलतापूर्वक अपलोड हुई!",
-        "no_posts": "कोई पोस्ट उपलब्ध नहीं है।",
-        "admin_only_files": "संलग्न फ़ाइलें केवल व्यवस्थापक द्वारा देखी जा सकती हैं।"
+        "no_files": "कोई नहीं"
     }
 }
 
@@ -231,83 +208,10 @@ def save_uploaded_files(uploaded_files):
                 "size": uploaded_file.size
             })
         except Exception as e:
-            # Streamlit Alert 메시지 숨김 처리
+            st.error(f"파일 저장 오류: {e}")
             pass
             
     return file_info_list
-
-# --- 파일 Base64 인코딩 함수 (추가) ---
-def get_file_as_base64(file_path):
-    """파일 경로를 받아 Base64 문자열을 반환합니다."""
-    try:
-        with open(file_path, "rb") as f:
-            file_bytes = f.read()
-            base64_encoded_data = base64.b64encode(file_bytes).decode('utf-8')
-            return base64_encoded_data
-    except Exception:
-        # 파일이 없거나 접근할 수 없을 경우
-        return None
-
-# --- 미디어 인라인 표시 및 다운로드 헬퍼 함수 (재사용성을 위해 별도 정의) ---
-def display_and_download_file(file_info, notice_id, is_admin=False, is_user_post=False):
-    file_size_kb = round(file_info['size'] / 1024, 1)
-    file_type = file_info['type']
-    file_path = file_info['path']
-    file_name = file_info['name']
-    key_prefix = "admin" if is_admin else "user"
-    
-    if is_user_post and not is_admin:
-        # 사용자 포스트의 파일은 일반 모드에서 숨김 (관리자만 확인 가능)
-        st.markdown(f"**{_('admin_only_files')}**")
-        return
-
-    if os.path.exists(file_path):
-        # 1. 이미지 파일은 인라인으로 표시
-        if file_type.startswith('image/'):
-            base64_data = get_file_as_base64(file_path)
-            if base64_data:
-                st.image(
-                    f"data:{file_type};base64,{base64_data}",
-                    caption=f"🖼️ {file_name} ({file_size_kb} KB)",
-                    use_column_width=True
-                )
-            else:
-                # Base64 인코딩 실패 시 다운로드 버튼 표시
-                st.markdown(f"**🖼️ {file_name} ({file_size_kb} KB)** (다운로드 버튼)")
-                try:
-                    with open(file_path, "rb") as f:
-                        st.download_button(
-                            label=f"⬇️ {file_name} 다운로드 (인라인 실패)",
-                            data=f.read(),
-                            file_name=file_name,
-                            mime=file_type,
-                            key=f"{key_prefix}_download_{notice_id}_{file_name}_imgfallback"
-                        )
-                except Exception:
-                    pass
-        
-        # 2. 비디오 파일은 st.video로 표시
-        elif file_type.startswith('video/'):
-            st.video(open(file_path, 'rb').read(), format=file_type, start_time=0)
-            st.markdown(f"**🎬 {file_name} ({file_size_kb} KB)**")
-            
-        # 3. 기타 파일은 다운로드 버튼으로 표시
-        else:
-            icon = "📄"
-            try:
-                with open(file_path, "rb") as f:
-                    st.download_button(
-                        label=f"⬇️ {icon} {file_name} ({file_size_kb} KB)",
-                        data=f.read(),
-                        file_name=file_name,
-                        mime=file_type,
-                        key=f"{key_prefix}_download_{notice_id}_{file_name}"
-                    )
-            except Exception:
-                pass
-    else:
-        st.markdown(f"**{file_name}** (파일을 찾을 수 없습니다.)")
-
 
 # --- JSON 헬퍼 ---
 def load_json(f):
@@ -324,53 +228,7 @@ def save_json(f, d):
         with open(f, "w", encoding="utf-8") as file:
             json.dump(d, file, ensure_ascii=False, indent=2)
     except Exception as e:
-        # Streamlit Alert 메시지 숨김 처리
-        pass
-        
-# --- NEW: 거리 및 시간 계산 함수 ---
-def haversine(lat1, lon1, lat2, lon2):
-    """두 위도/경도 쌍 사이의 지구 표면 거리를 km 단위로 계산합니다 (Haversine 공식)."""
-    R = 6371  # 지구 반지름 (km)
-
-    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
-
-    dlon = lon2 - lon1
-    dlat = lat2 - lat1
-
-    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
-    c = 2 * asin(sqrt(a))
-    distance = R * c
-    return distance
-
-def calculate_distance_and_time(p1, p2):
-    """두 좌표 사이의 거리와 예상 소요 시간을 문자열로 반환합니다."""
-    lat1, lon1 = p1
-    lat2, lon2 = p2
-    distance_km = haversine(lat1, lon1, lat2, lon2)
-    
-    # 거리에 따라 예상 평균 속도 적용
-    if distance_km < 500:
-        avg_speed_kmh = 60
-    else:
-        avg_speed_kmh = 80
-        
-    travel_time_h = distance_km / avg_speed_kmh
-    
-    # 거리 형식 지정
-    distance_str = f"{distance_km:.1f} km"
-    
-    # 시간 형식 지정 (HH시간 MM분)
-    hours = int(travel_time_h)
-    minutes = int((travel_time_h - hours) * 60)
-    
-    # 한국어로 거리 및 시간 정보 문자열 구성
-    if hours > 0:
-        time_str = f"{hours}시간 {minutes}분"
-    else:
-        time_str = f"{minutes}분"
-
-    return f"거리: {distance_str} | 예상 시간: {time_str}"
-
+        st.error(f"Error saving {f}: {e}")
 
 # --- 도시 목록 및 좌표 정의 (원래 코드에서 가져옴) ---
 city_dict = {
@@ -447,7 +305,6 @@ city_options = ["공연없음"] + major_cities_available + remaining_cities
 # --- 데이터 로드 (공지사항 및 투어 일정) ---
 tour_notices = load_json(NOTICE_FILE)
 tour_schedule = load_json(CITY_FILE) 
-user_posts = load_json(USER_POST_FILE) # <-- 사용자 포스트 로드
 
 # 만약 city_dict에 있는 도시 정보가 없다면 초기화
 if not tour_schedule:
@@ -511,21 +368,10 @@ with col_lang:
         st.rerun()
 
 # --- 로그인 / 로그아웃 로직 (버튼 문제 수정) ---
-# st.rerun() 대신 st.experimental_rerun()의 대체 함수를 사용합니다.
-# Streamlit 1.29.0+ 버전에서는 st.rerun()을 사용해야 합니다.
-def safe_rerun():
-    if hasattr(st, 'rerun'):
-        st.rerun()
-    elif hasattr(st, 'experimental_rerun'):
-        st.experimental_rerun()
-    else:
-        # Fallback for very old versions or other environments
-        pass
-
 def handle_login_button_click():
     """로그인 버튼 클릭 시 폼 표시 상태를 토글하고 강제 재실행합니다."""
     st.session_state.show_login_form = not st.session_state.show_login_form
-    safe_rerun()
+    st.rerun()
 
 with col_auth:
     if st.session_state.admin:
@@ -533,8 +379,9 @@ with col_auth:
             st.session_state.admin = False
             st.session_state.logged_in_user = None
             st.session_state.show_login_form = False
+            st.success(_("logged_out_success"))
             play_alert_sound()
-            safe_rerun()
+            st.rerun()
     else:
         # 로그인 버튼 클릭 시 on_click 대신 명시적 핸들러를 사용해 즉시 재실행을 보장
         if st.button(_("login"), key="login_btn"):
@@ -552,11 +399,11 @@ with col_auth:
                         st.session_state.admin = True
                         st.session_state.logged_in_user = "Admin"
                         st.session_state.show_login_form = False
+                        st.success(_("logged_in_success"))
                         play_alert_sound()
-                        safe_rerun()
+                        st.rerun()
                     else:
-                        # 오류 메시지 숨김 처리
-                        pass
+                        st.error(_("incorrect_password"))
 
 
 # --- 탭 구성 ---
@@ -566,24 +413,24 @@ tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
 # 탭 1: 공지사항 (Notice)
 # =============================================================================
 with tab1:
-    
-    # 1. 관리자 공지사항 관리
+    st.subheader(f"🔔 {_('tab_notice')}")
+
     if st.session_state.admin:
-        st.subheader(f"🔔 {_('existing_notices')} (관리자 모드)")
-        
         # --- 관리자: 공지사항 등록/수정 폼 ---
-        with st.expander(_("register"), expanded=False):
+        with st.expander(_("register"), expanded=True):
             with st.form("notice_form", clear_on_submit=True):
                 notice_title = st.text_input(_("title_cantata"))
                 notice_content = st.text_area(_("note"))
                 
+                # 파일/이미지 첨부 필드 추가 (요청 반영)
                 uploaded_files = st.file_uploader(
                     _("file_attachment"),
-                    type=["png", "jpg", "jpeg", "pdf", "txt", "zip"],
+                    type=["png", "jpg", "jpeg", "pdf", "txt"],
                     accept_multiple_files=True,
                     key="notice_file_uploader"
                 )
                 
+                # 내부적으로는 항상 English key를 사용하고, 사용자에게는 번역된 값을 보여줍니다.
                 type_options = {"General": _("general"), "Urgent": _("urgent")}
                 selected_display_type = st.radio(_("type"), list(type_options.values()))
                 notice_type = list(type_options.keys())[list(type_options.values()).index(selected_display_type)]
@@ -603,12 +450,15 @@ with tab1:
                     }
                     tour_notices.insert(0, new_notice)
                     save_json(NOTICE_FILE, tour_notices)
+                    st.success(_("notice_reg_success"))
                     play_alert_sound()
-                    safe_rerun()
+                    st.rerun()
                 elif submitted:
-                    pass
+                    st.warning(_("fill_in_fields"))
         
         # --- 관리자: 공지사항 목록 및 수정/삭제 ---
+        st.subheader(_("existing_notices"))
+        
         valid_notices = [n for n in tour_notices if isinstance(n, dict) and n.get('id') and n.get('title')]
         notices_to_display = sorted(valid_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
         type_options_rev = {"General": _("general"), "Urgent": _("urgent")}
@@ -623,26 +473,31 @@ with tab1:
                 col_del, col_title = st.columns([1, 4])
                 with col_del:
                     if st.button(_("remove"), key=f"del_n_{notice_id}", help=_("remove")):
+                        # 실제 파일 삭제 로직 추가 (선택 사항이지만 안전을 위해 구현)
                         for file_info in notice.get('files', []):
                             if os.path.exists(file_info['path']):
                                 os.remove(file_info['path'])
                         
                         tour_notices[:] = [n for n in tour_notices if n.get('id') != notice_id]
                         save_json(NOTICE_FILE, tour_notices)
+                        st.success(_("notice_del_success"))
                         play_alert_sound()
-                        safe_rerun()
+                        st.rerun()
                 
                 with col_title:
                     st.markdown(f"**{_('content')}:** {notice.get('content', _('no_content'))}")
                     
+                    # 첨부 파일 표시
                     attached_files = notice.get('files', [])
                     if attached_files:
                         st.markdown(f"**{_('attached_files')}:**")
                         for file_info in attached_files:
-                            display_and_download_file(file_info, notice_id, is_admin=True, is_user_post=False)
+                            icon = "🖼️" if file_info['type'].startswith('image/') else "📄"
+                            st.markdown(f"- {icon} {file_info['name']} ({round(file_info['size'] / 1024, 1)} KB)")
                     else:
                         st.markdown(f"**{_('attached_files')}:** {_('no_files')}")
                 
+                # 업데이트 로직은 복잡하여 파일 수정 기능을 제외하고 텍스트만 업데이트하도록 간소화
                 with st.form(f"update_notice_{notice_id}", clear_on_submit=True):
                     current_type_index = list(type_options_rev.keys()).index(notice_type_key)
                     updated_display_type = st.radio(_("type"), list(type_options_rev.values()), index=current_type_index, key=f"update_type_{notice_id}")
@@ -656,120 +511,35 @@ with tab1:
                                 n['content'] = updated_content
                                 n['type'] = updated_type_key
                                 save_json(NOTICE_FILE, tour_notices)
+                                st.success(_("notice_upd_success"))
                                 play_alert_sound()
-                                safe_rerun()
+                                st.rerun()
         
-    # 2. 일반 사용자 공지사항 & 포스트 보기
-    if not st.session_state.admin:
-        st.subheader(f"📢 {_('tab_notice')}")
-        
-        # --- 공지사항 목록 ---
+    else:
+        # --- 사용자: 공지사항 보기 (안정성 강화) ---
         valid_notices = [n for n in tour_notices if isinstance(n, dict) and n.get('title')]
         if not valid_notices:
-            st.write(_("no_notices")) # st.write로 변경하여 CSS에 숨겨지지 않도록 함
+            st.info(_("no_notices"))
         else:
             notices_to_display = sorted(valid_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
             type_options_rev = {"General": _("general"), "Urgent": _("urgent")}
             
             for notice in notices_to_display:
-                notice_id = notice.get('id')
                 notice_type_key = notice.get('type', 'General')
                 translated_type = type_options_rev.get(notice_type_key, _("general"))
                 notice_title = notice.get('title', _("no_title"))
                 notice_content = notice.get('content', _("no_content"))
                 
-                # Expander로 감싸고 닫힘 상태로 시작 (요청 반영)
-                header_text = f"[{translated_type}] {notice_title} - *{notice.get('date', 'N/A')[:16]}*"
-                with st.expander(header_text, expanded=False): 
-                    
-                    # st.info 대신 custom markdown 사용 (숨겨지는 문제 방지)
-                    st.markdown(f'<div class="notice-content-box">{notice_content}</div>', unsafe_allow_html=True)
-
-                    # --- 파일 첨부 표시 (이미지/비디오 인라인, 파일 다운로드) ---
-                    attached_files = notice.get('files', [])
-                    if attached_files:
-                        st.markdown(f"**{_('attached_files')}:**")
-                        for file_info in attached_files:
-                            display_and_download_file(file_info, notice_id, is_admin=False, is_user_post=False)
-
-        st.markdown("---")
-    
-    # 3. 사용자 포스트 섹션 (관리자/일반 사용자 공통)
-    st.subheader(f"📸 {_('user_posts')}") 
-    
-    # --- 사용자 포스트 작성 폼 (일반 사용자 모두 허용) ---
-    with st.expander(_("new_post"), expanded=False):
-        with st.form("user_post_form", clear_on_submit=True):
-            post_content = st.text_area(_("post_content"), placeholder="여행 후기, 사진 공유 등 자유롭게 작성하세요.")
-            uploaded_media = st.file_uploader(
-                _("media_attachment"),
-                type=["png", "jpg", "jpeg", "mp4", "mov"], # 이미지 및 동영상 허용
-                accept_multiple_files=True,
-                key="user_media_uploader"
-            )
-            
-            post_submitted = st.form_submit_button(_("register"))
-            
-            if post_submitted and (post_content or uploaded_media):
-                # 파일 저장 및 정보 수집 (클라우드 저장소에 저장된다고 가정)
-                media_info_list = save_uploaded_files(uploaded_media) 
+                st.markdown(f"**[{translated_type}] {notice_title}** - *{notice.get('date', 'N/A')[:16]}*")
+                st.info(notice_content)
                 
-                new_post = {
-                    "id": str(uuid.uuid4()),
-                    "content": post_content,
-                    "files": media_info_list, 
-                    "date": datetime.now(timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S")
-                }
-                user_posts.insert(0, new_post)
-                save_json(USER_POST_FILE, user_posts)
-                play_alert_sound()
-                safe_rerun()
-            elif post_submitted:
-                pass
-    
-    # --- 사용자 포스트 목록 표시 ---
-    valid_posts = [p for p in user_posts if isinstance(p, dict) and (p.get('content') or p.get('files'))]
-    
-    if st.session_state.admin:
-        # 관리자 모드: 모든 포스트 표시
-        posts_to_display = sorted(valid_posts, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
-        st.markdown("---")
-        st.markdown(f"**관리자**는 총 {len(posts_to_display)}개의 사용자 포스트를 확인할 수 있습니다.")
-        for post in posts_to_display:
-            post_id = post['id']
-            
-            with st.expander(f"익명 사용자 포스트 - *{post.get('date', 'N/A')[:16]}*", expanded=False):
-                st.markdown(f'<div class="notice-content-box">{post.get("content", _("no_content"))}</div>', unsafe_allow_html=True)
-                
-                attached_media = post.get('files', [])
-                if attached_media:
-                    st.markdown(f"**{_('attached_files')} (클라우드 저장소)**:")
-                    for file_info in attached_media:
-                        # 관리자는 파일 확인 가능
-                        display_and_download_file(file_info, post_id, is_admin=True, is_user_post=True)
-                else:
-                    st.markdown(f"**{_('attached_files')}:** {_('no_files')}")
-                    
-                st.markdown("---")
-    
-    else:
-        # 일반 사용자 모드: 포스트 목록만 표시 (첨부 파일은 관리자만 확인 가능)
-        posts_to_display = sorted(valid_posts, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
-        
-        if not posts_to_display:
-            st.write(_("no_posts"))
-        else:
-            for post in posts_to_display:
-                post_id = post['id']
-                
-                st.markdown(f"**익명 사용자** - *{post.get('date', 'N/A')[:16]}*")
-                st.markdown(f'<div class="notice-content-box">{post.get("content", _("no_content"))}</div>', unsafe_allow_html=True)
-                
-                # 일반 사용자는 파일이 첨부되었는지 여부와 함께 경고 메시지 표시
-                if post.get('files'):
-                    st.markdown(f"**{_('attached_files')}:** {_('admin_only_files')}")
-                
-                st.markdown("---")
+                # 첨부 파일 표시
+                attached_files = notice.get('files', [])
+                if attached_files:
+                    st.markdown(f"**{_('attached_files')}:**")
+                    for file_info in attached_files:
+                        icon = "🖼️" if file_info['type'].startswith('image/') else "📄"
+                        st.markdown(f"- {icon} {file_info['name']} ({round(file_info['size'] / 1024, 1)} KB)")
 
 
 # =============================================================================
@@ -782,8 +552,7 @@ with tab2:
     if st.session_state.admin:
         st.markdown(f"**{_('register')} {_('tab_map')} {_('set_data')}**")
         
-        # 초기 상태: 닫힘 (요청 반영)
-        with st.expander(_("add_city"), expanded=False):
+        with st.expander(_("add_city"), expanded=True):
             with st.form("schedule_form", clear_on_submit=True):
                 col_c, col_d, col_v = st.columns(3)
                 
@@ -806,9 +575,9 @@ with tab2:
                 
                 if submitted:
                     if city_name_input == "공연없음" or not venue_name or not schedule_date:
-                        pass
+                        st.error(_("warning"))
                     elif city_name_input not in city_dict:
-                        pass
+                        st.error(f"Coordinates for '{city_name_input}' not found in city_dict. {_('city_coords_error')}")
                     else:
                         city_coords = city_dict[city_name_input]
                         new_schedule_entry = {
@@ -826,8 +595,9 @@ with tab2:
                         }
                         tour_schedule.append(new_schedule_entry)
                         save_json(CITY_FILE, tour_schedule)
+                        st.success(f"{_('schedule_reg_success')} ({city_name_input})")
                         play_alert_sound()
-                        safe_rerun()
+                        st.rerun()
                         
         
         # --- 관리자: 일정 보기 및 수정/삭제 (안정성 강화) ---
@@ -852,12 +622,13 @@ with tab2:
                     with col_u:
                         if st.button(_("update"), key=f"upd_s_{item_id}"):
                             st.session_state[f"edit_mode_{item_id}"] = True
-                            safe_rerun()
+                            st.rerun()
                         if st.button(_("remove"), key=f"del_s_{item_id}"):
                             tour_schedule[:] = [s for s in tour_schedule if s.get('id') != item_id]
                             save_json(CITY_FILE, tour_schedule)
+                            st.success(f"{item['city']} {_('schedule_del_success')}")
                             play_alert_sound()
-                            safe_rerun()
+                            st.rerun()
 
                     if st.session_state.get(f"edit_mode_{item_id}"):
                         with st.form(f"edit_form_{item_id}"):
@@ -905,9 +676,10 @@ with tab2:
                                         }
                                         save_json(CITY_FILE, tour_schedule)
                                         st.session_state[f"edit_mode_{item_id}"] = False
+                                        st.success(_("schedule_upd_success"))
                                         play_alert_sound()
-                                        safe_rerun()
-                            
+                                        st.rerun()
+                        
                     if not st.session_state.get(f"edit_mode_{item_id}"):
                         st.markdown(f"**{_('date')}:** {item.get('date', 'N/A')} ({item.get('reg_date', '')})")
                         st.markdown(f"**{_('venue')}:** {item.get('venue', 'N/A')}")
@@ -918,7 +690,7 @@ with tab2:
                             st.markdown(f"**{_('google_link')}:** [{_('google_link')}]({google_link_url})")
                         st.markdown(f"**{_('note')}:** {item.get('note', 'N/A')}")
         else:
-            st.write(_("no_schedule"))
+            st.info(_("no_schedule"))
 
     # --- 지도 표시 (사용자 & 관리자 공통) ---
     current_date = date.today()
@@ -953,22 +725,15 @@ with tab2:
         opacity_val = 0.25 if is_past else 1.0
         
         # 팝업 내용 (번역 및 실내/실외, 구글맵 포함)
-        type_options_map_rev = {"indoor": _("indoor"), "outdoor": _("outdoor")} # Internal Key -> Display
         translated_type = type_options_map_rev.get(item.get('type', 'outdoor'), _("outdoor"))
         map_type_icon = '🏠' if item.get('type') == 'indoor' else '🌳'
-        
-        # --- 수정된 부분: 도시 이름을 빨간색으로 표시 ---
-        city_name_display = item.get('city', 'N/A')
-        red_city_name = f'<span style="color: #FF4B4B; font-weight: bold;">{city_name_display}</span>'
-        
         popup_html = f"""
-        <b>{_('city')}:</b> {red_city_name}<br>
+        <b>{_('city')}:</b> {item.get('city', 'N/A')}<br>
         <b>{_('date')}:</b> {date_str}<br>
         <b>{_('venue')}:</b> {item.get('venue', 'N/A')}<br>
         <b>{_('type')}:</b> {map_type_icon} {translated_type}<br>
         <b>{_('seats')}:</b> {item.get('seats', 'N/A')}<br>
         """
-        # -----------------------------------------------
         
         if item.get('google_link'):
             google_link_url = item['google_link'] 
@@ -1033,9 +798,8 @@ with tab2:
                 tooltip=_("past_route")
             ).add_to(m)
             
-        # Future segments (animated line and individual PolyLines for tooltip)
+        # 요청 반영: 도시간 연결선 애니메이션 속도를 1/2로 (delay 3000 -> 6000)
         if len(future_segments) > 1:
-            # 1. AntPath for the continuous animation effect (속도 1/2 조정)
             AntPath(
                 future_segments, 
                 use="regular", 
@@ -1043,31 +807,8 @@ with tab2:
                 color='#FF4B4B', 
                 weight=5, 
                 opacity=0.8,
-                options={"delay": 12000, "dash_factor": 0.1, "color": "#FF4B4B"} # 속도를 1/2로 조정
+                options={"delay": 6000, "dash_factor": 0.1, "color": "#FF4B4B"} # 속도 1/2로 조정 (3000ms의 2배)
             ).add_to(m)
-
-            # 2. Add invisible PolyLines for hover tooltips on each segment
-            for i in range(len(future_segments) - 1):
-                p1 = future_segments[i]
-                p2 = future_segments[i+1]
-                
-                # 거리 및 시간 계산
-                segment_info = calculate_distance_and_time(p1, p2)
-                
-                # 투명한 PolyLine을 생성하여 툴팁 영역으로 사용 (쉬운 터치/호버 감지)
-                folium.PolyLine(
-                    locations=[p1, p2],
-                    color="transparent", 
-                    weight=15, # 두껍게 하여 호버 영역 확장
-                    opacity=0, 
-                    tooltip=folium.Tooltip(
-                        segment_info, 
-                        permanent=False, 
-                        direction="top", 
-                        sticky=True,
-                        style="background-color: #333; color: white; padding: 5px; border-radius: 5px;"
-                    )
-                ).add_to(m)
             
     elif locations:
         # 단일 도시일 때도 25% 투명도 적용
@@ -1090,7 +831,21 @@ with tab2:
     # 지도 표시
     st_folium(m, width=1000, height=600)
     
-    # 지도 아래 텍스트 제거 완료
+    # 범례 표시
+    st.info(f"{_('legend')}: 🔴 {_('outdoor')} | 🔵 {_('indoor')}")
+
+# --- 알림음 재생 스크립트 (요청 반영: 일반모드에서 울리고, 캐롤로 변경) ---
+if st.session_state.play_sound:
+    # 플래그를 즉시 재설정
+    st.session_state.play_sound = False
+    
+    # 크리스마스 캐롤 링크로 변경
+    st.markdown("""
+        <audio autoplay>
+            <source src="https://assets.mixkit.co/sfx/preview/mixkit-carol-of-the-bells-christmas-music-1447.mp3" type="audio/mp3">
+            Your browser does not support the audio element.
+        </audio>
+    """, unsafe_allow_html=True)
 
 
 # --- CSS 적용 (최하단에 위치시켜야 함) ---
@@ -1109,82 +864,27 @@ st.markdown(f"""
 .main-title {{
     font-size: 3em;
     margin-bottom: 0.5em;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-}}
-/* Streamlit 기본 스타일 오버라이드 */
-.stApp {{
-    background-color: #1E1E1E; /* 어두운 배경 */
-    color: #FAFAFA; /* 밝은 글꼴 */
-    font-family: Arial, sans-serif;
-}}
-/* 탭 배경색/글꼴색 */
-.stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {{
-    color: #FAFAFA !important;
-}}
-/* 폼 배경색 */
-.stForm {{
-    padding: 15px;
-    border: 1px solid #333333;
-    border-radius: 10px;
-    background-color: #2D2D2D;
-}}
-/* Expander 배경색 */
-.streamlit-expanderHeader {{
-    background-color: #333333;
-    color: #FAFAFA;
-    border-radius: 5px;
-    padding: 10px;
-}}
-/* 버튼 스타일 */
-.stButton>button {{
-    background-color: #FF4B4B;
-    color: white;
-    border-radius: 8px;
-    border: none;
-    padding: 8px 16px;
-    transition: background-color 0.3s;
-}}
-.stButton>button:hover {{
-    background-color: #FF6B6B;
-}}
-/* info, warning 스타일 */
-.stAlert.info, .stAlert.warning {{
-    border-left: 5px solid;
-    padding: 10px;
-    border-radius: 5px;
-    margin-top: 10px;
-}}
-.stAlert.info {{
-    border-color: #007BFF;
-    background-color: rgba(0, 123, 255, 0.1);
-}}
-.stAlert.warning {{
-    border-color: #FFC107;
-    background-color: rgba(255, 193, 7, 0.1);
+    text-shadow: 2px 2px 4px #000000;
 }}
 
-/* Custom Content Box Style (mimicking st.info appearance, to avoid being hidden by stAlert CSS) */
-.notice-content-box {{
-    border-left: 5px solid #007BFF; /* Info blue */
-    background-color: rgba(0, 123, 255, 0.1); /* Light blue background */
-    padding: 10px;
-    border-radius: 5px;
-    margin-top: 10px;
-    margin-bottom: 10px;
+[data-testid="stAppViewContainer"] {{ 
+    /* 배경 이미지를 제거하고 다크 배경색 적용 */
+    background-color: #1E1E1E;
+    color: #FFFFFF;
+    background-attachment: fixed; 
 }}
 
-
-/* Streamlit Alert 메시지 숨기기 (사용자 요청 반영: 모든 상태 알림 숨김) */
-div[data-testid="stAlert"] {{
-    display: none !important;
+/* Streamlit 기본 텍스트 색상 오버라이드 */
+.stText {{
+    color: #FFFFFF;
 }}
 
-/* Streamlit Selectbox/Input 스타일 */
-.stSelectbox>label, .stTextInput>label, .stTextArea>label, .stNumberInput>label {{
-    color: #BBBBBB;
+/* 탭 스타일 */
+.stTabs [data-baseweb="tab-list"] button {{
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 8px 8px 0 0;
 }}
-.stSelectbox div[data-baseweb="select"] {{
-    background-color: #333333;
-}}
-</style>
-""", unsafe_allow_html=True)
+.stTabs [data-baseweb="tab-list"] button [data-testid="stText"] {{
+    font-weight: bold;
+    color: #FFFFFF;
+    text-shadow
