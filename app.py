@@ -427,10 +427,21 @@ with col_lang:
         st.rerun()
 
 # --- 로그인 / 로그아웃 로직 (버튼 문제 수정) ---
+# st.rerun() 대신 st.experimental_rerun()의 대체 함수를 사용합니다.
+# Streamlit 1.29.0+ 버전에서는 st.rerun()을 사용해야 합니다.
+def safe_rerun():
+    if hasattr(st, 'rerun'):
+        st.rerun()
+    elif hasattr(st, 'experimental_rerun'):
+        st.experimental_rerun()
+    else:
+        # Fallback for very old versions or other environments
+        pass
+
 def handle_login_button_click():
     """로그인 버튼 클릭 시 폼 표시 상태를 토글하고 강제 재실행합니다."""
     st.session_state.show_login_form = not st.session_state.show_login_form
-    st.rerun()
+    safe_rerun()
 
 with col_auth:
     if st.session_state.admin:
@@ -439,8 +450,7 @@ with col_auth:
             st.session_state.logged_in_user = None
             st.session_state.show_login_form = False
             play_alert_sound()
-            # st.success(_("logged_out_success")) # 숨겨짐
-            st.rerun()
+            safe_rerun()
     else:
         # 로그인 버튼 클릭 시 on_click 대신 명시적 핸들러를 사용해 즉시 재실행을 보장
         if st.button(_("login"), key="login_btn"):
@@ -459,10 +469,9 @@ with col_auth:
                         st.session_state.logged_in_user = "Admin"
                         st.session_state.show_login_form = False
                         play_alert_sound()
-                        # st.success(_("logged_in_success")) # 숨겨짐
-                        st.rerun()
+                        safe_rerun()
                     else:
-                        # st.error(_("incorrect_password")) # 숨겨짐
+                        # 오류 메시지 숨김 처리
                         pass
 
 
@@ -511,11 +520,9 @@ with tab1:
                     }
                     tour_notices.insert(0, new_notice)
                     save_json(NOTICE_FILE, tour_notices)
-                    # st.success(_("notice_reg_success")) # 숨겨짐
                     play_alert_sound()
-                    st.rerun()
+                    safe_rerun()
                 elif submitted:
-                    # st.warning(_("fill_in_fields")) # 숨겨짐
                     pass
         
         # --- 관리자: 공지사항 목록 및 수정/삭제 ---
@@ -531,7 +538,7 @@ with tab1:
             translated_type = type_options_rev.get(notice_type_key, _("general"))
             notice_title = notice['title']
             
-            # 관리자 모드는 기존과 같이 개별 공지를 Expander로 표시 (초기 닫힘)
+            # 관리자 모드: 개별 공지를 Expander로 표시 (초기 닫힘)
             with st.expander(f"[{translated_type}] {notice_title} ({notice.get('date', 'N/A')[:10]})", expanded=False):
                 col_del, col_title = st.columns([1, 4])
                 with col_del:
@@ -543,9 +550,8 @@ with tab1:
                         
                         tour_notices[:] = [n for n in tour_notices if n.get('id') != notice_id]
                         save_json(NOTICE_FILE, tour_notices)
-                        # st.success(_("notice_del_success")) # 숨겨짐
                         play_alert_sound()
-                        st.rerun()
+                        safe_rerun()
                 
                 with col_title:
                     st.markdown(f"**{_('content')}:** {notice.get('content', _('no_content'))}")
@@ -564,10 +570,9 @@ with tab1:
                                     st.image(
                                         f"data:{file_info['type']};base64,{base64_data}",
                                         caption=f"🖼️ {file_info['name']} ({file_size_kb} KB)",
-                                        use_column_width='always' # 항상 인라인으로 표시
+                                        use_column_width=True 
                                     )
                                 else:
-                                    # Fallback for failed image load (숨겨짐)
                                     pass
                             
                             # 2. 이미지 외 파일 (또는 이미지 로드 실패 시) 다운로드 버튼 표시
@@ -584,10 +589,8 @@ with tab1:
                                                 key=f"admin_download_{notice_id}_{file_info['name']}"
                                             )
                                     except Exception:
-                                        # st.error(...) # 숨겨짐
                                         pass
                                 else:
-                                    # st.warning(...) # 숨겨짐
                                     pass
                     else:
                         st.markdown(f"**{_('attached_files')}:** {_('no_files')}")
@@ -606,15 +609,13 @@ with tab1:
                                 n['content'] = updated_content
                                 n['type'] = updated_type_key
                                 save_json(NOTICE_FILE, tour_notices)
-                                # st.success(_("notice_upd_success")) # 숨겨짐
                                 play_alert_sound()
-                                st.rerun()
+                                safe_rerun()
         
     else:
-        # --- 사용자: 공지사항 보기 (안정성 강화) ---
+        # --- 사용자: 공지사항 보기 (요청 반영: Expander, 이미지 인라인, 파일 다운로드) ---
         valid_notices = [n for n in tour_notices if isinstance(n, dict) and n.get('title')]
         if not valid_notices:
-            # st.info 대신 st.write 사용 (요청 반영)
             st.write(_("no_notices"))
         else:
             notices_to_display = sorted(valid_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
@@ -634,7 +635,7 @@ with tab1:
                     # st.info 대신 custom markdown 사용 (숨겨지는 문제 방지)
                     st.markdown(f'<div class="notice-content-box">{notice_content}</div>', unsafe_allow_html=True)
 
-                    # --- 사용자 모드: 파일 첨부 표시 (이미지는 인라인, 나머지는 다운로드) ---
+                    # --- 파일 첨부 표시 (이미지는 인라인, 나머지는 다운로드) ---
                     attached_files = notice.get('files', [])
                     if attached_files:
                         st.markdown(f"**{_('attached_files')}:**")
@@ -649,10 +650,9 @@ with tab1:
                                         st.image(
                                             f"data:{file_info['type']};base64,{base64_data}",
                                             caption=f"🖼️ {file_info['name']} ({file_size_kb} KB)",
-                                            use_column_width='always'
+                                            use_column_width=True
                                         )
                                     else:
-                                        # Fallback (Hidden)
                                         pass
                                 
                                 # 2. 이미지 외 파일은 다운로드 버튼으로 표시
@@ -668,7 +668,6 @@ with tab1:
                                                 key=f"user_download_{notice_id}_{file_info['name']}"
                                             )
                                     except Exception:
-                                        # st.warning(...) # 숨겨짐
                                         pass
 
 
@@ -706,10 +705,8 @@ with tab2:
                 
                 if submitted:
                     if city_name_input == "공연없음" or not venue_name or not schedule_date:
-                        # st.error(_("warning")) # 숨겨짐
                         pass
                     elif city_name_input not in city_dict:
-                        # st.error(f"Coordinates for '{city_name_input}' not found in city_dict. {_('city_coords_error')}") # 숨겨짐
                         pass
                     else:
                         city_coords = city_dict[city_name_input]
@@ -728,9 +725,8 @@ with tab2:
                         }
                         tour_schedule.append(new_schedule_entry)
                         save_json(CITY_FILE, tour_schedule)
-                        # st.success(f"{_('schedule_reg_success')} ({city_name_input})") # 숨겨짐
                         play_alert_sound()
-                        st.rerun()
+                        safe_rerun()
                         
         
         # --- 관리자: 일정 보기 및 수정/삭제 (안정성 강화) ---
@@ -755,13 +751,12 @@ with tab2:
                     with col_u:
                         if st.button(_("update"), key=f"upd_s_{item_id}"):
                             st.session_state[f"edit_mode_{item_id}"] = True
-                            st.rerun()
+                            safe_rerun()
                         if st.button(_("remove"), key=f"del_s_{item_id}"):
                             tour_schedule[:] = [s for s in tour_schedule if s.get('id') != item_id]
                             save_json(CITY_FILE, tour_schedule)
-                            # st.success(f"{item['city']} {_('schedule_del_success')}") # 숨겨짐
                             play_alert_sound()
-                            st.rerun()
+                            safe_rerun()
 
                     if st.session_state.get(f"edit_mode_{item_id}"):
                         with st.form(f"edit_form_{item_id}"):
@@ -809,9 +804,8 @@ with tab2:
                                         }
                                         save_json(CITY_FILE, tour_schedule)
                                         st.session_state[f"edit_mode_{item_id}"] = False
-                                        # st.success(_("schedule_upd_success")) # 숨겨짐
                                         play_alert_sound()
-                                        st.rerun()
+                                        safe_rerun()
                             
                     if not st.session_state.get(f"edit_mode_{item_id}"):
                         st.markdown(f"**{_('date')}:** {item.get('date', 'N/A')} ({item.get('reg_date', '')})")
@@ -823,7 +817,6 @@ with tab2:
                             st.markdown(f"**{_('google_link')}:** [{_('google_link')}]({google_link_url})")
                         st.markdown(f"**{_('note')}:** {item.get('note', 'N/A')}")
         else:
-            # st.info 대신 st.write 사용 (요청 반영)
             st.write(_("no_schedule"))
 
     # --- 지도 표시 (사용자 & 관리자 공통) ---
@@ -996,7 +989,7 @@ with tab2:
     # 지도 표시
     st_folium(m, width=1000, height=600)
     
-    # 범례 및 지도 아래 텍스트 제거 완료
+    # 지도 아래 텍스트 제거 완료
 
 
 # --- 알림음 재생 스크립트 ---
@@ -1085,14 +1078,14 @@ st.markdown(f"""
 }}
 
 /* Custom Content Box Style (mimicking st.info appearance, to avoid being hidden by stAlert CSS) */
-.notice-content-box {
+.notice-content-box {{
     border-left: 5px solid #007BFF; /* Info blue */
     background-color: rgba(0, 123, 255, 0.1); /* Light blue background */
     padding: 10px;
     border-radius: 5px;
     margin-top: 10px;
     margin-bottom: 10px;
-}
+}}
 
 
 /* Streamlit Alert 메시지 숨기기 (사용자 요청 반영: 모든 상태 알림 숨김) */
