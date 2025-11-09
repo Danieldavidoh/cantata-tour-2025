@@ -189,7 +189,27 @@ if not tour_schedule:
 
 # --- 관리자 및 UI 설정 ---
 ADMIN_PASS = "admin_password_here" # 실제로는 보안 강화를 해야 합니다.
-st.title(f"{_('title_cantata')} {_('title_year')} - {_('title_region')}")
+
+# 요청 반영: 제목 스타일 및 애니메이션을 위한 HTML 마크다운 처리
+icons_html = """
+    <i class="fas fa-gift christmas-icon icon-gift"></i>
+    <i class="fas fa-candy-cane christmas-icon icon-cane"></i>
+    <i class="fas fa-socks christmas-icon icon-sock"></i>
+    <i class="fas fa-tree christmas-icon icon-tree"></i>
+    <i class="fas fa-deer christmas-icon icon-deer"></i>
+"""
+title_html = f"""
+    <div class="header-container">
+        <div class="christmas-decoration">{icons_html}</div>
+        <h1 class="main-title">
+            <span style="color: red;">{_('title_cantata')}</span> 
+            <span style="color: white;">{_('title_year')}</span>
+            <span style="color: green; font-size: 0.66em;">{_('title_region')}</span>
+        </h1>
+    </div>
+"""
+st.markdown(title_html, unsafe_allow_html=True)
+# st.title(f"{_('title_cantata')} {_('title_year')} - {_('title_region')}") # 이전 제목 표시 코드
 
 # 언어 선택 버튼 (상단 고정)
 col_lang, col_auth = st.columns([1, 3])
@@ -496,21 +516,27 @@ with tab2:
             popup_html += f'<a href="{google_link_url}" target="_blank">{_("google_link")}</a>'
         
         # 요청 반영: DivIcon을 사용하여 2/3 크기 (scale 0.666) 및 투명도 적용
+        # Font Awesome 아이콘을 사용해 크기를 조절
+        marker_icon_html = f"""
+            <div style="
+                transform: scale(0.666); 
+                opacity: {opacity_val};
+                text-align: center;
+                white-space: nowrap;
+            ">
+                <i class="fa fa-map-marker fa-3x" style="color: {color};"></i>
+                <div style="font-size: 10px; color: black; font-weight: bold; position: absolute; top: 12px; left: 13px;">{item['city'][0]}</div>
+            </div>
+        """
+            
         folium.Marker(
             [lat, lon],
             popup=folium.Popup(popup_html, max_width=300),
             tooltip=f"{item['city']} - {date_str}",
             icon=folium.DivIcon(
-                icon_size=(30, 30),
-                icon_anchor=(15, 30),
-                html=f"""
-                    <div style="
-                        transform: scale(0.666); 
-                        opacity: {opacity_val};
-                    ">
-                        <i class="fa fa-info-circle fa-2x" style="color: {color};"></i>
-                    </div>
-                """
+                icon_size=(30, 45),
+                icon_anchor=(15, 45),
+                html=marker_icon_html
             )
         ).add_to(m)
         
@@ -534,16 +560,16 @@ with tab2:
             past_segments = []
             future_segments = locations
         else: 
-            # 과거 세그먼트: 시작 ~ 현재/다음 도시
+            # 과거 세그먼트: 시작 ~ 현재/다음 도시 (PolyLine 사용)
             past_segments = locations[:current_index + 1]
-            # 미래 세그먼트: 현재/다음 도시 ~ 끝
+            # 미래 세그먼트: 현재/다음 도시 ~ 끝 (AntPath 사용)
             future_segments = locations[current_index:]
 
         # 요청 반영: 지난 도시/라인 30% 투명도의 빨간색 선
         if len(past_segments) > 1:
             folium.PolyLine(
                 locations=past_segments,
-                color="#FF0000",
+                color="#FF4B4B", # Streamlit Red
                 weight=5,
                 opacity=0.3,
                 tooltip="Past Route"
@@ -555,10 +581,10 @@ with tab2:
                 future_segments, 
                 use="regular", 
                 dash_array='5, 5', 
-                color='#FF0000',
+                color='#FF4B4B', # Streamlit Red
                 weight=5, 
                 opacity=0.8,
-                options={"delay": 1000, "dash_factor": 0.1, "color": "#FF0000"}
+                options={"delay": 1000, "dash_factor": 0.1, "color": "#FF4B4B"}
             ).add_to(m)
             
     elif locations:
@@ -569,9 +595,9 @@ with tab2:
         folium.Circle(
             location=locations[0],
             radius=1000, # 1km
-            color='red',
+            color='#FF4B4B',
             fill=True,
-            fill_color='red',
+            fill_color='#FF4B4B',
             fill_opacity=0.3 if single_is_past else 0.8,
             tooltip="Single Location"
         ).add_to(m)
@@ -586,51 +612,125 @@ with tab2:
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-    /* Streamlit 기본 레이아웃 수정 */
-    [data-testid="stAppViewContainer"] { 
-        background: url("background_christmas_dark.png"); 
-        background-size: cover; 
-        background-attachment: fixed; 
-        padding-top: 0 !important; 
-    }
-    
-    /* 헤더 스타일 */
-    .header-container { 
-        text-align: center; 
-        margin: 0 !important; 
-        padding-top: 20px; /* 상단 여백 확보 */
-    }
-    .christmas-decoration { 
-        display: flex; 
-        justify-content: center; 
-        gap: 12px; 
-        margin-bottom: 10px !important; 
-        padding: 10px 0;
-    }
-    
-    /* 탭 스타일 개선 */
-    .stTabs [data-baseweb="tab-list"] button [data-testid="stText"] {
-        font-weight: bold;
-    }
-    
-    /* 배경 이미지 적용 시 사이드바 배경이 흰색이 되는 것을 방지 */
-    section[data-testid="stSidebar"] {
-        background-color: rgba(0, 0, 0, 0.8); /* 어두운 투명 배경 */
-    }
-    
-    /* 일반 텍스트 입력 필드 배경 */
-    div[data-testid="stTextInput"] > div > div > input,
-    div[data-testid="stNumberInput"] > div > div > input,
-    div[data-testid="stTextArea"] > div > textarea {
-        background-color: rgba(255, 255, 255, 0.9);
-        color: black;
-    }
-    
-    /* Expander 배경을 투명하게 만들어 배경 이미지 보이게 하기 */
-    [data-testid$="stExpander"] {
-        background-color: rgba(10, 10, 10, 0.85); /* 어두운 반투명 */
-        border-radius: 8px;
-    }
+/* 요청 반영: 투명한 눈 입자 애니메이션 */
+@keyframes snowfall {
+    0% { background-position: 0% 0%, 50% 50%, 100% 100%; }
+    100% { background-position: 500px 1000px, 0px 500px, -500px 500px; }
+}
+
+[data-testid="stAppViewContainer"] { 
+    background: url("background_christmas_dark.png"); 
+    background-size: cover; 
+    background-attachment: fixed; 
+    padding-top: 0 !important; 
+    position: relative;
+}
+
+[data-testid="stAppViewContainer"]::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 99999; /* Ensure snow is on top of content */
+    pointer-events: none; /* Allows clicks through the snow */
+    /* Three layers of snow with different sizes/speeds for depth and transparency */
+    background-image:
+        radial-gradient(4px 4px at 20px 20px, rgba(255, 255, 255, 0.6), transparent),
+        radial-gradient(3px 3px at 70px 70px, rgba(255, 255, 255, 0.8), transparent),
+        radial-gradient(2px 2px at 120px 120px, rgba(255, 255, 255, 0.4), transparent);
+    background-size: 500px 500px, 200px 200px, 300px 300px;
+    animation: snowfall 50s linear infinite; /* 느린 연속적인 움직임 */
+}
+
+/* 요청 반영: 제목 아이콘 애니메이션 */
+@keyframes float {
+    0% { transform: translate(0, 0) rotate(0deg); opacity: 0.8; }
+    50% { transform: translate(10px, -10px) rotate(5deg); opacity: 1; }
+    100% { transform: translate(0, 0) rotate(0deg); opacity: 0.8; }
+}
+
+/* 헤더 스타일 및 애니메이션 컨테이너 */
+.header-container { 
+    text-align: center; 
+    margin: 0 !important; 
+    padding-top: 20px;
+    position: relative; /* Ensure the decoration is positioned correctly */
+}
+.main-title {
+    font-size: 3em;
+    margin-bottom: 0.5em;
+    text-shadow: 2px 2px 4px #000000;
+}
+.christmas-decoration {
+    position: absolute;
+    top: -50px; /* 제목 위로 이동 */
+    height: 60px; /* 아이콘 움직일 공간 */
+    width: 100%;
+    overflow: visible; /* 아이콘이 컨테이너를 벗어나 움직일 수 있도록 */
+    pointer-events: none;
+}
+
+.christmas-icon {
+    position: absolute;
+    animation: float 10s ease-in-out infinite alternate;
+    z-index: 10;
+}
+
+/* 개별 아이콘 스타일 (랜덤 크기, 위치, 속도) */
+.icon-gift { left: 10%; top: 5px; font-size: 25px; color: #00ff00; animation-duration: 12s; } /* Green */
+.icon-cane { left: 30%; top: 15px; font-size: 35px; color: white; animation-duration: 9s; }
+.icon-sock { right: 40%; top: 10px; font-size: 20px; color: #ff4b4b; animation-duration: 15s; } /* Red */
+.icon-tree { right: 15%; top: 0px; font-size: 40px; color: #00ff00; animation-duration: 11s; } /* Green */
+.icon-deer { left: 50%; top: 20px; font-size: 30px; color: #8B4513; animation-duration: 13s; } /* Brown */
+
+/* 탭 스타일 개선 (크리스마스 테마색) */
+.stTabs [data-baseweb="tab-list"] button {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 8px 8px 0 0;
+}
+.stTabs [data-baseweb="tab-list"] button [data-testid="stText"] {
+    font-weight: bold;
+    color: #ff4b4b; /* Red accent */
+    text-shadow: 1px 1px 2px #000;
+}
+.stTabs [aria-selected="true"] {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* 배경 이미지 적용 시 사이드바 배경이 흰색이 되는 것을 방지 */
+section[data-testid="stSidebar"] {
+    background-color: rgba(0, 0, 0, 0.8);
+    border-right: 2px solid #ff4b4b; /* Christmas color border */
+}
+
+/* 일반 텍스트 입력 필드 배경 */
+div[data-testid="stTextInput"] > div > div > input,
+div[data-testid="stNumberInput"] > div > div > input,
+div[data-testid="stTextArea"] > div > textarea {
+    background-color: rgba(255, 255, 255, 0.9);
+    color: black;
+}
+
+/* Expander 배경을 투명하게 만들어 배경 이미지 보이게 하기 */
+[data-testid$="stExpander"] {
+    background-color: rgba(10, 10, 10, 0.85);
+    border-radius: 8px;
+    border: 1px solid #00ff00; /* Green accent border */
+}
+
+/* 버튼 스타일 (로그인/로그아웃/등록 등) */
+.stButton > button {
+    background-color: #ff4b4b; /* Red button */
+    color: white;
+    border: 1px solid #cc0000;
+    font-weight: bold;
+}
+.stButton > button:hover {
+    background-color: #cc0000;
+    border-color: #ff4b4b;
+}
 
 </style>
 """, unsafe_allow_html=True)
