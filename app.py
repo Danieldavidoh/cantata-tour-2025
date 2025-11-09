@@ -1,184 +1,501 @@
+import json, os, uuid, base64, random
 import streamlit as st
-from datetime import datetime, timedelta
-from collections import OrderedDict
-import random
-import pandas as pd # pandas is used for data display and sorting
+from datetime import datetime, date
+import folium
+from streamlit_folium import st_folium
+from folium.plugins import AntPath
+from pytz import timezone
+from streamlit_autorefresh import st_autorefresh
 
-# --- App Configuration ---
-st.set_page_config(
-    page_title="Cantata Tour 2025 Schedule Manager (Simulation)",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
-# --- 10x Simulation Data Generation ---
-def generate_tour_data(count=10):
-    """Generates virtual tour data for 10 unique cities/stages."""
-    
-    # Define 10 unique cities and a base start date
-    cities = [
-        "New York", "London", "Berlin", "Dubai", "Sydney", 
-        "Rio de Janeiro", "Cairo", "Moscow", "Shanghai", "Mexico City"
-    ]
-    
-    start_date = datetime(2025, 3, 1).date()
-    extended_data = OrderedDict()
-    
-    for i in range(count):
-        city_name = cities[i % len(cities)]
-        
-        # Unique Key: Combine city name and index (e.g., 'New York (S1)') to ensure widget key uniqueness
-        unique_key = f"{city_name} (S{i+1})" 
-        # Set date spaced one week apart with some random variance
-        tour_date = start_date + timedelta(days=i * 7 + random.randint(0, 3)) 
-        
-        extended_data[unique_key] = {
-            "date": tour_date.strftime("%Y-%m-%d"), 
-            "notes": f"Cantata Tour 2025 - {city_name} 시뮬레이션 일정 {i+1}번", 
-            "city": city_name
-        }
-    return extended_data
+# --- 자동 새로고침 ---
+if not st.session_state.get("admin", False):
+    st_autorefresh(interval=5000, key="auto_refresh_user")
 
-# --- Session State Initialization and Data Handling ---
+# --- 파일 경로 ---
+NOTICE_FILE = "notice.json"
+CITY_FILE = "cities.json"
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-def initialize_session_state():
-    """Initializes session state variables."""
-    # tour_data: The permanent, saved schedule data.
-    if 'tour_data' not in st.session_state:
-        st.session_state.tour_data = generate_tour_data(10)
-    
-    # temp_tour_data: Temporary storage for user input before saving.
-    if 'temp_tour_data' not in st.session_state:
-        # Use a dictionary copy to separate temporary changes from permanent data
-        st.session_state.temp_tour_data = dict(st.session_state.tour_data)
+# --- 다국어 ---
+LANG = {
+    "ko": {
+        "title_cantata": "칸타타 투어", "title_year": "2025", "title_region": "마하라스트라",
+        "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
+        "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵",
+        "warning": "도시와 장소를 입력하세요", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
+        "add_city": "추가", "register": "등록", "update": "수정", "remove": "제거",
+        "date": "등록일"
+    },
+    "en": {
+        "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
+        "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
+        "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps",
+        "warning": "Enter city and venue", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
+        "add_city": "Add", "register": "Register", "update": "Update", "remove": "Remove",
+        "date": "Date"
+    },
+    "hi": {
+        "title_cantata": "कैंटाटा टूर", "title_year": "२०२५", "title_region": "महाराष्ट्र",
+        "tab_notice": "सूचना", "tab_map": "टूर रूट", "indoor": "इनडोर", "outdoor": "आउटडोर",
+        "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप्स",
+        "warning": "शहर और स्थल दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट",
+        "add_city": "जोड़ें", "register": "रजिस्टर", "update": "अपडेट", "remove": "हटाएं",
+        "date": "तारीख"
+    }
+}
 
-    if 'last_saved_time' not in st.session_state:
-        st.session_state.last_saved_time = "아직 저장되지 않았습니다."
-    
-    # simulation_count: Tracks how many times the user has saved the schedule.
-    if 'simulation_count' not in st.session_state:
-        st.session_state.simulation_count = 0
+# --- 세션 초기화 (lang 보장) ---
+defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False}
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
+    elif k == "lang" and not isinstance(st.session_state[k], str):
+        st.session_state[k] = "ko"
 
-def save_data():
-    """Saves temporary data to permanent data, updates save time, and increments simulation count."""
-    
-    # 1. Update permanent data with temporary inputs
-    st.session_state.tour_data = dict(st.session_state.temp_tour_data)
-    
-    # 2. Update metadata
-    st.session_state.last_saved_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    st.session_state.simulation_count += 1
-    
-    # 3. Provide feedback
-    st.success(f"데이터가 성공적으로 저장되었습니다. (저장 시간: {st.session_state.last_saved_time})")
-    st.info(f"현재 시뮬레이션 횟수: **{st.session_state.simulation_count}회**")
+# --- 번역 함수 ---
+def _(key):
+    lang = st.session_state.lang if isinstance(st.session_state.lang, str) else "ko"
+    return LANG.get(lang, LANG["ko"]).get(key, key)
 
-# --- UI Layout ---
-initialize_session_state()
+# --- JSON 헬퍼 ---
+def load_json(f): 
+    if os.path.exists(f):
+        try:
+            return json.load(open(f, "r", encoding="utf-8"))
+        except json.JSONDecodeError:
+            return []
+    return []
+def save_json(f, d): json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
-st.title("🎼 Cantata Tour 2025 스케줄 관리 시스템 (10회 시뮬레이션 모드)")
-st.markdown("---")
+# --- 도시 목록 생성 ---
+city_dict = {
+    "Ahmadnagar": {"lat": 19.095193, "lon": 74.749596},
+    "Akola": {"lat": 20.702269, "lon": 77.004699},
+    "Ambernath": {"lat": 19.186354, "lon": 73.191948},
+    "Amravati": {"lat": 20.93743, "lon": 77.779271},
+    "Aurangabad": {"lat": 19.876165, "lon": 75.343314},
+    "Badlapur": {"lat": 19.1088, "lon": 73.1311},
+    "Bhandara": {"lat": 21.180052, "lon": 79.564987},
+    "Bhiwandi": {"lat": 19.300282, "lon": 73.069645},
+    "Bhusawal": {"lat": 21.02606, "lon": 75.830095},
+    "Chandrapur": {"lat": 19.957275, "lon": 79.296875},
+    "Chiplun": {"lat": 17.5322, "lon": 73.516},
+    "Dhule": {"lat": 20.904964, "lon": 74.774651},
+    "Dombivli": {"lat": 19.2183, "lon": 73.0865},
+    "Gondia": {"lat": 21.4598, "lon": 80.195},
+    "Hingoli": {"lat": 19.7146, "lon": 77.1424},
+    "Ichalkaranji": {"lat": 16.6956, "lon": 74.4561},
+    "Jalgaon": {"lat": 21.007542, "lon": 75.562554},
+    "Jalna": {"lat": 19.833333, "lon": 75.883333},
+    "Kalyan": {"lat": 19.240283, "lon": 73.13073},
+    "Karad": {"lat": 17.284, "lon": 74.1779},
+    "Karanja": {"lat": 20.7083, "lon": 76.93},
+    "Karanja Lad": {"lat": 20.3969, "lon": 76.8908},
+    "Karjat": {"lat": 18.9121, "lon": 73.3259},
+    "Kavathe Mahankal": {"lat": 17.218, "lon": 74.416},
+    "Khamgaon": {"lat": 20.691, "lon": 76.6886},
+    "Khopoli": {"lat": 18.6958, "lon": 73.3207},
+    "Kolad": {"lat": 18.5132, "lon": 73.2166},
+    "Kolhapur": {"lat": 16.691031, "lon": 74.229523},
+    "Kopargaon": {"lat": 19.883333, "lon": 74.483333},
+    "Koparkhairane": {"lat": 19.0873, "lon": 72.9856},
+    "Kothrud": {"lat": 18.507399, "lon": 73.807648},
+    "Kudal": {"lat": 16.033333, "lon": 73.683333},
+    "Kurla": {"lat": 19.0667, "lon": 72.8833},
+    "Latur": {"lat": 18.406526, "lon": 76.560229},
+    "Lonavala": {"lat": 18.75, "lon": 73.4},
+    "Mahad": {"lat": 18.086, "lon": 73.3006},
+    "Malegaon": {"lat": 20.555256, "lon": 74.525539},
+    "Malkapur": {"lat": 20.4536, "lon": 76.3886},
+    "Manmad": {"lat": 20.3333, "lon": 74.4333},
+    "Mira-Bhayandar": {"lat": 19.271112, "lon": 72.854094},
+    "Mumbai": {"lat": 19.07609, "lon": 72.877426},
+    "Nagpur": {"lat": 21.1458, "lon": 79.088154},
+    "Nanded": {"lat": 19.148733, "lon": 77.321011},
+    "Nandurbar": {"lat": 21.317, "lon": 74.02},
+    "Nashik": {"lat": 20.011645, "lon": 73.790332},
+    "Niphad": {"lat": 20.074, "lon": 73.834},
+    "Osmanabad": {"lat": 18.169111, "lon": 76.035309},
+    "Palghar": {"lat": 19.691644, "lon": 72.768478},
+    "Panaji": {"lat": 15.4909, "lon": 73.8278},
+    "Panvel": {"lat": 18.989746, "lon": 73.117069},
+    "Parbhani": {"lat": 19.270335, "lon": 76.773347},
+    "Peth": {"lat": 18.125, "lon": 74.514},
+    "Phaltan": {"lat": 17.9977, "lon": 74.4066},
+    "Pune": {"lat": 18.52043, "lon": 73.856743},
+    "Raigad": {"lat": 18.515048, "lon": 73.179436},
+    "Ramtek": {"lat": 21.3142, "lon": 79.2676},
+    "Ratnagiri": {"lat": 16.990174, "lon": 73.311902},
+    "Sangli": {"lat": 16.855005, "lon": 74.56427},
+    "Sangole": {"lat": 17.126, "lon": 75.0331},
+    "Saswad": {"lat": 18.3461, "lon": 74.0335},
+    "Satara": {"lat": 17.688481, "lon": 73.993631},
+    "Sawantwadi": {"lat": 15.8964, "lon": 73.7626},
+    "Shahada": {"lat": 21.1167, "lon": 74.5667},
+    "Shirdi": {"lat": 19.7667, "lon": 74.4771},
+    "Shirpur": {"lat": 21.1286, "lon": 74.4172},
+    "Shirur": {"lat": 18.7939, "lon": 74.0305},
+    "Shrirampur": {"lat": 19.6214, "lon": 73.8653},
+    "Sinnar": {"lat": 19.8531, "lon": 73.9976},
+    "Solan": {"lat": 30.9083, "lon": 77.0989},
+    "Solapur": {"lat": 17.659921, "lon": 75.906393},
+    "Talegaon": {"lat": 18.7519, "lon": 73.487},
+    "Thane": {"lat": 19.218331, "lon": 72.978088},
+    "Achalpur": {"lat": 20.1833, "lon": 77.6833},
+    "Akot": {"lat": 21.1, "lon": 77.1167},
+    "Ambajogai": {"lat": 18.9667, "lon": 76.6833},
+    "Amalner": {"lat": 21.0333, "lon": 75.3333},
+    "Anjangaon Surji": {"lat": 21.1167, "lon": 77.8667},
+    "Arvi": {"lat": 20.45, "lon": 78.15},
+    "Ashti": {"lat": 18.0, "lon": 76.25},
+    "Atpadi": {"lat": 17.1667, "lon": 74.4167},
+    "Baramati": {"lat": 18.15, "lon": 74.6},
+    "Barshi": {"lat": 18.11, "lon": 76.06},
+    "Basmat": {"lat": 18.7, "lon": 77.856},
+    "Bhokar": {"lat": 19.5167, "lon": 77.3833},
+    "Biloli": {"lat": 19.5333, "lon": 77.2167},
+    "Chikhli": {"lat": 20.9, "lon": 76.0167},
+    "Daund": {"lat": 18.4667, "lon": 74.65},
+    "Deola": {"lat": 20.5667, "lon": 74.05},
+    "Dhanora": {"lat": 20.7167, "lon": 79.0167},
+    "Dharni": {"lat": 21.25, "lon": 78.2667},
+    "Dharur": {"lat": 18.0833, "lon": 76.7},
+    "Digras": {"lat": 19.45, "lon": 77.55},
+    "Dindori": {"lat": 21.0, "lon": 79.0},
+    "Erandol": {"lat": 21.0167, "lon": 75.2167},
+    "Faizpur": {"lat": 21.1167, "lon": 75.7167},
+    "Gadhinglaj": {"lat": 16.2333, "lon": 74.1333},
+    "Guhagar": {"lat": 16.4, "lon": 73.4},
+    "Hinganghat": {"lat": 20.0167, "lon": 78.7667},
+    "Igatpuri": {"lat": 19.6961, "lon": 73.5212},
+    "Junnar": {"lat": 19.2667, "lon": 73.8833},
+    "Kankavli": {"lat": 16.3833, "lon": 73.5167},
+    "Koregaon": {"lat": 17.2333, "lon": 74.1167},
+    "Kupwad": {"lat": 16.7667, "lon": 74.4667},
+    "Lonar": {"lat": 19.9833, "lon": 76.5167},
+    "Mangaon": {"lat": 18.1869, "lon": 73.2555},
+    "Mangalwedha": {"lat": 16.6667, "lon": 75.1333},
+    "Morshi": {"lat": 20.0556, "lon": 77.7647},
+    "Pandharpur": {"lat": 17.6658, "lon": 75.3203},
+    "Parli": {"lat": 18.8778, "lon": 76.65},
+    "Rahuri": {"lat": 19.2833, "lon": 74.5833},
+    "Raver": {"lat": 20.5876, "lon": 75.9002},
+    "Sangamner": {"lat": 19.3167, "lon": 74.5333},
+    "Savner": {"lat": 21.0833, "lon": 79.1333},
+    "Sillod": {"lat": 20.0667, "lon": 75.1833},
+    "Tumsar": {"lat": 20.4623, "lon": 79.5429},
+    "Udgir": {"lat": 18.4167, "lon": 77.1239},
+    "Ulhasnagar": {"lat": 19.218451, "lon": 73.16024},
+    "Vasai-Virar": {"lat": 19.391003, "lon": 72.839729},
+    "Wadgaon Road": {"lat": 18.52, "lon": 73.85},
+    "Wadwani": {"lat": 18.9, "lon": 76.69},
+    "Wai": {"lat": 17.9524, "lon": 73.8775},
+    "Wani": {"lat": 19.0, "lon": 78.002},
+    "Wardha": {"lat": 20.745445, "lon": 78.602452},
+    "Wardha Road": {"lat": 20.75, "lon": 78.6},
+    "Yavatmal": {"lat": 20.389917, "lon": 78.130051}
+}
 
-col_info, col_save = st.columns([3, 1])
+# --- 도시 목록 생성 ---
+major_cities = ["Mumbai", "Pune", "Nagpur", "Thane", "Nashik", "Kalyan", "Vasai-Virar", "Aurangabad", "Solapur", "Mira-Bhayandar", "Bhiwandi", "Amravati", "Nanded", "Kolhapur", "Ulhasnagar", "Sangli", "Malegaon", "Jalgaon", "Akola", "Latur", "Dhule", "Ahmadnagar", "Chandrapur", "Parbhani", "Ichalkaranji", "Jalna", "Ambernath", "Bhusawal", "Panvel", "Dombivli"]
 
-with col_info:
-    st.subheader("현재 투어 스케줄")
-    st.info(f"마지막 저장 시간: **{st.session_state.last_saved_time}** (저장 횟수: {st.session_state.simulation_count}회)")
+major_cities_available = [c for c in major_cities if c in city_dict]
 
-with col_save:
-    # Save button. Executes save_data function on click.
-    if st.button("💾 스케줄 저장 (Save Changes)", use_container_width=True, type="primary"):
-        save_data()
-        # Rerun is required to fully refresh the data table and sidebar metrics
-        st.experimental_rerun() 
+remaining_cities = sorted([c for c in city_dict if c not in major_cities_available])
 
-st.markdown("---")
+city_options = ["공연없음"] + major_cities_available + remaining_cities
 
-# --- Tour Data Input and Display ---
-st.subheader("10개 도시별 날짜 및 메모 수정 (저장 버튼 클릭 시 반영)")
+# --- 초기 도시 ---
+if not os.path.exists(CITY_FILE):
+    save_json(CITY_FILE, [])
 
-# Define columns for the input table
-cols = st.columns(4)
-cols[0].markdown("**Tour Unique Key**")
-cols[1].markdown("**Permanently Saved Date**")
-cols[2].markdown("**Select New Date (Temporary)**")
-cols[3].markdown("**Notes (Temporary)**")
-st.markdown("---")
+# --- CSS ---
+st.markdown("""
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+    [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-attachment: fixed; padding-top: 0 !important; }
+    .header-container { text-align: center; margin: 0 !important; }
+    .christmas-decoration { display: flex; justify-content: center; gap: 12px; margin-bottom: 0 !important; }
+    .christmas-decoration i { color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6); animation: float 3s ease-in-out infinite; }
+    @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-6px) rotate(4deg); } }
+    .main-title { font-size: 2.8em !important; font-weight: bold; text-shadow: 0 3px 8px rgba(0,0,0,0.6); margin: 0 !important; line-height: 1.2; }
+    .button-row { display: flex; justify-content: center; gap: 20px; margin-top: 0 !important; }
+    .tab-btn { background: rgba(255,255,255,0.96); color: #c62828; border: none; border-radius: 20px; padding: 10px 20px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.3s; flex: 1; max-width: 200px; }
+    .tab-btn:hover { background: #d32f2f; color: white; transform: translateY(-2px); }
+    .snowflake { position:fixed; top:-15px; color:#fff; font-size:1.1em; pointer-events:none; animation:fall linear infinite; opacity:0.3; z-index:1; }
+    @keyframes fall { 0% { transform:translateY(0) rotate(0deg); } 100% { transform:translateY(120vh) rotate(360deg); } }
+    .hamburger { position:fixed; top:15px; left:15px; z-index:10000; background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%; width:50px; height:50px; font-size:24px; cursor:pointer; }
+    .sidebar-mobile { position:fixed; top:0; left:-300px; width:280px; height:100vh; background:rgba(30,30,30,.95); color:#fff; padding:20px; transition:left .3s; z-index:9999; }
+    .sidebar-mobile.open { left:0; }
+    .overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,.5); z-index:9998; display:none; }
+    .overlay.open { display:block; }
+    @media(min-width:769px) { .hamburger, .sidebar-mobile, .overlay { display:none !important; } }
+    .stButton>button { border:none !important; }
+    .add-city-btn { background:white !important; color:black !important; font-weight:bold; border-radius:50%; width:40px; height:40px; font-size:1.5rem; display:flex; align-items:center; justify-content:center; }
+    .selectbox-small { width: 70% !important; }
+</style>
+""", unsafe_allow_html=True)
 
+for i in range(52):
+    st.markdown(f"<div class='snowflake' style='left:{random.randint(0,100)}vw; animation-duration:{random.randint(10,20)}s; font-size:{random.uniform(0.8,1.4)}em; animation-delay:{random.uniform(0,10)}s;'>❄</div>", unsafe_allow_html=True)
 
-# Iterate through the temporary data for input fields
-for i, (city_key, details) in enumerate(st.session_state.temp_tour_data.items()):
-    
-    # --- CRITICAL: Generate unique keys for widgets to prevent StreamlitDuplicateElementKey ---
-    unique_date_key = f"date_input_{city_key}_{i}"
-    unique_notes_key = f"notes_input_{city_key}_{i}"
-    
-    # Prepare the date value for the date_input widget
-    try:
-        temp_date = datetime.strptime(details['date'], "%Y-%m-%d").date()
-    except ValueError:
-        temp_date = datetime.now().date()
-    
-    # Retrieve the permanently saved date for comparison display
-    permanently_saved_date = st.session_state.tour_data.get(city_key, {}).get("date", "N/A")
+# --- 헤더 ---
+st.markdown('<div class="header-container">', unsafe_allow_html=True)
+st.markdown('''
+<div class="christmas-decoration">
+    <i class="fas fa-gift"></i><i class="fas fa-candy-cane"></i><i class="fas fa-socks"></i>
+    <i class="fas fa-sleigh"></i><i class="fas fa-deer"></i><i class="fas fa-tree"></i><i class="fas fa-bell"></i>
+</div>
+''', unsafe_allow_html=True)
+st.markdown(f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
-    # Display data in new row columns
-    col1, col2, col3, col4 = st.columns(4)
+# --- 탭 버튼 ---
+st.markdown('<div class="button-row">', unsafe_allow_html=True)
+col1, col2 = st.columns(2)
+with col1:
+    if st.button(_("tab_notice"), key="btn_notice", use_container_width=True):
+        st.session_state.notice_open = not st.session_state.notice_open
+        st.session_state.map_open = False
+        st.rerun()
+with col2:
+    if st.button(_("tab_map"), key="btn_map", use_container_width=True):
+        st.session_state.map_open = not st.session_state.map_open
+        st.session_state.notice_open = False
+        st.rerun()
+st.markdown('</div>', unsafe_allow_html=True)
 
-    with col1:
-        st.markdown(f"**{city_key}**") 
+# --- 공지 ---
+if st.session_state.notice_open:
+    if st.session_state.admin:
+        with st.expander("공지 작성"):
+            with st.form("notice_form", clear_on_submit=True):
+                title = st.text_input("제목")
+                content = st.text_area("내용")
+                img = st.file_uploader("이미지", type=["png","jpg","jpeg"])
+                file = st.file_uploader("첨부 파일")
+                if st.form_submit_button("등록"):
+                    if title.strip() and content.strip():
+                        img_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{img.name}") if img else None
+                        file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.name}") if file else None
+                        if img: open(img_path, "wb").write(img.getbuffer())
+                        if file: open(file_path, "wb").write(file.getbuffer())
+                        notice = {"id": str(uuid.uuid4()), "title": title, "content": content,
+                                  "date": datetime.now(timezone("Asia/Kolkata")).strftime("%m/%d %H:%M"),
+                                  "image": img_path, "file": file_path}
+                        data = load_json(NOTICE_FILE)
+                        data.insert(0, notice)
+                        save_json(NOTICE_FILE, data)
+                        st.success("등록 완료!")
+                        st.rerun()
+                    else:
+                        st.warning(_("warning"))
+    for i, n in enumerate(load_json(NOTICE_FILE)):
+        with st.expander(f"{n['date']} | {n['title']}", expanded=False):
+            st.markdown(n["content"])
+            if n.get("image") and os.path.exists(n["image"]): st.image(n["image"], use_column_width=True)
+            if n.get("file") and os.path.exists(n["file"]):
+                b64 = base64.b64encode(open(n["file"], "rb").read()).decode()
+                st.markdown(f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(n["file"])}">다운로드</a>', unsafe_allow_html=True)
+            if st.session_state.admin and st.button(_("delete"), key=f"del_n_{n['id']}"):
+                data = load_json(NOTICE_FILE)
+                data.pop(i)
+                save_json(NOTICE_FILE, data)
+                st.rerun()
 
-    with col2:
-        # Display the permanently saved date
-        st.markdown(f"*{permanently_saved_date}*")
+# --- 투어 경로 & 도시 추가 ---
+if st.session_state.map_open:
+    cities = load_json(CITY_FILE)
 
-    with col3:
-        # st.date_input widget
-        selected_date = st.date_input(
-            "날짜 선택",
-            value=temp_date,
-            key=unique_date_key, # Use the unique key
-            label_visibility="collapsed"
-        )
-        
-        # Update the temporary data state immediately on date change
-        st.session_state.temp_tour_data[city_key]['date'] = selected_date.strftime("%Y-%m-%d")
+    # --- 지도 (항상 Aurangabad 중심) ---
+    m = folium.Map(location=[19.876165, 75.343314], zoom_start=7, tiles="OpenStreetMap")
+    for i, c in enumerate(cities):
+        lat, lon = c["lat"], c["lon"]
+        indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
+        google_link = c.get("google_link", "")
+        link_text = f'<a href="{google_link}" target="_blank">Google Maps</a>' if google_link else ""
+        edit_link = ''
+        if st.session_state.admin:
+            edit_link = f'<br><a href="?edit={c["city"]}" target="_self">Edit</a>'
+        popup_html = f"<b>{c['city']}</b><br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br>{_('note')}: {c.get('note','—')}<br>{link_text}{edit_link}"
+        folium.Marker(
+            (lat, lon), popup=folium.Popup(popup_html, max_width=300),
+            icon=folium.Icon(color="red", icon="music", prefix="fa")
+        ).add_to(m)
+        if i < len(cities) - 1:
+            nxt = cities[i+1]
+            AntPath([(lat, lon), (nxt["lat"], nxt["lon"])], color="#e74c3c", weight=6, opacity=0.7).add_to(m)
+    st_folium(m, width=900, height=550, key="tour_map")
 
+    st.experimental_set_query_params()
+    query_params = st.experimental_get_query_params()
+    if st.session_state.admin and 'edit' in query_params:
+        city_name = query_params['edit'][0]
+        city_to_edit = next((c for c in cities if c['city'] == city_name), None)
+        if city_to_edit:
+            with st.expander(f"Edit {city_name}", expanded=True):
+                col1, col2 = st.columns(2)
+                with col1:
+                    current_date = city_to_edit.get("date")
+                    if isinstance(current_date, str) and current_date:
+                        try:
+                            current_date = datetime.strptime(current_date, "%Y-%m-%d").date()
+                        except:
+                            current_date = date.today()
+                    elif not isinstance(current_date, date):
+                        current_date = date.today()
+                    new_date = st.date_input(_("date"), value=current_date)
+                    city_to_edit["date"] = new_date
+                    city_to_edit["venue"] = st.text_input(_("venue"), value=city_to_edit.get("venue", ""))
+                    city_to_edit["seats"] = st.number_input(_("seats"), min_value=0, value=int(city_to_edit.get("seats", 500)), step=50)
+                with col2:
+                    city_to_edit["google_link"] = st.text_input(_("google_link"), value=city_to_edit.get("google_link", ""))
+                    city_to_edit["note"] = st.text_input(_("note"), value=city_to_edit.get("note", ""))
 
-    with col4:
-        # st.text_area widget
-        st.text_area(
-            "메모", 
-            value=details['notes'], 
-            key=unique_notes_key, # Use the unique key
-            label_visibility="collapsed",
-            height=50
-        )
-        # Update notes content to the temporary data state using the widget's current value
-        st.session_state.temp_tour_data[city_key]['notes'] = st.session_state[unique_notes_key]
+                col_radio, col_save, col_cancel = st.columns([3, 1, 1])
+                with col_radio:
+                    venue_type = st.radio(
+                        "공연 장소 유형", [_("indoor"), _("outdoor")],
+                        index=0 if city_to_edit.get("indoor", True) else 1,
+                        horizontal=True
+                    )
+                    city_to_edit["indoor"] = venue_type == _("indoor")
+                with col_save:
+                    if st.button(_("update")):
+                        if city_to_edit.get("venue"):
+                            city_to_edit["date"] = city_to_edit["date"].strftime("%Y-%m-%d")
+                            city_to_edit["seats"] = str(city_to_edit["seats"])
+                            save_json(CITY_FILE, cities)
+                            del st.query_params['edit']
+                            st.success("수정 완료!")
+                            st.rerun()
+                        else:
+                            st.warning(_("warning"))
+                with col_cancel:
+                    if st.button(_("remove")):
+                        cities = [c for c in cities if c['city'] != city_name]
+                        save_json(CITY_FILE, cities)
+                        del st.query_params['edit']
+                        st.rerun()
 
-# --- Final Data Confirmation (Dataframe Display) ---
-st.markdown("---")
-st.subheader("영구 저장된 전체 투어 데이터 상세")
+    if st.session_state.admin:
+        if 'new_cities' not in st.session_state:
+            st.session_state.new_cities = []
 
-# Convert permanent data to DataFrame for sorting and display
-data_list = []
-for city_key, details in st.session_state.tour_data.items():
-    data_list.append({
-        "고유 키": city_key,
-        "도시": details['city'],
-        "날짜": details['date'],
-        "메모": details['notes']
-    })
+        # 새로 추가된 도시들
+        if 'new_cities' in st.session_state:
+            for idx, new_city in enumerate(st.session_state.new_cities):
+                expanded = st.session_state.get(f"expand_{new_city['city']}", False)
+                with st.expander(f"{new_city['city']}", expanded=expanded):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        current_date = new_city.get("date")
+                        if isinstance(current_date, str) and current_date:
+                            try:
+                                current_date = datetime.strptime(current_date, "%Y-%m-%d").date()
+                            except:
+                                current_date = date.today()
+                        elif not isinstance(current_date, date):
+                            current_date = date.today()
+                        new_city["date"] = st.date_input(_("date"), value=current_date, key=f"date_{idx}")
+                        new_city["venue"] = st.text_input(_("venue"), value=new_city.get("venue", ""), key=f"venue_{idx}")
+                        new_city["seats"] = st.number_input(_("seats"), min_value=0, value=int(new_city.get("seats", 500)), step=50, key=f"seats_{idx}")
+                    with col2:
+                        new_city["google_link"] = st.text_input(_("google_link"), value=new_city.get("google_link", ""), key=f"google_link_{idx}")
+                        new_city["note"] = st.text_input(_("note"), value=new_city.get("note", ""), key=f"note_{idx}")
 
-df = pd.DataFrame(data_list)
-# Sort by date for logical display
-df_sorted = df.sort_values(by="날짜", ascending=True)
+                    col_radio, col_reg, col_rem = st.columns([3, 1, 1])
+                    with col_radio:
+                        venue_type = st.radio(
+                            "공연 장소 유형", [_("indoor"), _("outdoor")],
+                            index=0 if new_city.get("indoor", True) else 1,
+                            horizontal=True, key=f"venue_type_{idx}"
+                        )
+                        new_city["indoor"] = venue_type == _("indoor")
+                    with col_reg:
+                        if st.button(_("register"), key=f"reg_{idx}"):
+                            if new_city.get("venue"):
+                                save_city = new_city.copy()
+                                save_city["date"] = save_city["date"].strftime("%Y-%m-%d")
+                                save_city["seats"] = str(save_city["seats"])
+                                cities.insert(0, save_city)
+                                save_json(CITY_FILE, cities)
+                                st.session_state.new_cities.pop(idx)
+                                st.success("등록 완료!")
+                                st.rerun()
+                            else:
+                                st.warning(_("warning"))
+                    with col_rem:
+                        if st.button(_("remove"), key=f"rem_{idx}"):
+                            st.session_state.new_cities.pop(idx)
+                            st.rerun()
 
-st.dataframe(df_sorted, use_container_width=True, hide_index=True)
+        # 도시 선택 박스 + 추가 버튼 (나란히 배치)
+        col_select, col_add = st.columns([2, 1])
+        with col_select:
+            selected_city = st.selectbox(
+                "도시", options=city_options, key="city_select_header", index=0,
+                help="추가할 도시 선택", label_visibility="collapsed"
+            )
+        with col_add:
+            if st.button(_("add_city"), key="add_city_header_btn", help="도시 추가"):
+                existing_cities = [c['city'] for c in cities] + [c['city'] for c in st.session_state.new_cities]
+                if selected_city != "공연없음" and selected_city not in existing_cities:
+                    lat = city_dict[selected_city]["lat"]
+                    lon = city_dict[selected_city]["lon"]
+                    new_city = {
+                        "city": selected_city, "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True,
+                        "date": date.today(), "lat": lat, "lon": lon
+                    }
+                    st.session_state.new_cities.insert(0, new_city)
+                    st.session_state[f"expand_{selected_city}"] = True
+                    st.rerun()
 
-# --- Sidebar Metrics ---
-st.sidebar.markdown("# Tour Information")
-st.sidebar.metric("Total Tour Cities", len(st.session_state.tour_data))
-st.sidebar.metric("Saved Simulation Count", st.session_state.simulation_count)
-st.sidebar.markdown("Changes to dates and notes are reflected in the permanent data only when you click the **'Save Schedule'** button.")s
+# --- 사이드바 & 모바일 ---
+st.markdown(f'''
+<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.query_selector('.overlay').classList.toggle('open');">☰</button>
+<div class="overlay" onclick="document.querySelector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
+<div class="sidebar-mobile">
+    <h3 style="color:white;">{_("menu")}</h3>
+    <select onchange="window.location.href='?lang='+this.value" style="width:100%; padding:8px; margin:10px 0;">
+        <option value="ko" {'selected' if st.session_state.lang=="ko" else ''}>한국어</option>
+        <option value="en" {'selected' if st.session_state.lang=="en" else ''}>English</option>
+        <option value="hi" {'selected' if st.session_state.lang=="hi" else ''}>हिंदी</option>
+    </select>
+    {'''
+        <input type="password" placeholder="비밀번호" id="mobile_pw" style="width:100%; padding:8px; margin:10px 0;">
+        <button onclick="if(document.getElementById('mobile_pw').value=='0009') window.location.href='?admin=true'; else alert('오류');" style="width:100%; padding:10px; background:#e74c3c; color:white; border:none; border-radius:8px;">{_("login")}</button>
+    ''' if not st.session_state.admin else f'''
+        <button onclick="window.location.href='?admin=false'" style="width:100%; padding:10px; background:#27ae60; color:white; border:none; border-radius:8px;">{_("logout")}</button>
+    ''' }
+</div>
+''', unsafe_allow_html=True)
+
+with st.sidebar:
+    sel = st.selectbox("언어", ["한국어", "English", "हिंदी"], index=0 if st.session_state.lang == "ko" else 1 if st.session_state.lang == "en" else 2)
+    if sel == "English" and st.session_state.lang != "en":
+        st.session_state.lang = "en"
+        st.rerun()
+    elif sel == "한국어" and st.session_state.lang != "ko":
+        st.session_state.lang = "ko"
+        st.rerun()
+    elif sel == "हिंदी" and st.session_state.lang != "hi":
+        st.session_state.lang = "hi"
+        st.rerun()
+
+    if not st.session_state.admin:
+        pw = st.text_input("비밀번호", type="password")
+        if st.button("로그인"):
+            if pw == "0009":
+                st.session_state.admin = True
+                st.rerun()
+            else:
+                st.error("비밀번호 오류")
+    else:
+        st.success("관리자 모드")
+        if st.button("로그아웃"):
+            st.session_state.admin = False
+            st.rerun()
