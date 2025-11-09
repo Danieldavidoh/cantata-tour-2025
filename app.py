@@ -10,85 +10,71 @@ from math import radians, sin, cos, sqrt, atan2
 
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
-# --- 자동 새로고침 ---
+# 자동 새로고침
 if not st.session_state.get("admin", False):
     st_autorefresh(interval=5000, key="auto_refresh_user")
 
-# --- 파일 경로 ---
+# 파일 경로
 NOTICE_FILE = "notice.json"
 CITY_FILE = "cities.json"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# --- 다국어 ---
+# 다국어
 LANG = {
-    "ko": {
-        "title_cantata": "칸타타 투어", "title_year": "2025", "title_region": "마하라스트라",
-        "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
-        "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵",
-        "warning": "도시와 장소를 입력하세요", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
-        "add_city": "도시 추가 버튼", "register": "등록", "update": "수정", "remove": "제거",
-        "date": "등록일"
-    },
-    "en": {
-        "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
-        "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
-        "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps",
-        "warning": "Enter city and venue", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
-        "add_city": "Add City Button", "register": "Register", "update": "Update", "remove": "Remove",
-        "date": "Date"
-    }
+    "ko": {"title_cantata": "칸타타 투어", "title_year": "2025", "title_region": "마하라스트라",
+           "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
+           "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵",
+           "warning": "도시와 장소를 입력하세요", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
+           "add_city": "도시 추가 버튼", "register": "등록", "update": "수정", "remove": "제거",
+           "date": "등록일"},
+    "en": {"title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
+           "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
+           "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps",
+           "warning": "Enter city and venue", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
+           "add_city": "Add City Button", "register": "Register", "update": "Update", "remove": "Remove",
+           "date": "Date"}
 }
 
-# --- 세션 초기화 (lang 보장) ---
+# 세션 초기화
 defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False}
 for k, v in defaults.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
-    elif k == "lang" and not isinstance(st.session_state[k], str):
-        st.session_state[k] = "ko"
+    if k not in st.session_state: st.session_state[k] = v
+    elif k == "lang" and not isinstance(st.session_state[k], str): st.session_state[k] = "ko"
 
-# --- 번역 함수 ---
-def _(key):
-    lang = st.session_state.lang if isinstance(st.session_state.lang, str) else "ko"
-    return LANG.get(lang, LANG["ko"]).get(key, key)
+# 번역 함수
+_ = lambda key: LANG.get(st.session_state.lang if isinstance(st.session_state.lang, str) else "ko", LANG["ko"]).get(key, key)
 
-# --- JSON 헬퍼 ---
-def load_json(f): return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
-def save_json(f, d): json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+# JSON 헬퍼
+load_json = lambda f: json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
+save_json = lambda f, d: json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
-# --- 초기 도시 ---
+# 초기 도시
 DEFAULT_CITIES = [
     {"city": "Mumbai", "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True, "date": "", "lat": 19.07609, "lon": 72.877426},
     {"city": "Pune", "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True, "date": "", "lat": 18.52043, "lon": 73.856743},
     {"city": "Nagpur", "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True, "date": "", "lat": 21.1458, "lon": 79.088154}
 ]
-if not os.path.exists(CITY_FILE):
-    save_json(CITY_FILE, DEFAULT_CITIES)
+if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
 
-# --- 거리 계산 함수 (km) ---
+# 거리 계산
 def calculate_distance(lat1, lon1, lat2, lon2):
-    R = 6371.0  # 지구 반경 (km)
-    lat1_rad = radians(lat1)
-    lon1_rad = radians(lon1)
-    lat2_rad = radians(lat2)
-    lon2_rad = radians(lon2)
-    dlon = lon2_rad - lon1_rad
-    dlat = lat2_rad - lat1_rad
+    R = 6371.0
+    lat1_rad, lon1_rad, lat2_rad, lon2_rad = map(radians, [lat1, lon1, lat2, lon2])
+    dlon, dlat = lon2_rad - lon1_rad, lat2_rad - lat1_rad
     a = sin(dlat / 2)**2 + cos(lat1_rad) * cos(lat2_rad) * sin(dlon / 2)**2
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
-    distance = R * c
-    return distance
+    return R * c
 
-# --- 시간 계산 함수 (평균 속도 100km/h 가정) ---
+# 시간 계산
 def calculate_time(distance):
-    speed = 100  # km/h
+    speed = 100
     time_hours = distance / speed
     hours = int(time_hours)
     minutes = int((time_hours - hours) * 60)
     return f"{hours}h {minutes}m"
 
-# --- CSS (스크롤 최소화, 패딩 조정) ---
+# CSS (스크롤 최소화)
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
