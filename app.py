@@ -4,7 +4,7 @@ import uuid
 import base64
 import random
 import streamlit as st
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
@@ -38,7 +38,41 @@ LANG = {
         "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵",
         "warning": "도시와 장소를 입력하세요", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
         "add_city": "추가", "register": "등록", "update": "수정", "remove": "제거",
-        "date": "등록일", "city_name": "도시 이름", "search_placeholder": "도시/장소 검색..."
+        "date": "날짜", "city_name": "도시 이름", "search_placeholder": "도시/장소 검색...",
+        
+        # 추가 번역 (모든 UI 요소 포함)
+        "general": "일반", "urgent": "긴급",
+        "admin_login": "관리자 로그인",
+        "update_content": "내용 수정",
+        "existing_notices": "기존 공지사항",
+        "no_notices": "공지사항이 없습니다.",
+        "content": "내용",
+        "no_content": "내용 없음",
+        "no_title": "제목 없음",
+        "tour_schedule_management": "투어 일정 관리",
+        "set_data": "데이터 설정",
+        "type": "유형",
+        "city": "도시",
+        "link": "링크",
+        "past_route": "지난 경로",
+        "single_location": "단일 위치",
+        "legend": "범례",
+        "no_schedule": "일정이 없습니다.",
+        "city_coords_error": "좌표를 찾을 수 없습니다. city_dict에 추가해 주세요.",
+        "logged_in_success": "관리자로 로그인했습니다.",
+        "logged_out_success": "로그아웃했습니다.",
+        "incorrect_password": "비밀번호가 틀렸습니다.",
+        "fill_in_fields": "제목과 내용을 채워주세요.",
+        "notice_reg_success": "공지사항이 성공적으로 등록되었습니다!",
+        "notice_del_success": "공지사항이 삭제되었습니다.",
+        "notice_upd_success": "공지사항이 수정되었습니다.",
+        "schedule_reg_success": "일정이 등록되었습니다.",
+        "schedule_del_success": "일정 항목이 제거되었습니다.",
+        "schedule_upd_success": "일정이 성공적으로 수정되었습니다.",
+        "venue_placeholder": "공연 장소를 입력하세요",
+        "note_placeholder": "특이사항을 입력하세요",
+        "google_link_placeholder": "구글맵 URL을 입력하세요",
+        "seats_tooltip": "예상 관객 인원"
     },
     "en": {
         "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
@@ -46,7 +80,41 @@ LANG = {
         "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps",
         "warning": "Enter city and venue", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
         "add_city": "Add", "register": "Register", "update": "Update", "remove": "Remove",
-        "date": "Date", "city_name": "City Name", "search_placeholder": "Search City/Venue..."
+        "date": "Date", "city_name": "City Name", "search_placeholder": "Search City/Venue...",
+        
+        # Additional translations
+        "general": "General", "urgent": "Urgent",
+        "admin_login": "Admin Login",
+        "update_content": "Update Content",
+        "existing_notices": "Existing Notices",
+        "no_notices": "No notices available.",
+        "content": "Content",
+        "no_content": "No Content",
+        "no_title": "No Title",
+        "tour_schedule_management": "Tour Schedule Management",
+        "set_data": "Set Data",
+        "type": "Type",
+        "city": "City",
+        "link": "Link",
+        "past_route": "Past Route",
+        "single_location": "Single Location",
+        "legend": "Legend",
+        "no_schedule": "No schedule available.",
+        "city_coords_error": "Coordinates not found. Please add to city_dict.",
+        "logged_in_success": "Logged in as Admin.",
+        "logged_out_success": "Logged out.",
+        "incorrect_password": "Incorrect password.",
+        "fill_in_fields": "Please fill in the title and content.",
+        "notice_reg_success": "Notice registered successfully!",
+        "notice_del_success": "Notice deleted.",
+        "notice_upd_success": "Notice updated.",
+        "schedule_reg_success": "Schedule registered.",
+        "schedule_del_success": "Schedule entry removed.",
+        "schedule_upd_success": "Schedule updated successfully.",
+        "venue_placeholder": "Enter venue name",
+        "note_placeholder": "Enter notes/special remarks",
+        "google_link_placeholder": "Enter Google Maps URL",
+        "seats_tooltip": "Expected audience count"
     },
     "hi": {
         "title_cantata": "कैंटाटा टूर", "title_year": "२०२५", "title_region": "महाराष्ट्र",
@@ -54,12 +122,46 @@ LANG = {
         "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप्स",
         "warning": "शहर और स्थल दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट",
         "add_city": "जोड़ें", "register": "रजिस्टर", "update": "अपडेट", "remove": "हटाएं",
-        "date": "तारीख", "city_name": "शहर का नाम", "search_placeholder": "शहर/स्थल खोजें..."
+        "date": "तारीख", "city_name": "शहर का नाम", "search_placeholder": "शहर/स्थल खोजें...",
+        
+        # Additional translations
+        "general": "सामान्य", "urgent": "तत्काल",
+        "admin_login": "व्यवस्थापक लॉगिन",
+        "update_content": "सामग्री अपडेट करें",
+        "existing_notices": "मौजूदा सूचनाएं",
+        "no_notices": "कोई सूचना उपलब्ध नहीं है।",
+        "content": "सामग्री",
+        "no_content": "कोई सामग्री नहीं",
+        "no_title": "कोई शीर्षक नहीं",
+        "tour_schedule_management": "टूर अनुसूची प्रबंधन",
+        "set_data": "डेटा सेट करें",
+        "type": "प्रकार",
+        "city": "शहर",
+        "link": "लिंक",
+        "past_route": "पिछला मार्ग",
+        "single_location": "एकल स्थान",
+        "legend": "किंवदंती",
+        "no_schedule": "कोई कार्यक्रम उपलब्ध नहीं है।",
+        "city_coords_error": "निर्देशांक नहीं मिला। कृपया city_dict में जोड़ें।",
+        "logged_in_success": "व्यवस्थापक के रूप में लॉग इन किया गया।",
+        "logged_out_success": "लॉग आउट किया गया।",
+        "incorrect_password": "गलत पासवर्ड।",
+        "fill_in_fields": "कृपया शीर्षक और सामग्री भरें।",
+        "notice_reg_success": "सूचना सफलतापूर्वक पंजीकृत हुई!",
+        "notice_del_success": "सूचना हटा दी गई।",
+        "notice_upd_success": "सूचना अपडेट की गई।",
+        "schedule_reg_success": "कार्यक्रम पंजीकृत हुआ।",
+        "schedule_del_success": "कार्यक्रम प्रविष्टि हटा दी गई।",
+        "schedule_upd_success": "कार्यक्रम सफलतापूर्वक अपडेट किया गया।",
+        "venue_placeholder": "स्थल का नाम दर्ज करें",
+        "note_placeholder": "नोट्स/विशेष टिप्पणी दर्ज करें",
+        "google_link_placeholder": "गूगल मैप्स URL दर्ज करें",
+        "seats_tooltip": "अपेक्षित दर्शक संख्या"
     }
 }
 
 # --- 세션 초기화 ---
-defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "logged_in_user": None, "show_login_form": False}
+defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "logged_in_user": None, "show_login_form": False, "play_sound": False}
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -70,6 +172,10 @@ for k, v in defaults.items():
 def _(key):
     lang = st.session_state.lang if isinstance(st.session_state.lang, str) else "ko"
     return LANG.get(lang, LANG["ko"]).get(key, key)
+
+# --- 알림음 함수 ---
+def play_alert_sound():
+    st.session_state.play_sound = True
 
 # --- JSON 헬퍼 ---
 def load_json(f):
@@ -188,24 +294,15 @@ if not tour_schedule:
 
 
 # --- 관리자 및 UI 설정 ---
-ADMIN_PASS = "0009" # 요청 반영: 비밀번호를 '0009'로 변경
-# 실제로는 보안 강화를 해야 합니다.
+ADMIN_PASS = "0009" # 비밀번호: '0009'
 
-# 요청 반영: 제목 스타일 및 애니메이션을 위한 HTML 마크다운 처리
-icons_html = """
-    <i class="fas fa-gift christmas-icon icon-gift"></i>
-    <i class="fas fa-candy-cane christmas-icon icon-cane"></i>
-    <i class="fas fa-socks christmas-icon icon-sock"></i>
-    <i class="fas fa-tree christmas-icon icon-tree"></i>
-    <i class="fas fa-deer christmas-icon icon-deer"></i>
-"""
+# 요청 반영: 제목 스타일 (아이콘 제거, 기본 스타일 유지)
 title_html = f"""
     <div class="header-container">
-        <div class="christmas-decoration">{icons_html}</div>
         <h1 class="main-title">
-            <span style="color: red;">{_('title_cantata')}</span> 
+            <span style="color: #FF4B4B;">{_('title_cantata')}</span> 
             <span style="color: white;">{_('title_year')}</span>
-            <span style="color: green; font-size: 0.66em;">{_('title_region')}</span>
+            <span style="color: #008000; font-size: 0.66em;">{_('title_region')}</span>
         </h1>
     </div>
 """
@@ -222,7 +319,7 @@ with col_lang:
     current_lang_index = lang_keys.index(st.session_state.lang)
 
     selected_lang_display = st.selectbox(
-        "Language", 
+        _("menu"), 
         options=lang_display_names, 
         index=current_lang_index,
         key="lang_select"
@@ -242,7 +339,8 @@ with col_auth:
             st.session_state.admin = False
             st.session_state.logged_in_user = None
             st.session_state.show_login_form = False # 로그아웃 시 폼 숨김
-            st.success("Logged out.")
+            st.success(_("logged_out_success"))
+            play_alert_sound()
             st.rerun()
     else:
         # 로그인 버튼 클릭 시 폼 표시 상태 변경
@@ -252,7 +350,7 @@ with col_auth:
         # 폼 표시 상태가 True일 때만 폼을 렌더링
         if st.session_state.show_login_form:
             with st.form("login_form_permanent", clear_on_submit=False):
-                st.write("Admin Login")
+                st.write(_("admin_login"))
                 password = st.text_input("Password", type="password")
                 submitted = st.form_submit_button(_("login"))
                 
@@ -261,10 +359,11 @@ with col_auth:
                         st.session_state.admin = True
                         st.session_state.logged_in_user = "Admin"
                         st.session_state.show_login_form = False # 성공하면 폼 숨김
-                        st.success("Logged in as Admin.")
+                        st.success(_("logged_in_success"))
+                        play_alert_sound()
                         st.rerun()
                     else:
-                        st.error("Incorrect password.")
+                        st.error(_("incorrect_password"))
                         # 실패해도 폼을 유지하기 위해 show_login_form=True 유지
 
 
@@ -283,7 +382,13 @@ with tab1:
             with st.form("notice_form", clear_on_submit=True):
                 notice_title = st.text_input(_("title_cantata"))
                 notice_content = st.text_area(_("note"))
-                notice_type = st.radio("Type", ["General", "Urgent"])
+                
+                # 내부적으로는 항상 English key를 사용하고, 사용자에게는 번역된 값을 보여줍니다.
+                type_options = {"General": _("general"), "Urgent": _("urgent")}
+                selected_display_type = st.radio(_("type"), list(type_options.values()))
+                
+                # Display value를 이용해 내부 key를 찾습니다.
+                notice_type = list(type_options.keys())[list(type_options.values()).index(selected_display_type)]
                 
                 submitted = st.form_submit_button(_("register"))
                 if submitted and notice_title and notice_content:
@@ -291,65 +396,83 @@ with tab1:
                         "id": str(uuid.uuid4()),
                         "title": notice_title,
                         "content": notice_content,
-                        "type": notice_type,
+                        "type": notice_type, # English key로 저장
                         "date": datetime.now(timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S") # IST 기준 시간
                     }
                     tour_notices.insert(0, new_notice) # 최신순으로 맨 앞에 추가
                     save_json(NOTICE_FILE, tour_notices)
-                    st.success("Notice registered successfully!")
+                    st.success(_("notice_reg_success"))
+                    play_alert_sound()
                     st.rerun()
                 elif submitted:
-                    st.warning("Please fill in the title and content.")
+                    st.warning(_("fill_in_fields"))
         
         # --- 관리자: 공지사항 목록 및 수정/삭제 ---
-        st.subheader("Existing Notices")
+        st.subheader(_("existing_notices"))
         
         # 안정성 강화: 유효한 형식의 공지사항만 필터링하고 날짜순으로 정렬
         valid_notices = [n for n in tour_notices if isinstance(n, dict) and n.get('id') and n.get('title')]
         notices_to_display = sorted(valid_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
         
+        # 번역을 위해 type_options을 다시 정의
+        type_options_rev = {"General": _("general"), "Urgent": _("urgent")}
+        
         for notice in notices_to_display:
             notice_id = notice['id'] # 이제 'id'는 반드시 존재
-            notice_type = notice.get('type', 'General')
+            # 저장된 English key를 이용해 번역된 텍스트를 가져옵니다.
+            notice_type_key = notice.get('type', 'General')
+            translated_type = type_options_rev.get(notice_type_key, _("general"))
             notice_title = notice['title'] # 이제 'title'은 반드시 존재
             
-            with st.expander(f"[{notice_type}] {notice_title} ({notice.get('date', 'N/A')[:10]})", expanded=False):
+            with st.expander(f"[{translated_type}] {notice_title} ({notice.get('date', 'N/A')[:10]})", expanded=False):
                 col_del, col_title = st.columns([1, 4])
                 with col_del:
-                    if st.button(_("remove"), key=f"del_n_{notice_id}", help="Delete Notice"):
+                    if st.button(_("remove"), key=f"del_n_{notice_id}", help=_("remove")):
                         tour_notices[:] = [n for n in tour_notices if n.get('id') != notice_id]
                         save_json(NOTICE_FILE, tour_notices)
-                        st.success("Notice deleted.")
+                        st.success(_("notice_del_success"))
+                        play_alert_sound()
                         st.rerun()
                 
                 with col_title:
-                    st.markdown(f"**Content:** {notice.get('content', 'No Content')}")
+                    st.markdown(f"**{_('content')}:** {notice.get('content', _('no_content'))}")
                 
                 # 간단한 업데이트 로직 추가
                 with st.form(f"update_notice_{notice_id}", clear_on_submit=True):
-                    updated_content = st.text_area("Update Content", value=notice.get('content', ''))
+                    # 현재 타입을 찾아서 초기값으로 설정
+                    current_type_index = list(type_options_rev.keys()).index(notice_type_key)
+                    updated_display_type = st.radio(_("type"), list(type_options_rev.values()), index=current_type_index, key=f"update_type_{notice_id}")
+                    updated_type_key = list(type_options_rev.keys())[list(type_options_rev.values()).index(updated_display_type)]
+                    
+                    updated_content = st.text_area(_("update_content"), value=notice.get('content', ''))
+                    
                     if st.form_submit_button(_("update")):
                         for n in tour_notices:
                             if n.get('id') == notice_id:
                                 n['content'] = updated_content
-                                n['type'] = notice_type
+                                n['type'] = updated_type_key # English key로 저장
                                 save_json(NOTICE_FILE, tour_notices)
-                                st.success("Notice updated.")
+                                st.success(_("notice_upd_success"))
+                                play_alert_sound()
                                 st.rerun()
-                        
+        
     else:
         # --- 사용자: 공지사항 보기 (안정성 강화) ---
         valid_notices = [n for n in tour_notices if isinstance(n, dict) and n.get('title')]
         if not valid_notices:
-            st.info("No notices available.")
+            st.info(_("no_notices"))
         else:
             notices_to_display = sorted(valid_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
+            type_options_rev = {"General": _("general"), "Urgent": _("urgent")}
+            
             for notice in notices_to_display:
-                notice_type = notice.get('type', 'General')
-                notice_title = notice.get('title', 'No Title')
-                notice_content = notice.get('content', 'No content available.')
+                notice_type_key = notice.get('type', 'General')
+                translated_type = type_options_rev.get(notice_type_key, _("general"))
                 
-                st.markdown(f"**[{notice_type}] {notice_title}** - *{notice.get('date', 'N/A')[:16]}*")
+                notice_title = notice.get('title', _("no_title"))
+                notice_content = notice.get('content', _("no_content"))
+                
+                st.markdown(f"**[{translated_type}] {notice_title}** - *{notice.get('date', 'N/A')[:16]}*")
                 st.info(notice_content)
                 st.markdown("---")
 
@@ -362,22 +485,25 @@ with tab2:
     
     # --- 관리자: 투어 일정 관리 ---
     if st.session_state.admin:
-        st.markdown(f"**{_('register')} {_('tab_map')} Data**")
+        st.markdown(f"**{_('register')} {_('tab_map')} {_('set_data')}**")
         
         with st.expander(_("add_city"), expanded=True):
             with st.form("schedule_form", clear_on_submit=True):
                 col_c, col_d, col_v = st.columns(3)
                 
                 city_name_input = col_c.selectbox(_('city_name'), options=city_options, index=city_options.index("공연없음") if "공연없음" in city_options else 0)
-                schedule_date = col_d.date_input("Date")
-                venue_name = col_v.text_input(_("venue"))
+                schedule_date = col_d.date_input(_("date"))
+                venue_name = col_v.text_input(_("venue"), placeholder=_("venue_placeholder"))
                 
                 col_l, col_s, col_n = st.columns(3)
-                type_sel = col_l.radio("Type", [_("indoor"), _("outdoor")])
-                expected_seats = col_s.number_input(_("seats"), min_value=0, value=100)
-                google_link = col_n.text_input(_("google_link"))
+                type_options_map = {_("indoor"): "indoor", _("outdoor"): "outdoor"} # Display -> Internal Key
+                selected_display_type = col_l.radio(_("type"), list(type_options_map.keys()))
+                type_sel = type_options_map[selected_display_type] # Internal key
                 
-                note = st.text_area(_("note"))
+                expected_seats = col_s.number_input(_("seats"), min_value=0, value=100, help=_("seats_tooltip"))
+                google_link = col_n.text_input(_("google_link"), placeholder=_("google_link_placeholder"))
+                
+                note = st.text_area(_("note"), placeholder=_("note_placeholder"))
                 
                 submitted = st.form_submit_button(_("register"))
                 
@@ -385,7 +511,7 @@ with tab2:
                     if city_name_input == "공연없음" or not venue_name or not schedule_date:
                         st.error(_("warning"))
                     elif city_name_input not in city_dict:
-                        st.error(f"Coordinates for '{city_name_input}' not found in city_dict. Please add it to the city_dict.")
+                        st.error(f"Coordinates for '{city_name_input}' not found in city_dict. {_('city_coords_error')}")
                     else:
                         city_coords = city_dict[city_name_input]
                         new_schedule_entry = {
@@ -395,7 +521,7 @@ with tab2:
                             "lat": city_coords["lat"],
                             "lon": city_coords["lon"],
                             "date": schedule_date.strftime("%Y-%m-%d"),
-                            "type": type_sel,
+                            "type": type_sel, # Internal key로 저장
                             "seats": str(expected_seats),
                             "note": note,
                             "google_link": google_link,
@@ -403,7 +529,8 @@ with tab2:
                         }
                         tour_schedule.append(new_schedule_entry)
                         save_json(CITY_FILE, tour_schedule)
-                        st.success(f"Schedule for {city_name_input} registered.")
+                        st.success(f"{_('schedule_reg_success')} ({city_name_input})")
+                        play_alert_sound()
                         st.rerun()
                         
         
@@ -417,16 +544,21 @@ with tab2:
         ]
         
         if valid_schedule:
-            st.subheader("Tour Schedule Management")
+            st.subheader(_("tour_schedule_management"))
             
             # id를 기준으로 딕셔너리로 변환
             schedule_dict = {item['id']: item for item in valid_schedule}
             
             # 날짜를 기준으로 정렬
             sorted_schedule_items = sorted(schedule_dict.items(), key=lambda x: x[1].get('date', '9999-12-31'))
+            
+            type_options_map_rev = {"indoor": _("indoor"), "outdoor": _("outdoor")} # Internal Key -> Display
 
             for item_id, item in sorted_schedule_items:
-                with st.expander(f"[{item.get('date', 'N/A')}] {item['city']} - {item['venue']}", expanded=False):
+                # 내부 키를 이용하여 번역된 타입 텍스트를 가져옴
+                translated_type = type_options_map_rev.get(item.get('type', 'outdoor'), _("outdoor"))
+                
+                with st.expander(f"[{item.get('date', 'N/A')}] {item['city']} - {item['venue']} ({translated_type})", expanded=False):
                     col_u, col_d = st.columns([1, 5])
                     
                     with col_u:
@@ -438,14 +570,15 @@ with tab2:
                             # tour_schedule 리스트를 직접 수정
                             tour_schedule[:] = [s for s in tour_schedule if s.get('id') != item_id]
                             save_json(CITY_FILE, tour_schedule)
-                            st.success(f"Schedule entry for {item['city']} removed.")
+                            st.success(f"{item['city']} {_('schedule_del_success')}")
+                            play_alert_sound()
                             st.rerun()
 
                     if st.session_state.get(f"edit_mode_{item_id}"):
                         with st.form(f"edit_form_{item_id}"):
                             col_uc, col_ud, col_uv = st.columns(3)
                             
-                            updated_city = col_uc.selectbox("City", city_options, index=city_options.index(item.get('city', "공연없음")))
+                            updated_city = col_uc.selectbox(_("city"), city_options, index=city_options.index(item.get('city', "공연없음")))
                             
                             # 날짜 형식 처리 개선
                             try:
@@ -453,16 +586,25 @@ with tab2:
                             except ValueError:
                                 initial_date = date.today()
                                 
-                            updated_date = col_ud.date_input("Date", value=initial_date)
-                            updated_venue = col_uv.text_input("Venue", value=item.get('venue'))
+                            updated_date = col_ud.date_input(_("date"), value=initial_date)
+                            updated_venue = col_uv.text_input(_("venue"), value=item.get('venue'))
                             
                             col_ul, col_us, col_ug = st.columns(3)
-                            updated_type = col_ul.radio("Type", [_("indoor"), _("outdoor")], index=[_("indoor"), _("outdoor")].index(item.get('type', 'outdoor')))
+                            
+                            # 현재 타입에 맞는 인덱스를 찾아서 초기값으로 설정
+                            current_map_type = item.get('type', 'outdoor')
+                            current_map_index = 0 if current_map_type == "indoor" else 1
+                            
+                            map_type_list = list(type_options_map_rev.values())
+                            updated_display_type = col_ul.radio(_("type"), map_type_list, index=current_map_index, key=f"update_map_type_{item_id}")
+                            # Display value를 이용해 내부 key를 찾습니다.
+                            updated_type = "indoor" if updated_display_type == _("indoor") else "outdoor"
+                            
                             seats_value = item.get('seats', '0')
-                            updated_seats = col_us.number_input("Seats", min_value=0, value=int(seats_value) if str(seats_value).isdigit() else 0)
-                            updated_google = col_ug.text_input("Google Link", value=item.get('google_link', ''))
+                            updated_seats = col_us.number_input(_("seats"), min_value=0, value=int(seats_value) if str(seats_value).isdigit() else 0)
+                            updated_google = col_ug.text_input(_("google_link"), value=item.get('google_link', ''))
 
-                            updated_note = st.text_area("Note", value=item.get('note'))
+                            updated_note = st.text_area(_("note"), value=item.get('note'))
                             
                             if st.form_submit_button(_("update")):
                                 for idx, s in enumerate(tour_schedule):
@@ -475,7 +617,7 @@ with tab2:
                                             "lat": coords["lat"],
                                             "lon": coords["lon"],
                                             "date": updated_date.strftime("%Y-%m-%d"),
-                                            "type": updated_type,
+                                            "type": updated_type, # Internal key로 저장
                                             "seats": str(updated_seats),
                                             "note": updated_note,
                                             "google_link": updated_google,
@@ -483,19 +625,21 @@ with tab2:
                                         }
                                         save_json(CITY_FILE, tour_schedule)
                                         st.session_state[f"edit_mode_{item_id}"] = False
-                                        st.success("Schedule updated successfully.")
+                                        st.success(_("schedule_upd_success"))
+                                        play_alert_sound()
                                         st.rerun()
                         
                     if not st.session_state.get(f"edit_mode_{item_id}"):
                         st.markdown(f"**{_('date')}:** {item.get('date', 'N/A')} ({item.get('reg_date', '')})")
                         st.markdown(f"**{_('venue')}:** {item.get('venue', 'N/A')}")
                         st.markdown(f"**{_('seats')}:** {item.get('seats', 'N/A')}")
-                        st.markdown(f"**Type:** {item.get('type', 'N/A')}")
+                        st.markdown(f"**{_('type')}:** {translated_type}")
                         if item.get('google_link'):
                             google_link_url = item['google_link']
                             st.markdown(f"**{_('google_link')}:** [{_('google_link')}]({google_link_url})")
                         st.markdown(f"**{_('note')}:** {item.get('note', 'N/A')}")
-
+        else:
+            st.info(_("no_schedule"))
 
     # --- 지도 표시 (사용자 & 관리자 공통) ---
     
@@ -530,25 +674,25 @@ with tab2:
         
         is_past = event_date < current_date
         
-        # 마커 색상 설정
+        # 마커 색상 설정 (내부 키 사용)
         color = 'blue' if item.get('type') == 'indoor' else 'red'
         
-        # 요청 반영: 지난 도시 30% 투명도, 미래 도시 100% 투명도
+        # 지난 도시 30% 투명도, 미래 도시 100% 투명도
         opacity_val = 0.3 if is_past else 1.0
         
-        # 팝업 내용
+        # 팝업 내용 (번역 적용)
         popup_html = f"""
-        <b>City:</b> {item.get('city', 'N/A')}<br>
-        <b>Date:</b> {date_str}<br>
-        <b>Venue:</b> {item.get('venue', 'N/A')}<br>
-        <b>Seats:</b> {item.get('seats', 'N/A')}<br>
+        <b>{_('city')}:</b> {item.get('city', 'N/A')}<br>
+        <b>{_('date')}:</b> {date_str}<br>
+        <b>{_('venue')}:</b> {item.get('venue', 'N/A')}<br>
+        <b>{_('seats')}:</b> {item.get('seats', 'N/A')}<br>
         """
         
         if item.get('google_link'):
             google_link_url = item['google_link'] 
             popup_html += f'<a href="{google_link_url}" target="_blank">{_("google_link")}</a>'
         
-        # 요청 반영: DivIcon을 사용하여 2/3 크기 (scale 0.666) 및 투명도 적용
+        # DivIcon을 사용하여 2/3 크기 (scale 0.666) 및 투명도 적용
         city_initial = item.get('city', 'A')[0]
         marker_icon_html = f"""
             <div style="
@@ -602,17 +746,17 @@ with tab2:
             # 미래 세그먼트: 현재/다음 도시 ~ 끝 (AntPath 사용)
             future_segments = locations[current_index:]
 
-        # 요청 반영: 지난 도시/라인 30% 투명도의 빨간색 선
+        # 지난 도시/라인 30% 투명도의 빨간색 선
         if len(past_segments) > 1:
             folium.PolyLine(
                 locations=past_segments,
                 color="#FF4B4B", # Streamlit Red
                 weight=5,
                 opacity=0.3,
-                tooltip="Past Route"
+                tooltip=_("past_route")
             ).add_to(m)
             
-        # 요청 반영: 도시간 연결선 80% 투명도의 빨간색 AntPath
+        # 도시간 연결선 80% 투명도의 빨간색 AntPath
         if len(future_segments) > 1:
             AntPath(
                 future_segments, 
@@ -639,145 +783,119 @@ with tab2:
             fill=True,
             fill_color='#FF4B4B',
             fill_opacity=0.3 if single_is_past else 0.8,
-            tooltip="Single Location"
+            tooltip=_("single_location")
         ).add_to(m)
 
     # 지도 표시
     st_folium(m, width=1000, height=600)
     
     # 범례 표시
-    st.info(f"Legend: 🔴 {_('outdoor')} | 🔵 {_('indoor')}")
+    st.info(f"{_('legend')}: 🔴 {_('outdoor')} | 🔵 {_('indoor')}")
+
+# --- 알림음 재생 스크립트 (요청 반영) ---
+if st.session_state.play_sound:
+    # 플래그를 즉시 재설정
+    st.session_state.play_sound = False
+    
+    # 짧은 알림음 파일을 HTML 오디오 태그로 삽입하여 자동 재생
+    # *주의: Streamlit 환경에서는 외부 URL이 차단될 수 있으므로, 작동하지 않을 경우
+    # 로컬 경로의 사운드 파일을 사용하거나 다른 방법을 고려해야 합니다.
+    # 여기서는 샘플로 공개된 짧은 mp3 파일 URL을 사용합니다.
+    st.markdown("""
+        <audio autoplay>
+            <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mp3">
+            Your browser does not support the audio element.
+        </audio>
+    """, unsafe_allow_html=True)
+
 
 # --- CSS 적용 (최하단에 위치시켜야 함) ---
-st.markdown("""
+st.markdown(f"""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-/* 요청 반영: 투명한 눈 입자 애니메이션 */
-@keyframes snowfall {
-    0% { background-position: 0% 0%, 50% 50%, 100% 100%; }
-    100% { background-position: 500px 1000px, 0px 500px, -500px 500px; }
-}
+/* 기본 배경/글꼴 색상 설정 (CSS 제거 요청에 따라 중립적인 색상으로 설정) */
 
-[data-testid="stAppViewContainer"] { 
-    background: url("background_christmas_dark.png"); 
-    background-size: cover; 
-    background-attachment: fixed; 
-    padding-top: 0 !important; 
-    position: relative;
-}
-
-[data-testid="stAppViewContainer"]::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 99999; /* Ensure snow is on top of content */
-    pointer-events: none; /* Allows clicks through the snow */
-    /* Three layers of snow with different sizes/speeds for depth and transparency */
-    background-image:
-        radial-gradient(4px 4px at 20px 20px, rgba(255, 255, 255, 0.6), transparent),
-        radial-gradient(3px 3px at 70px 70px, rgba(255, 255, 255, 0.8), transparent),
-        radial-gradient(2px 2px at 120px 120px, rgba(255, 255, 255, 0.4), transparent);
-    background-size: 500px 500px, 200px 200px, 300px 300px;
-    animation: snowfall 50s linear infinite; /* 느린 연속적인 움직임 */
-}
-
-/* 요청 반영: 제목 아이콘 애니메이션 */
-@keyframes float {
-    0% { transform: translate(0, 0) rotate(0deg); opacity: 0.8; }
-    50% { transform: translate(10px, -10px) rotate(5deg); opacity: 1; }
-    100% { transform: translate(0, 0) rotate(0deg); opacity: 0.8; }
-}
-
-/* 헤더 스타일 및 애니메이션 컨테이너 */
+/* 제목 컨테이너 기본 스타일 */
 .header-container { 
     text-align: center; 
     margin: 0 !important; 
     padding-top: 20px;
-    position: relative; /* Ensure the decoration is positioned correctly */
+    position: relative;
 }
 .main-title {
     font-size: 3em;
     margin-bottom: 0.5em;
     text-shadow: 2px 2px 4px #000000;
 }
-.christmas-decoration {
-    position: absolute;
-    top: -50px; /* 제목 위로 이동 */
-    height: 60px; /* 아이콘 움직일 공간 */
-    width: 100%;
-    overflow: visible; /* 아이콘이 컨테이너를 벗어나 움직일 수 있도록 */
-    pointer-events: none;
-}
 
-.christmas-icon {
-    position: absolute;
-    animation: float 10s ease-in-out infinite alternate;
-    z-index: 10;
-}
+[data-testid="stAppViewContainer"] {{ 
+    /* 배경 이미지를 제거하고 다크 배경색 적용 */
+    background-color: #1E1E1E;
+    color: #FFFFFF;
+    background-attachment: fixed; 
+}}
 
-/* 개별 아이콘 스타일 (랜덤 크기, 위치, 속도) */
-.icon-gift { left: 10%; top: 5px; font-size: 25px; color: #00ff00; animation-duration: 12s; } /* Green */
-.icon-cane { left: 30%; top: 15px; font-size: 35px; color: white; animation-duration: 9s; }
-.icon-sock { right: 40%; top: 10px; font-size: 20px; color: #ff4b4b; animation-duration: 15s; } /* Red */
-.icon-tree { right: 15%; top: 0px; font-size: 40px; color: #00ff00; animation-duration: 11s; } /* Green */
-.icon-deer { left: 50%; top: 20px; font-size: 30px; color: #8B4513; animation-duration: 13s; } /* Brown */
+/* Streamlit 기본 텍스트 색상 오버라이드 */
+.stText {{
+    color: #FFFFFF;
+}}
 
-/* 탭 스타일 개선 (크리스마스 테마색) */
-.stTabs [data-baseweb="tab-list"] button {
+/* 탭 스타일 */
+.stTabs [data-baseweb="tab-list"] button {{
     background-color: rgba(255, 255, 255, 0.1);
     border-radius: 8px 8px 0 0;
-}
-.stTabs [data-baseweb="tab-list"] button [data-testid="stText"] {
+}}
+.stTabs [data-baseweb="tab-list"] button [data-testid="stText"] {{
     font-weight: bold;
-    color: #ff4b4b; /* Red accent */
+    color: #FFFFFF;
     text-shadow: 1px 1px 2px #000;
-}
-.stTabs [aria-selected="true"] {
-    background-color: rgba(255, 255, 255, 0.2) !important;
-}
+}}
 
-/* 배경 이미지 적용 시 사이드바 배경이 흰색이 되는 것을 방지 */
-section[data-testid="stSidebar"] {
-    background-color: rgba(0, 0, 0, 0.8);
-    border-right: 2px solid #ff4b4b; /* Christmas color border */
-}
+/* 사이드바 배경 */
+section[data-testid="stSidebar"] {{
+    background-color: #333333;
+}}
 
-/* 일반 텍스트 입력 필드 배경 */
+/* 입력 필드 배경 */
 div[data-testid="stTextInput"] > div > div > input,
 div[data-testid="stNumberInput"] > div > div > input,
 div[data-testid="stTextArea"] > div > textarea,
-div[data-testid="stForm"] {
-    background-color: rgba(255, 255, 255, 0.9);
-    color: black;
-}
+div[data-testid="stForm"] {{
+    background-color: #444444;
+    color: #FFFFFF;
+    border: 1px solid #777777;
+}}
 
-/* Expander 배경을 투명하게 만들어 배경 이미지 보이게 하기 */
-[data-testid$="stExpander"] {
-    background-color: rgba(10, 10, 10, 0.85);
+/* Expander 배경 */
+[data-testid$="stExpander"] {{
+    background-color: #2E2E2E;
     border-radius: 8px;
-    border: 1px solid #00ff00; /* Green accent border */
-}
+    border: 1px solid #555555;
+}}
 
-/* 버튼 스타일 (로그인/로그아웃/등록 등) */
-.stButton > button {
-    background-color: #ff4b4b; /* Red button */
+/* 버튼 스타일 */
+.stButton > button {{
+    background-color: #4CAF50; /* Green */
     color: white;
-    border: 1px solid #cc0000;
+    border: 1px solid #388E3C;
     font-weight: bold;
-}
-.stButton > button:hover {
-    background-color: #cc0000;
-    border-color: #ff4b4b;
-}
+}}
+.stButton > button:hover {{
+    background-color: #388E3C;
+    border-color: #4CAF50;
+}}
 
-/* Selectbox와 Date Input의 흰색 배경 투명도 조정 */
+/* Selectbox와 Date Input의 배경 */
 div[data-testid="stSelectbox"] > div > div,
-div[data-testid="stDateInput"] > div > div {
-    background-color: rgba(255, 255, 255, 0.9);
-}
+div[data-testid="stDateInput"] > div > div {{
+    background-color: #444444;
+    color: #FFFFFF;
+}}
+
+/* st.info/st.warning 등의 텍스트 색상 */
+div[data-testid="stAlert"] {{
+    color: #FFFFFF !important;
+}}
 
 </style>
 """, unsafe_allow_html=True)
