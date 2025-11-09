@@ -590,15 +590,12 @@ if st.session_state.admin:
     with st.expander(_("password_change"), expanded=False):
         with st.form("password_change_form", clear_on_submit=True):
             
-            # 🚨 오류 수정: global ADMIN_PASS 선언을 블록 최상단으로 이동
-            # ADMIN_PASS를 사용하거나 수정하는 코드보다 먼저 위치해야 합니다.
-            # 이 폼이 제출되면 ADMIN_PASS를 수정하므로, 제출 로직 내부에서 선언합니다.
-            
             current_pass = st.text_input(_("current_password"), type="password", key="current_pass_input")
             new_pass = st.text_input(_("new_password"), type="password", key="new_pass_input")
             change_submitted = st.form_submit_button(_("update"))
 
             if change_submitted:
+                # 🚨 수정된 부분: global ADMIN_PASS 선언이 조건문 시작과 함께 위치
                 global ADMIN_PASS
                 
                 if current_pass == ADMIN_PASS:
