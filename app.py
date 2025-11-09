@@ -9,7 +9,7 @@ import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
 from pytz import timezone
-from math import radians, cos, sin, asin, sqrt
+from math import radians, cos, sin, asin, sqrt # <-- 거리 계산을 위해 추가
 
 # --- 파일 저장 경로 설정 ---
 UPLOAD_DIR = "uploads"
@@ -80,14 +80,13 @@ LANG = {
         "file_attachment": "파일 첨부",
         "attached_files": "첨부 파일",
         "no_files": "없음",
-        "user_posts": "사용자 포스트",
-        "new_post": "새 포스트 작성",
-        "post_content": "포스트 내용",
-        "media_attachment": "사진/동영상 첨부",
-        "post_success": "포스트가 성공적으로 업로드되었습니다!",
-        "no_posts": "현재 포스트가 없습니다.",
-        "admin_only_files": "첨부 파일은 관리자만 확인 가능합니다.",
-        "probability": "가능성" # <-- 수정: '%' 제거
+        "user_posts": "사용자 포스트", # <-- 추가
+        "new_post": "새 포스트 작성", # <-- 추가
+        "post_content": "포스트 내용", # <-- 추가
+        "media_attachment": "사진/동영상 첨부", # <-- 추가
+        "post_success": "포스트가 성공적으로 업로드되었습니다!", # <-- 추가
+        "no_posts": "현재 포스트가 없습니다.", # <-- 추가
+        "admin_only_files": "첨부 파일은 관리자만 확인 가능합니다." # <-- 추가
     },
     "en": {
         "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
@@ -139,8 +138,7 @@ LANG = {
         "media_attachment": "Attach Photo/Video",
         "post_success": "Post uploaded successfully!",
         "no_posts": "No posts available.",
-        "admin_only_files": "Attached files can only be viewed by Admin.",
-        "probability": "Probability" # <-- 수정: '%' 제거
+        "admin_only_files": "Attached files can only be viewed by Admin."
     },
     "hi": {
         "title_cantata": "कैंटाटा टूर", "title_year": "२०२५", "title_region": "महाराष्ट्र",
@@ -192,13 +190,12 @@ LANG = {
         "media_attachment": "फोटो/वीडियो संलग्न करें",
         "post_success": "पोस्ट सफलतापूर्वक अपलोड हुई!",
         "no_posts": "कोई पोस्ट उपलब्ध नहीं है।",
-        "admin_only_files": "संलग्न फ़ाइलें केवल व्यवस्थापक द्वारा देखी जा सकती हैं।",
-        "probability": "संभावना" # <-- 수정: '%' 제거
+        "admin_only_files": "संलग्न फ़ाइलें केवल व्यवस्थापक द्वारा देखी जा सकती हैं।"
     }
 }
 
 # --- 세션 초기화 ---
-defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "logged_in_user": None, "show_login_form": False}
+defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "logged_in_user": None, "show_login_form": False, "play_sound": False}
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -207,9 +204,12 @@ for k, v in defaults.items():
 
 # --- 번역 함수 ---
 def _(key):
-    # 이 함수는 전역 네임스페이스에서 정의된 'LANG' 딕셔너리를 사용합니다.
     lang = st.session_state.lang if isinstance(st.session_state.lang, str) else "ko"
     return LANG.get(lang, LANG["ko"]).get(key, key)
+
+# --- 알림음 함수 ---
+def play_alert_sound():
+    st.session_state.play_sound = True
 
 # --- 파일 첨부/저장 함수 ---
 def save_uploaded_files(uploaded_files):
@@ -236,13 +236,12 @@ def save_uploaded_files(uploaded_files):
             
     return file_info_list
 
-# --- 파일 Base64 인코딩 함수 (수정 완료) ---
+# --- 파일 Base64 인코딩 함수 (추가) ---
 def get_file_as_base64(file_path):
     """파일 경로를 받아 Base64 문자열을 반환합니다."""
     try:
         with open(file_path, "rb") as f:
             file_bytes = f.read()
-            # base64 모듈 사용 (이전 오타 base66 수정)
             base64_encoded_data = base64.b64encode(file_bytes).decode('utf-8')
             return base64_encoded_data
     except Exception:
@@ -250,7 +249,7 @@ def get_file_as_base64(file_path):
         return None
 
 # --- 미디어 인라인 표시 및 다운로드 헬퍼 함수 (재사용성을 위해 별도 정의) ---
-def display_and_download_file(file_info, item_id, is_admin=False, is_user_post=False):
+def display_and_download_file(file_info, notice_id, is_admin=False, is_user_post=False):
     file_size_kb = round(file_info['size'] / 1024, 1)
     file_type = file_info['type']
     file_path = file_info['path']
@@ -259,8 +258,7 @@ def display_and_download_file(file_info, item_id, is_admin=False, is_user_post=F
     
     if is_user_post and not is_admin:
         # 사용자 포스트의 파일은 일반 모드에서 숨김 (관리자만 확인 가능)
-        # 파일이 첨부되었음을 알리는 텍스트만 표시
-        st.markdown(f"**{_('attached_files')}:** {_('admin_only_files')}")
+        st.markdown(f"**{_('admin_only_files')}**")
         return
 
     if os.path.exists(file_path):
@@ -283,7 +281,7 @@ def display_and_download_file(file_info, item_id, is_admin=False, is_user_post=F
                             data=f.read(),
                             file_name=file_name,
                             mime=file_type,
-                            key=f"{key_prefix}_download_{item_id}_{file_name}_imgfallback"
+                            key=f"{key_prefix}_download_{notice_id}_{file_name}_imgfallback"
                         )
                 except Exception:
                     pass
@@ -303,7 +301,7 @@ def display_and_download_file(file_info, item_id, is_admin=False, is_user_post=F
                         data=f.read(),
                         file_name=file_name,
                         mime=file_type,
-                        key=f"{key_prefix}_download_{item_id}_{file_name}"
+                        key=f"{key_prefix}_download_{notice_id}_{file_name}"
                     )
             except Exception:
                 pass
@@ -374,7 +372,7 @@ def calculate_distance_and_time(p1, p2):
     return f"거리: {distance_str} | 예상 시간: {time_str}"
 
 
-# --- 도시 목록 및 좌표 정의 ---
+# --- 도시 목록 및 좌표 정의 (원래 코드에서 가져옴) ---
 city_dict = {
     "Ahmadnagar": {"lat": 19.095193, "lon": 74.749596}, "Akola": {"lat": 20.702269, "lon": 77.004699},
     "Ambernath": {"lat": 19.186354, "lon": 73.191948}, "Amravati": {"lat": 20.93743, "lon": 77.779271},
@@ -438,19 +436,12 @@ city_dict = {
     "Wadgaon Road": {"lat": 18.52, "lon": 73.85}, "Wadwani": {"lat": 18.9, "lon": 76.69},
     "Wai": {"lat": 17.9524, "lon": 73.8775}, "Wani": {"lat": 19.0, "lon": 78.002},
     "Wardha": {"lat": 20.745445, "lon": 78.602452}, "Wardha Road": {"lat": 20.75, "lon": 78.6},
-    "Yavatmal": {"lat": 20.389917, "lon": 78.130051},
-    
-    # NEW: 추가된 도시들의 대략적인 좌표
-    "Miraj": {"lat": 16.8286, "lon": 74.6300}, # Sangli 근처
-    "Kodoli": {"lat": 16.8920, "lon": 74.2465}, # Kolhapur 근처
-    "Mira Road": {"lat": 19.2847, "lon": 72.8687}, # Mira-Bhayandar 근처
-    "Wadala": {"lat": 19.0195, "lon": 72.8596}, # Mumbai 근처
-    "Bandra": {"lat": 19.0592, "lon": 72.8300} # Mumbai 근처
+    "Yavatmal": {"lat": 20.389917, "lon": 78.130051}
 }
 
 major_cities_available = [c for c in ["Mumbai", "Pune", "Nagpur", "Thane", "Nashik", "Kalyan", "Vasai-Virar", "Aurangabad", "Solapur", "Mira-Bhayandar", "Bhiwandi", "Amravati", "Nanded", "Kolhapur", "Ulhasnagar", "Sangli", "Malegaon", "Jalgaon", "Akola", "Latur", "Dhule", "Ahmadnagar", "Chandrapur", "Parbhani", "Ichalkaranji", "Jalna", "Ambernath", "Bhusawal", "Panvel", "Dombivli"] if c in city_dict]
 remaining_cities = sorted([c for c in city_dict if c not in major_cities_available])
-city_options = major_cities_available + remaining_cities
+city_options = ["공연없음"] + major_cities_available + remaining_cities
 
 
 # --- 데이터 로드 (공지사항 및 투어 일정) ---
@@ -458,103 +449,38 @@ tour_notices = load_json(NOTICE_FILE)
 tour_schedule = load_json(CITY_FILE) 
 user_posts = load_json(USER_POST_FILE) # <-- 사용자 포스트 로드
 
-# 요청 반영: 제공된 새로운 스케줄 데이터로 tour_schedule 초기화
-new_schedule_data = [
-    {"date": "2025-12-01", "city": "Nagpur", "probability": 100},
-    {"date": "2025-12-02", "city": "Amravati", "probability": 100},
-    {"date": "2025-12-03", "city": "Chandrapur", "note": "CNI", "probability": 80}, # 'CNI'를 note로 이동
-    {"date": "2025-12-05", "city": "Jalna", "probability": 100},
-    {"date": "2025-12-06", "city": "Aurangabad", "probability": 30},
-    {"date": "2025-12-07", "city": "Nashik", "probability": 100},
-    {"date": "2025-12-08", "city": "Mumbai", "probability": 100},
-    {"date": "2025-12-09", "city": "Pune", "probability": 100},
-    {"date": "2025-12-10", "city": "Sangli", "probability": 100},
-    {"date": "2025-12-11", "city": "Kolhapur", "probability": 100},
-    {"date": "2025-12-12", "city": "Miraj", "probability": 100},
-    {"date": "2025-12-13", "city": "Ichalkaranji", "probability": 100},
-    {"date": "2025-12-14", "city": "Kodoli", "probability": 100},
-    {"date": "2025-12-15", "city": "Karad", "probability": 100},
-    {"date": "2025-12-16", "city": "Satara", "probability": 100},
-    {"date": "2025-12-17", "city": "Aurangabad", "probability": 100},
-    {"date": "2025-12-18", "city": "Parbhani", "probability": 100},
-    {"date": "2025-12-19", "city": "Shirur", "probability": 100},
-    {"date": "2025-12-20", "city": "Pune", "probability": 100},
-    {"date": "2025-12-21", "city": "Palghar", "probability": 100},
-    {"date": "2025-12-22", "city": "Ambernath", "probability": 100},
-    {"date": "2025-12-23", "city": "Mira Road", "probability": 100},
-    {"date": "2025-12-24", "city": "Wadala", "probability": 100},
-    {"date": "2025-12-25", "city": "Solapur", "note": "Christmas", "probability": 100}, # 'Christmas'를 note로 이동
-    {"date": "2025-12-26", "city": "Bandra", "probability": 100},
-    {"date": "2025-12-27", "city": "Solapur", "probability": 100},
-]
-
-# 기존 tour_schedule을 비우고 새 데이터로 채웁니다.
-tour_schedule = []
-for entry in new_schedule_data:
-    city_name = entry['city']
-    coords = city_dict.get(city_name)
-    
-    if coords is None:
-        # city_dict에 없는 도시는 기본값으로 뭄바이 좌표를 사용 (또는 오류 처리)
-        coords = city_dict.get("Mumbai", {'lat': 19.07609, 'lon': 72.877426})
-        st.warning(f"Warning: Coordinates for city '{city_name}' not found. Using Mumbai's coordinates.")
-
-    tour_schedule.append({
-        "id": str(uuid.uuid4()),
-        "city": city_name,
-        "venue": "TBD", # 기본값
-        "lat": coords["lat"],
-        "lon": coords["lon"],
-        "date": entry['date'],
-        "type": "outdoor", # 기본값
-        "seats": "0", # 기본값
-        "note": entry.get('note', ""),
-        "google_link": "", # 기본값
-        "probability": entry.get('probability', 100),
-        "reg_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    })
-save_json(CITY_FILE, tour_schedule) # 업데이트된 스케줄 저장
+# 만약 city_dict에 있는 도시 정보가 없다면 초기화
+if not tour_schedule:
+    # 초기 도시 데이터를 지도 경로를 위해 포맷팅하여 저장
+    initial_schedule = []
+    for city, coords in city_dict.items():
+        initial_schedule.append({
+            "id": str(uuid.uuid4()),
+            "city": city,
+            "venue": "TBD",
+            "lat": coords["lat"],
+            "lon": coords["lon"],
+            "date": "",
+            "type": "outdoor",
+            "seats": "0",
+            "note": "Initial Data",
+            "google_link": "",
+            "reg_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
+    save_json(CITY_FILE, initial_schedule)
+    tour_schedule = initial_schedule
 
 
 # --- 관리자 및 UI 설정 ---
 ADMIN_PASS = "0009" # 비밀번호: '0009'
 
-# 요청 반영: 제목 위에 크리스마스 아이콘 추가
-christmas_icons = {
-    "gift": "🎁", "candy": "🍭", "sock": "🧦", "sleigh": " sleigh ", "tree": "🎄", "santa": "🎅", "reindeer": "🦌"
-}
-
-# 랜덤 아이콘 생성 및 애니메이션 스타일
-icon_html = ""
-# ERROR FIX: for _ in range(7): 대신 for i in range(7): 사용하여 _ 함수 덮어쓰기 방지
-for i in range(7): 
-    icon_name, icon_char = random.choice(list(christmas_icons.items()))
-    
-    # 랜덤 애니메이션 속성
-    start_delay = random.uniform(0, 5) # 초
-    duration = random.uniform(10, 20) # 초
-    size = random.uniform(1.0, 2.0) # 배율
-    top_pos = random.uniform(-20, 100) # %
-    left_pos = random.uniform(-10, 100) # %
-    animation_name = f"float-side-{random.randint(0,1)}" # 좌우 흔들림 랜덤 선택
-    
-    icon_html += f"""
-        <span class="christmas-icon" style="
-            position: absolute; 
-            font-size: {size}em; 
-            top: {top_pos}%; 
-            left: {left_pos}%; 
-            animation: {animation_name} {duration}s ease-in-out {start_delay}s infinite alternate;
-            z-index: 100;
-        ">{icon_char}</span>
-    """
-
+# 요청 반영: 제목 스타일 (아이콘 제거, 기본 스타일 유지)
 title_html = f"""
-    <div class="header-container" style="position: relative; overflow: visible; height: 100px;">
-        {icon_html} <!-- 크리스마스 아이콘들 --><h1 class="main-title" style="position: relative; z-index: 101;">
-            <span style="color: #BB3333;">{_('title_cantata')}</span>
-            <span style="color: #FAFAFA;">{_('title_year')}</span>
-            <span style="color: #66BB66; font-size: 0.66em;">{_('title_region')}</span>
+    <div class="header-container">
+        <h1 class="main-title">
+            <span style="color: #FF4B4B;">{_('title_cantata')}</span> 
+            <span style="color: white;">{_('title_year')}</span>
+            <span style="color: #008000; font-size: 0.66em;">{_('title_region')}</span>
         </h1>
     </div>
 """
@@ -563,6 +489,7 @@ st.markdown(title_html, unsafe_allow_html=True)
 # 언어 선택 버튼 (상단 고정)
 col_lang, col_auth = st.columns([1, 3])
 with col_lang:
+    # 요청 반영: 언어 선택 옵션을 해당 언어명으로 표시
     LANG_OPTIONS = {"ko": "한국어", "en": "English", "hi": "हिन्दी"}
     lang_keys = list(LANG_OPTIONS.keys())
     lang_display_names = list(LANG_OPTIONS.values())
@@ -576,6 +503,7 @@ with col_lang:
         key="lang_select"
     )
     
+    # 표시된 이름으로 다시 키를 찾음
     selected_lang_key = lang_keys[lang_display_names.index(selected_lang_display)]
     
     if selected_lang_key != st.session_state.lang:
@@ -583,15 +511,19 @@ with col_lang:
         st.rerun()
 
 # --- 로그인 / 로그아웃 로직 (버튼 문제 수정) ---
+# st.rerun() 대신 st.experimental_rerun()의 대체 함수를 사용합니다.
+# Streamlit 1.29.0+ 버전에서는 st.rerun()을 사용해야 합니다.
 def safe_rerun():
     if hasattr(st, 'rerun'):
         st.rerun()
     elif hasattr(st, 'experimental_rerun'):
         st.experimental_rerun()
     else:
+        # Fallback for very old versions or other environments
         pass
 
 def handle_login_button_click():
+    """로그인 버튼 클릭 시 폼 표시 상태를 토글하고 강제 재실행합니다."""
     st.session_state.show_login_form = not st.session_state.show_login_form
     safe_rerun()
 
@@ -601,11 +533,14 @@ with col_auth:
             st.session_state.admin = False
             st.session_state.logged_in_user = None
             st.session_state.show_login_form = False
+            play_alert_sound()
             safe_rerun()
     else:
+        # 로그인 버튼 클릭 시 on_click 대신 명시적 핸들러를 사용해 즉시 재실행을 보장
         if st.button(_("login"), key="login_btn"):
             handle_login_button_click()
         
+        # 폼 표시 상태가 True일 때만 폼을 렌더링
         if st.session_state.show_login_form:
             with st.form("login_form_permanent", clear_on_submit=False):
                 st.write(_("admin_login"))
@@ -617,8 +552,10 @@ with col_auth:
                         st.session_state.admin = True
                         st.session_state.logged_in_user = "Admin"
                         st.session_state.show_login_form = False
+                        play_alert_sound()
                         safe_rerun()
                     else:
+                        # 오류 메시지 숨김 처리
                         pass
 
 
@@ -666,6 +603,7 @@ with tab1:
                     }
                     tour_notices.insert(0, new_notice)
                     save_json(NOTICE_FILE, tour_notices)
+                    play_alert_sound()
                     safe_rerun()
                 elif submitted:
                     pass
@@ -681,10 +619,7 @@ with tab1:
             translated_type = type_options_rev.get(notice_type_key, _("general"))
             notice_title = notice['title']
             
-            prefix = "🚨 " if notice_type_key == "Urgent" else ""
-            header_text = f"{prefix}[{translated_type}] {notice_title} ({notice.get('date', 'N/A')[:10]})"
-            
-            with st.expander(header_text, expanded=False):
+            with st.expander(f"[{translated_type}] {notice_title} ({notice.get('date', 'N/A')[:10]})", expanded=False):
                 col_del, col_title = st.columns([1, 4])
                 with col_del:
                     if st.button(_("remove"), key=f"del_n_{notice_id}", help=_("remove")):
@@ -694,6 +629,7 @@ with tab1:
                         
                         tour_notices[:] = [n for n in tour_notices if n.get('id') != notice_id]
                         save_json(NOTICE_FILE, tour_notices)
+                        play_alert_sound()
                         safe_rerun()
                 
                 with col_title:
@@ -720,15 +656,17 @@ with tab1:
                                 n['content'] = updated_content
                                 n['type'] = updated_type_key
                                 save_json(NOTICE_FILE, tour_notices)
+                                play_alert_sound()
                                 safe_rerun()
         
     # 2. 일반 사용자 공지사항 & 포스트 보기
     if not st.session_state.admin:
         st.subheader(f"📢 {_('tab_notice')}")
         
+        # --- 공지사항 목록 ---
         valid_notices = [n for n in tour_notices if isinstance(n, dict) and n.get('title')]
         if not valid_notices:
-            st.write(_("no_notices"))
+            st.write(_("no_notices")) # st.write로 변경하여 CSS에 숨겨지지 않도록 함
         else:
             notices_to_display = sorted(valid_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
             type_options_rev = {"General": _("general"), "Urgent": _("urgent")}
@@ -740,22 +678,26 @@ with tab1:
                 notice_title = notice.get('title', _("no_title"))
                 notice_content = notice.get('content', _("no_content"))
                 
-                prefix = "🚨 " if notice_type_key == "Urgent" else ""
-                header_text = f"{prefix}[{translated_type}] {notice_title} - *{notice.get('date', 'N/A')[:16]}*"
-                
+                # Expander로 감싸고 닫힘 상태로 시작 (요청 반영)
+                header_text = f"[{translated_type}] {notice_title} - *{notice.get('date', 'N/A')[:16]}*"
                 with st.expander(header_text, expanded=False): 
                     
+                    # st.info 대신 custom markdown 사용 (숨겨지는 문제 방지)
                     st.markdown(f'<div class="notice-content-box">{notice_content}</div>', unsafe_allow_html=True)
 
+                    # --- 파일 첨부 표시 (이미지/비디오 인라인, 파일 다운로드) ---
                     attached_files = notice.get('files', [])
                     if attached_files:
                         st.markdown(f"**{_('attached_files')}:**")
                         for file_info in attached_files:
                             display_and_download_file(file_info, notice_id, is_admin=False, is_user_post=False)
+
+        st.markdown("---")
     
     # 3. 사용자 포스트 섹션 (관리자/일반 사용자 공통)
     st.subheader(f"📸 {_('user_posts')}") 
     
+    # --- 사용자 포스트 작성 폼 (일반 사용자 모두 허용) ---
     with st.expander(_("new_post"), expanded=False):
         with st.form("user_post_form", clear_on_submit=True):
             post_content = st.text_area(_("post_content"), placeholder="여행 후기, 사진 공유 등 자유롭게 작성하세요.")
@@ -769,6 +711,7 @@ with tab1:
             post_submitted = st.form_submit_button(_("register"))
             
             if post_submitted and (post_content or uploaded_media):
+                # 파일 저장 및 정보 수집 (클라우드 저장소에 저장된다고 가정)
                 media_info_list = save_uploaded_files(uploaded_media) 
                 
                 new_post = {
@@ -779,6 +722,7 @@ with tab1:
                 }
                 user_posts.insert(0, new_post)
                 save_json(USER_POST_FILE, user_posts)
+                play_alert_sound()
                 safe_rerun()
             elif post_submitted:
                 pass
@@ -787,7 +731,9 @@ with tab1:
     valid_posts = [p for p in user_posts if isinstance(p, dict) and (p.get('content') or p.get('files'))]
     
     if st.session_state.admin:
+        # 관리자 모드: 모든 포스트 표시
         posts_to_display = sorted(valid_posts, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
+        st.markdown("---")
         st.markdown(f"**관리자**는 총 {len(posts_to_display)}개의 사용자 포스트를 확인할 수 있습니다.")
         for post in posts_to_display:
             post_id = post['id']
@@ -797,10 +743,17 @@ with tab1:
                 
                 attached_media = post.get('files', [])
                 if attached_media:
+                    st.markdown(f"**{_('attached_files')} (클라우드 저장소)**:")
                     for file_info in attached_media:
+                        # 관리자는 파일 확인 가능
                         display_and_download_file(file_info, post_id, is_admin=True, is_user_post=True)
+                else:
+                    st.markdown(f"**{_('attached_files')}:** {_('no_files')}")
+                    
+                st.markdown("---")
     
     else:
+        # 일반 사용자 모드: 포스트 목록만 표시 (첨부 파일은 관리자만 확인 가능)
         posts_to_display = sorted(valid_posts, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
         
         if not posts_to_display:
@@ -812,11 +765,12 @@ with tab1:
                 st.markdown(f"**익명 사용자** - *{post.get('date', 'N/A')[:16]}*")
                 st.markdown(f'<div class="notice-content-box">{post.get("content", _("no_content"))}</div>', unsafe_allow_html=True)
                 
-                attached_media = post.get('files', [])
-                if attached_media:
-                    # 사용자 모드에서는 첫 번째 첨부 파일만 표시 및 다운로드 허용
-                    display_and_download_file(attached_media[0], post_id, is_admin=False, is_user_post=True)
+                # 일반 사용자는 파일이 첨부되었는지 여부와 함께 경고 메시지 표시
+                if post.get('files'):
+                    st.markdown(f"**{_('attached_files')}:** {_('admin_only_files')}")
                 
+                st.markdown("---")
+
 
 # =============================================================================
 # 탭 2: 투어 경로 (Map)
@@ -828,62 +782,52 @@ with tab2:
     if st.session_state.admin:
         st.markdown(f"**{_('register')} {_('tab_map')} {_('set_data')}**")
         
+        # 초기 상태: 닫힘 (요청 반영)
         with st.expander(_("add_city"), expanded=False):
             with st.form("schedule_form", clear_on_submit=True):
                 col_c, col_d, col_v = st.columns(3)
                 
-                city_name_input = col_c.selectbox(_('city_name'), options=city_options, index=0, key="new_city_select")
-                schedule_date = col_d.date_input(_("date"), key="new_date_input")
-                venue_name = col_v.text_input(_("venue"), placeholder=_("venue_placeholder"), key="new_venue_input")
+                city_name_input = col_c.selectbox(_('city_name'), options=city_options, index=city_options.index("공연없음") if "공연없음" in city_options else 0)
+                schedule_date = col_d.date_input(_("date"))
+                venue_name = col_v.text_input(_("venue"), placeholder=_("venue_placeholder"))
                 
-                col_l, col_s, col_n, col_p = st.columns(4)
-                
+                col_l, col_s, col_n = st.columns(3)
                 type_options_map = {_("indoor"): "indoor", _("outdoor"): "outdoor"} # Display -> Internal Key
                 selected_display_type = col_l.radio(_("type"), list(type_options_map.keys()))
                 type_sel = type_options_map[selected_display_type] # Internal key
                 
+                # 예상인원 기본값을 500으로, step을 50으로 변경
                 expected_seats = col_s.number_input(_("seats"), min_value=0, value=500, step=50, help=_("seats_tooltip"))
                 google_link = col_n.text_input(_("google_link"), placeholder=_("google_link_placeholder"))
                 
-                probability = col_p.slider(_("probability"), min_value=0, max_value=100, value=100, step=5)
-
-
                 note = st.text_area(_("note"), placeholder=_("note_placeholder"))
                 
                 submitted = st.form_submit_button(_("register"))
                 
                 if submitted:
-                    if not city_name_input or not venue_name or not schedule_date:
+                    if city_name_input == "공연없음" or not venue_name or not schedule_date:
                         pass
                     elif city_name_input not in city_dict:
                         pass
                     else:
-                        is_duplicate = any(
-                            s.get('city') == city_name_input and s.get('date') == schedule_date.strftime("%Y-%m-%d")
-                            for s in tour_schedule
-                        )
-                        
-                        if is_duplicate:
-                            pass
-                        else:
-                            city_coords = city_dict[city_name_input]
-                            new_schedule_entry = {
-                                "id": str(uuid.uuid4()),
-                                "city": city_name_input,
-                                "venue": venue_name,
-                                "lat": city_coords["lat"],
-                                "lon": city_coords["lon"], # 수정: city_coords["lon"]으로 변경
-                                "date": schedule_date.strftime("%Y-%m-%d"),
-                                "type": type_sel, # Internal key로 저장
-                                "seats": str(expected_seats),
-                                "note": note,
-                                "google_link": google_link,
-                                "probability": probability,
-                                "reg_date": datetime.now(timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S")
-                            }
-                            tour_schedule.append(new_schedule_entry)
-                            save_json(CITY_FILE, tour_schedule)
-                            safe_rerun()
+                        city_coords = city_dict[city_name_input]
+                        new_schedule_entry = {
+                            "id": str(uuid.uuid4()),
+                            "city": city_name_input,
+                            "venue": venue_name,
+                            "lat": city_coords["lat"],
+                            "lon": city_coords["lon"],
+                            "date": schedule_date.strftime("%Y-%m-%d"),
+                            "type": type_sel, # Internal key로 저장
+                            "seats": str(expected_seats),
+                            "note": note,
+                            "google_link": google_link,
+                            "reg_date": datetime.now(timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S")
+                        }
+                        tour_schedule.append(new_schedule_entry)
+                        save_json(CITY_FILE, tour_schedule)
+                        play_alert_sound()
+                        safe_rerun()
                         
         
         # --- 관리자: 일정 보기 및 수정/삭제 (안정성 강화) ---
@@ -901,11 +845,8 @@ with tab2:
 
             for item_id, item in sorted_schedule_items:
                 translated_type = type_options_map_rev.get(item.get('type', 'outdoor'), _("outdoor"))
-                probability_val = item.get('probability', 100)
                 
-                header_text = f"[{item.get('date', 'N/A')}] {item['city']} - {item['venue']} ({translated_type}) | {_('probability')}: {probability_val}%"
-
-                with st.expander(header_text, expanded=False):
+                with st.expander(f"[{item.get('date', 'N/A')}] {item['city']} - {item['venue']} ({translated_type})", expanded=False):
                     col_u, col_d = st.columns([1, 5])
                     
                     with col_u:
@@ -915,13 +856,14 @@ with tab2:
                         if st.button(_("remove"), key=f"del_s_{item_id}"):
                             tour_schedule[:] = [s for s in tour_schedule if s.get('id') != item_id]
                             save_json(CITY_FILE, tour_schedule)
+                            play_alert_sound()
                             safe_rerun()
 
                     if st.session_state.get(f"edit_mode_{item_id}"):
                         with st.form(f"edit_form_{item_id}"):
                             col_uc, col_ud, col_uv = st.columns(3)
                             
-                            updated_city = col_uc.selectbox(_("city"), city_options, index=city_options.index(item.get('city', "Pune") if item.get('city') in city_options else city_options[0]))
+                            updated_city = col_uc.selectbox(_("city"), city_options, index=city_options.index(item.get('city', "공연없음")))
                             
                             try:
                                 initial_date = datetime.strptime(item.get('date', '2025-01-01'), "%Y-%m-%d").date()
@@ -931,7 +873,7 @@ with tab2:
                             updated_date = col_ud.date_input(_("date"), value=initial_date)
                             updated_venue = col_uv.text_input(_("venue"), value=item.get('venue'))
                             
-                            col_ul, col_us, col_ug, col_up = st.columns(4)
+                            col_ul, col_us, col_ug = st.columns(3)
                             current_map_type = item.get('type', 'outdoor')
                             current_map_index = 0 if current_map_type == "indoor" else 1
                             map_type_list = list(type_options_map_rev.values())
@@ -942,31 +884,28 @@ with tab2:
                             updated_seats = col_us.number_input(_("seats"), min_value=0, value=int(seats_value) if str(seats_value).isdigit() else 500, step=50)
                             updated_google = col_ug.text_input(_("google_link"), value=item.get('google_link', ''))
 
-                            updated_probability = col_up.slider(_("probability"), min_value=0, max_value=100, value=item.get('probability', 100), step=5)
-
                             updated_note = st.text_area(_("note"), value=item.get('note'))
                             
                             if st.form_submit_button(_("update")):
                                 for idx, s in enumerate(tour_schedule):
                                     if s.get('id') == item_id:
                                         coords = city_dict.get(updated_city, {'lat': s.get('lat', 0), 'lon': s.get('lon', 0)})
-                                        
                                         tour_schedule[idx] = {
                                             "id": item_id,
                                             "city": updated_city,
                                             "venue": updated_venue,
                                             "lat": coords["lat"],
-                                            "lon": coords["lon"], # 수정: coords["lon"]으로 변경
+                                            "lon": coords["lon"],
                                             "date": updated_date.strftime("%Y-%m-%d"),
                                             "type": updated_type,
                                             "seats": str(updated_seats),
                                             "note": updated_note,
                                             "google_link": updated_google,
-                                            "probability": updated_probability,
                                             "reg_date": s.get('reg_date', datetime.now(timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S"))
                                         }
                                         save_json(CITY_FILE, tour_schedule)
                                         st.session_state[f"edit_mode_{item_id}"] = False
+                                        play_alert_sound()
                                         safe_rerun()
                             
                     if not st.session_state.get(f"edit_mode_{item_id}"):
@@ -974,11 +913,9 @@ with tab2:
                         st.markdown(f"**{_('venue')}:** {item.get('venue', 'N/A')}")
                         st.markdown(f"**{_('seats')}:** {item.get('seats', 'N/A')}")
                         st.markdown(f"**{_('type')}:** {translated_type}")
-                        st.markdown(f"**{_('probability')}:** {probability_val}%")
                         if item.get('google_link'):
-                            # 수정: 관리자 모드에서도 내비게이션 링크 생성
-                            nav_link = f"https://www.google.com/maps/dir/?api=1&destination={item['lat']},{item['lon']}"
-                            st.markdown(f"**{_('google_link')}:** [<span style='color:#FFD700;'>{_('google_link')}</span>]({nav_link})", unsafe_allow_html=True)
+                            google_link_url = item['google_link']
+                            st.markdown(f"**{_('google_link')}:** [{_('google_link')}]({google_link_url})")
                         st.markdown(f"**{_('note')}:** {item.get('note', 'N/A')}")
         else:
             st.write(_("no_schedule"))
@@ -990,9 +927,10 @@ with tab2:
         if s.get('date') and s.get('lat') is not None and s.get('lon') is not None and s.get('id')
     ], key=lambda x: x['date'])
     
-    AURANGABAD_COORDS = city_dict.get("Aurangabad", {'lat': 19.876165, 'lon': 75.343314})
-    start_coords = [AURANGABAD_COORDS['lat'], AURANGABAD_COORDS['lon']]
-    
+    start_coords = [18.52043, 73.856743]
+    if schedule_for_map:
+        start_coords = [schedule_for_map[0]['lat'], schedule_for_map[0]['lon']]
+
     m = folium.Map(location=start_coords, zoom_start=8)
     locations = []
     
@@ -1008,46 +946,35 @@ with tab2:
         
         is_past = event_date < current_date
         
-        icon_color = '#BB3333'
+        # 요청 반영: 아이콘 색상은 항상 빨간색
+        icon_color = 'red' 
+        
+        # 요청 반영: 지난 도시는 25% 투명도
         opacity_val = 0.25 if is_past else 1.0
         
-        type_options_map_rev = {"indoor": _("indoor"), "outdoor": _("outdoor")}
+        # 팝업 내용 (번역 및 실내/실외, 구글맵 포함)
+        type_options_map_rev = {"indoor": _("indoor"), "outdoor": _("outdoor")} # Internal Key -> Display
         translated_type = type_options_map_rev.get(item.get('type', 'outdoor'), _("outdoor"))
         map_type_icon = '🏠' if item.get('type') == 'indoor' else '🌳'
-        probability_val = item.get('probability', 100)
         
+        # --- 수정된 부분: 도시 이름을 빨간색으로 표시 ---
         city_name_display = item.get('city', 'N/A')
-        red_city_name = f'<span style="color: #BB3333; font-weight: bold;">{city_name_display}</span>'
-        
-        bar_color = "red" if probability_val < 50 else "gold" if probability_val < 90 else "#66BB66"
-        
-        # 수정: '가능성 (%)' -> '가능성'
-        prob_bar_html = f"""
-        <div style="margin-top: 5px;">
-            <b>{_('probability')}:</b>
-            <div style="width: 100%; height: 10px; background-color: #333; border-radius: 5px; overflow: hidden; margin-top: 3px;">
-                <div style="width: {probability_val}%; height: 100%; background-color: {bar_color};"></div>
-            </div>
-            <span style="font-size: 12px; font-weight: bold; color: {bar_color};">{probability_val}%</span>
-        </div>
-        """
+        red_city_name = f'<span style="color: #FF4B4B; font-weight: bold;">{city_name_display}</span>'
         
         popup_html = f"""
-        <div style="color: #FAFAFA; background-color: #1A1A1A; padding: 10px; border-radius: 8px;">
-            <b>{_('city')}:</b> {red_city_name}<br>
-            <b>{_('date')}:</b> {date_str}<br>
-            <b>{_('venue')}:</b> {item.get('venue', 'N/A')}<br>
-            <b>{_('type')}:</b> {map_type_icon} {translated_type}<br>
-            {prob_bar_html}
+        <b>{_('city')}:</b> {red_city_name}<br>
+        <b>{_('date')}:</b> {date_str}<br>
+        <b>{_('venue')}:</b> {item.get('venue', 'N/A')}<br>
+        <b>{_('type')}:</b> {map_type_icon} {translated_type}<br>
+        <b>{_('seats')}:</b> {item.get('seats', 'N/A')}<br>
         """
+        # -----------------------------------------------
         
         if item.get('google_link'):
-            # 수정: 구글맵 내비게이션 링크로 변경
-            nav_link = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
-            popup_html += f'<a href="{nav_link}" target="_blank" style="color: #FFD700; text-decoration: none; display: block; margin-top: 5px;">{_("google_link")}</a>'
+            google_link_url = item['google_link'] 
+            popup_html += f'<a href="{google_link_url}" target="_blank">{_("google_link")}</a><br>'
         
-        popup_html += "</div>"
-        
+        # 요청 반영: DivIcon을 사용하여 2/3 크기 (scale 0.666) 아이콘으로 조정 (항상 빨간색)
         city_initial = item.get('city', 'A')[0]
         marker_icon_html = f"""
             <div style="
@@ -1061,6 +988,7 @@ with tab2:
             </div>
         """
         
+        # 요청 반영: 말풍선 터치 시 나오는 작은 말풍선 제거 (tooltip 제거)
         folium.Marker(
             [lat, lon],
             popup=folium.Popup(popup_html, max_width=300),
@@ -1073,6 +1001,7 @@ with tab2:
         
         locations.append([lat, lon])
 
+    # 4. AntPath (경로 애니메이션) - 과거/미래 분리 및 스타일 적용
     if len(locations) > 1:
         current_index = -1
         for i, item in enumerate(schedule_for_map):
@@ -1094,47 +1023,54 @@ with tab2:
             past_segments = locations[:current_index + 1]
             future_segments = locations[current_index:]
 
+        # 요청 반영: 지난 도시/라인 25% 투명도의 빨간색 선
         if len(past_segments) > 1:
             folium.PolyLine(
                 locations=past_segments,
-                color="#BB3333",
+                color="#FF4B4B",
                 weight=5,
-                opacity=0.25,
+                opacity=0.25, # 25% 투명도
                 tooltip=_("past_route")
             ).add_to(m)
             
+        # Future segments (animated line and individual PolyLines for tooltip)
         if len(future_segments) > 1:
+            # 1. AntPath for the continuous animation effect (속도 1/2 조정)
             AntPath(
                 future_segments, 
                 use="regular", 
-                dash_array='30, 20',
-                color='#BB3333', 
+                dash_array='5, 5', 
+                color='#FF4B4B', 
                 weight=5, 
                 opacity=0.8,
-                options={"delay": 24000, "dash_factor": -0.1, "color": "#BB3333"} 
+                options={"delay": 12000, "dash_factor": 0.1, "color": "#FF4B4B"} # 속도를 1/2로 조정
             ).add_to(m)
 
+            # 2. Add invisible PolyLines for hover tooltips on each segment
             for i in range(len(future_segments) - 1):
                 p1 = future_segments[i]
                 p2 = future_segments[i+1]
                 
+                # 거리 및 시간 계산
                 segment_info = calculate_distance_and_time(p1, p2)
                 
+                # 투명한 PolyLine을 생성하여 툴팁 영역으로 사용 (쉬운 터치/호버 감지)
                 folium.PolyLine(
                     locations=[p1, p2],
                     color="transparent", 
-                    weight=15,
+                    weight=15, # 두껍게 하여 호버 영역 확장
                     opacity=0, 
                     tooltip=folium.Tooltip(
                         segment_info, 
                         permanent=False, 
                         direction="top", 
                         sticky=True,
-                        style="background-color: #2D2D2D; color: #FAFAFA; padding: 5px; border-radius: 5px;"
+                        style="background-color: #333; color: white; padding: 5px; border-radius: 5px;"
                     )
                 ).add_to(m)
             
     elif locations:
+        # 단일 도시일 때도 25% 투명도 적용
         try:
             single_item_date = datetime.strptime(schedule_for_map[0]['date'], "%Y-%m-%d").date()
             single_is_past = single_item_date < current_date
@@ -1144,98 +1080,111 @@ with tab2:
         folium.Circle(
             location=locations[0],
             radius=1000,
-            color='#BB3333',
+            color='#FF4B4B',
             fill=True,
-            fill_color='#BB3333',
+            fill_color='#FF4B4B',
             fill_opacity=0.25 if single_is_past else 0.8,
             tooltip=_("single_location")
         ).add_to(m)
 
+    # 지도 표시
     st_folium(m, width=1000, height=600)
     
-# 최종 HTML/CSS 마크다운 블록 (SyntaxError 수정)
+    # 지도 아래 텍스트 제거 완료
+
+
+# --- CSS 적용 (최하단에 위치시켜야 함) ---
 st.markdown(f"""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+/* 기본 배경/글꼴 색상 설정 */
 
-<!-- Snowfall animation setup --><style>
-/* Snowfall animation setup (눈 결정체 모양으로 수정) */
-@keyframes snowfall {{
-    0% {{ background-position: 0% 0%, 0% 0%, 0% 0% }}
-    100% {{ background-position: 500px 1000px, 250px 500px, -100px 300px }}
-}}
-
-/* 크리스마스 아이콘 움직임 애니메이션 */
-@keyframes float-side-0 {{
-    0% {{ transform: translateY(0) translateX(0) scale(var(--size)); }}
-    50% {{ transform: translateY(20px) translateX(10px) scale(var(--size)); }}
-    100% {{ transform: translateY(0) translateX(0) scale(var(--size)); }}
-}}
-
-@keyframes float-side-1 {{
-    0% {{ transform: translateY(0) translateX(0) scale(var(--size)); }}
-    50% {{ transform: translateY(-15px) translateX(-15px) scale(var(--size)); }}
-    100% {{ transform: translateY(0) translateX(0) scale(var(--size)); }}
-}}
-
-/* Dark Christmas Theme Colors */
-:root {{
-    --bg-dark: #1A1A1A; /* Deep Dark */
-    --accent-red: #BB3333; /* Burgundy Red */
-    --accent-gold: #FFD700; /* Gold/Yellow */
-    --text-light: #FAFAFA; /* Light Text */
-    --form-bg: #2D2D2D;
-    --expander-bg: #333333;
-}}
-
-/* Snow effect applied to the root container (눈 결정체 모양 및 투명도, 밀도, 속도 조정) */
-.stApp {{
-    background-color: var(--bg-dark); 
-    color: var(--text-light); 
-    font-family: Arial, sans-serif;
-    
-    background-image:
-        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><rect width='100' height='100' fill='none'/><path d='M50 0 L60 40 L100 50 L60 60 L50 100 L40 60 L0 50 L40 40 Z' fill='rgba(255, 255, 255, 0.4)'/></svg>"),
-        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><rect width='100' height='100' fill='none'/><path d='M50 0 L60 40 L100 50 L60 60 L50 100 L40 60 L0 50 L40 40 Z' fill='rgba(255, 255, 255, 0.3)'/></svg>"),
-        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><rect width='100' height='100' fill='none'/><path d='M50 0 L60 40 L100 50 L60 60 L50 100 L40 60 L0 50 L40 40 Z' fill='rgba(255, 255, 255, 0.2)'/></svg>");
-    
-    background-size: 200px 200px, 100px 100px, 70px 70px; /* 크기를 줄여 더 많은 수의 눈 결정체 */
-    
-    animation: snowfall 20s linear infinite; /* 속도 빠르게 (40s -> 20s) */
-}}
-
-/* Header Styling */
-.header-container {{
+/* 제목 컨테이너 기본 스타일 */
+.header-container {{ 
+    text-align: center; 
+    margin: 0 !important; 
+    padding-top: 20px;
     position: relative;
-    height: 100px; /* 아이콘들이 움직일 공간 확보 */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 20px;
 }}
-
 .main-title {{
     font-size: 3em;
     margin-bottom: 0.5em;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
-    position: relative;
-    z-index: 101; /* 제목이 아이콘 위에 오도록 */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }}
-
-/* Christmas Icons Styling */
-.christmas-icon {{
-    position: absolute;
-    color: var(--accent-red); /* 아이콘 색상 통일 */
-    filter: drop-shadow(0 0 5px rgba(255,255,255,0.3)); /* 그림자 효과 */
+/* Streamlit 기본 스타일 오버라이드 */
+.stApp {{
+    background-color: #1E1E1E; /* 어두운 배경 */
+    color: #FAFAFA; /* 밝은 글꼴 */
+    font-family: Arial, sans-serif;
 }}
-
 /* 탭 배경색/글꼴색 */
 .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {{
-    color: var(--text-light) !important;
+    color: #FAFAFA !important;
 }}
-
 /* 폼 배경색 */
 .stForm {{
     padding: 15px;
+    border: 1px solid #333333;
+    border-radius: 10px;
+    background-color: #2D2D2D;
+}}
+/* Expander 배경색 */
+.streamlit-expanderHeader {{
+    background-color: #333333;
+    color: #FAFAFA;
+    border-radius: 5px;
+    padding: 10px;
+}}
+/* 버튼 스타일 */
+.stButton>button {{
+    background-color: #FF4B4B;
+    color: white;
+    border-radius: 8px;
+    border: none;
+    padding: 8px 16px;
+    transition: background-color 0.3s;
+}}
+.stButton>button:hover {{
+    background-color: #FF6B6B;
+}}
+/* info, warning 스타일 */
+.stAlert.info, .stAlert.warning {{
+    border-left: 5px solid;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+}}
+.stAlert.info {{
+    border-color: #007BFF;
+    background-color: rgba(0, 123, 255, 0.1);
+}}
+.stAlert.warning {{
+    border-color: #FFC107;
+    background-color: rgba(255, 193, 7, 0.1);
+}}
+
+/* Custom Content Box Style (mimicking st.info appearance, to avoid being hidden by stAlert CSS) */
+.notice-content-box {{
+    border-left: 5px solid #007BFF; /* Info blue */
+    background-color: rgba(0, 123, 255, 0.1); /* Light blue background */
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}}
+
+
+/* Streamlit Alert 메시지 숨기기 (사용자 요청 반영: 모든 상태 알림 숨김) */
+div[data-testid="stAlert"] {{
+    display: none !important;
+}}
+
+/* Streamlit Selectbox/Input 스타일 */
+.stSelectbox>label, .stTextInput>label, .stTextArea>label, .stNumberInput>label {{
+    color: #BBBBBB;
+}}
+.stSelectbox div[data-baseweb="select"] {{
+    background-color: #333333;
 }}
 </style>
-""")
+""", unsafe_allow_html=True)
