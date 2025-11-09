@@ -26,7 +26,7 @@ LANG = {
         "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
         "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵",
         "warning": "도시와 장소를 입력하세요", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
-        "add_city": "도시", "register": "등록", "update": "수정", "remove": "제거",
+        "add_city": "도시 추가 버튼", "register": "등록", "update": "수정", "remove": "제거",
         "date": "등록일"
     },
     "en": {
@@ -34,18 +34,18 @@ LANG = {
         "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
         "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps",
         "warning": "Enter city and venue", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
-        "add_city": "City", "register": "Register", "update": "Update", "remove": "Remove",
+        "add_city": "Add City Button", "register": "Register", "update": "Update", "remove": "Remove",
         "date": "Date"
     }
 }
 
-# --- 세션 초기화 (lang는 무조건 str) ---
+# --- 세션 초기화 (lang 보장) ---
 defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False}
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
     elif k == "lang" and not isinstance(st.session_state[k], str):
-        st.session_state[k] = "ko"  # 강제 문자열 보장
+        st.session_state[k] = "ko"
 
 # --- 번역 함수 ---
 def _(key):
@@ -164,90 +164,79 @@ if st.session_state.map_open:
     city_options = ["Mumbai", "Pune", "Nagpur"]
 
     if st.session_state.admin:
-        st.markdown(f"### {_('add_city')}")
+        if st.button(_("add_city"), key="add_city_header_btn"):
+            if 'new_cities' not in st.session_state:
+                st.session_state.new_cities = []
+            st.session_state.new_cities.append({
+                "city": city_options[0], "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True,
+                "date": date.today()
+            })
+            st.rerun()
 
-        if 'new_cities' not in st.session_state:
-            st.session_state.new_cities = []
-
-        for idx, new_city in enumerate(st.session_state.new_cities):
-            with st.container():
-                col_select, col_btn = st.columns([8, 1])
-                with col_select:
-                    # 안전한 city 접근
-                    current_city = new_city.get("city", city_options[0])
-                    selected_city = st.selectbox(
-                        "도시", options=city_options, key=f"city_select_{idx}",
-                        index=city_options.index(current_city) if current_city in city_options else 0
-                    )
-                    new_city["city"] = selected_city
-                    new_city["lat"] = next(c["lat"] for c in DEFAULT_CITIES if c["city"] == selected_city)
-                    new_city["lon"] = next(c["lon"] for c in DEFAULT_CITIES if c["city"] == selected_city)
-                with col_btn:
-                    if st.button("+", key=f"add_block_{idx}", help="도시 추가"):
-                        st.session_state.new_cities.append({
-                            "city": city_options[0], "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True,
-                            "date": date.today()
-                        })
-                        st.rerun()
-
-                # expander: city 존재 보장
-                with st.expander(f"{new_city['city']} 상세 정보", expanded=False):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        # 날짜: date 객체 사용
-                        current_date = new_city.get("date")
-                        if isinstance(current_date, str) and current_date:
-                            try:
-                                current_date = datetime.strptime(current_date, "%Y-%m-%d").date()
-                            except:
-                                current_date = date.today()
-                        elif not isinstance(current_date, date):
-                            current_date = date.today()
-                        new_city["date"] = st.date_input(_("date"), value=current_date, key=f"date_{idx}")
-
-                        new_city["venue"] = st.text_input(_("venue"), value=new_city.get("venue", ""), key=f"venue_{idx}")
-                        new_city["seats"] = st.number_input(_("seats"), min_value=0, value=int(new_city.get("seats", 500)), step=50, key=f"seats_{idx}")
-                    with col2:
-                        new_city["google_link"] = st.text_input(_("google_link"), value=new_city.get("google_link", ""), key=f"google_link_{idx}")
-                        new_city["note"] = st.text_input(_("note"), value=new_city.get("note", ""), key=f"note_{idx}")
-
-                    # 실내/실외 라디오
-                    venue_type = st.radio(
-                        "공연 장소 유형", [_("indoor"), _("outdoor")],
-                        index=0 if new_city.get("indoor", True) else 1,
-                        horizontal=True, key=f"venue_type_{idx}"
-                    )
-                    new_city["indoor"] = venue_type == _("indoor")
-
-                    btn_cols = st.columns(3)
-                    with btn_cols[0]:
-                        if st.button(_("register"), key=f"reg_{idx}"):
-                            if new_city.get("city") and new_city.get("venue"):
-                                save_city = new_city.copy()
-                                save_city["date"] = save_city["date"].strftime("%Y-%m-%d")
-                                save_city["seats"] = str(save_city["seats"])
-                                cities.append(save_city)
-                                save_json(CITY_FILE, cities)
-                                st.session_state.new_cities.pop(idx)
-                                st.success("등록 완료!")
-                                st.rerun()
-                            else:
-                                st.warning(_("warning"))
-                    with btn_cols[2]:
-                        if st.button(_("remove"), key=f"rem_{idx}"):
-                            st.session_state.new_cities.pop(idx)
+        if 'new_cities' in st.session_state:
+            for idx, new_city in enumerate(st.session_state.new_cities):
+                with st.container():
+                    col_select, col_btn = st.columns([8, 1])
+                    with col_select:
+                        current_city = new_city.get("city", city_options[0])
+                        selected_city = st.selectbox(
+                            "도시", options=city_options, key=f"city_select_{idx}",
+                            index=city_options.index(current_city) if current_city in city_options else 0
+                        )
+                        new_city["city"] = selected_city
+                        new_city["lat"] = next(c["lat"] for c in DEFAULT_CITIES if c["city"] == selected_city)
+                        new_city["lon"] = next(c["lon"] for c in DEFAULT_CITIES if c["city"] == selected_city)
+                    with col_btn:
+                        if st.button("+", key=f"add_block_{idx}", help="도시 추가"):
+                            st.session_state.new_cities.append({
+                                "city": city_options[0], "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True,
+                                "date": date.today()
+                            })
                             st.rerun()
 
-        # 초기 + 버튼
-        if not st.session_state.new_cities:
-            col_ph, col_init = st.columns([8, 1])
-            with col_init:
-                if st.button("+", key="init_add"):
-                    st.session_state.new_cities.append({
-                        "city": city_options[0], "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True,
-                        "date": date.today()
-                    })
-                    st.rerun()
+                    with st.expander(f"{new_city['city']} 상세 정보", expanded=False):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            current_date = new_city.get("date")
+                            if isinstance(current_date, str) and current_date:
+                                try:
+                                    current_date = datetime.strptime(current_date, "%Y-%m-%d").date()
+                                except:
+                                    current_date = date.today()
+                            elif not isinstance(current_date, date):
+                                current_date = date.today()
+                            new_city["date"] = st.date_input(_("date"), value=current_date, key=f"date_{idx}")
+                            new_city["venue"] = st.text_input(_("venue"), value=new_city.get("venue", ""), key=f"venue_{idx}")
+                            new_city["seats"] = st.number_input(_("seats"), min_value=0, value=int(new_city.get("seats", 500)), step=50, key=f"seats_{idx}")
+                        with col2:
+                            new_city["google_link"] = st.text_input(_("google_link"), value=new_city.get("google_link", ""), key=f"google_link_{idx}")
+                            new_city["note"] = st.text_input(_("note"), value=new_city.get("note", ""), key=f"note_{idx}")
+
+                        venue_type = st.radio(
+                            "공연 장소 유형", [_("indoor"), _("outdoor")],
+                            index=0 if new_city.get("indoor", True) else 1,
+                            horizontal=True, key=f"venue_type_{idx}"
+                        )
+                        new_city["indoor"] = venue_type == _("indoor")
+
+                        btn_cols = st.columns(3)
+                        with btn_cols[0]:
+                            if st.button(_("register"), key=f"reg_{idx}"):
+                                if new_city.get("city") and new_city.get("venue"):
+                                    save_city = new_city.copy()
+                                    save_city["date"] = save_city["date"].strftime("%Y-%m-%d")
+                                    save_city["seats"] = str(save_city["seats"])
+                                    cities.append(save_city)
+                                    save_json(CITY_FILE, cities)
+                                    st.session_state.new_cities.pop(idx)
+                                    st.success("등록 완료!")
+                                    st.rerun()
+                                else:
+                                    st.warning(_("warning"))
+                        with btn_cols[2]:
+                            if st.button(_("remove"), key=f"rem_{idx}"):
+                                st.session_state.new_cities.pop(idx)
+                                st.rerun()
 
     # --- 지도 ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
@@ -266,7 +255,7 @@ if st.session_state.map_open:
 
 # --- 사이드바 & 모바일 ---
 st.markdown(f'''
-<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">☰</button>
+<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.query_selector('.overlay').classList.toggle('open');">☰</button>
 <div class="overlay" onclick="document.querySelector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
 <div class="sidebar-mobile">
     <h3 style="color:white;">{_("menu")}</h3>
