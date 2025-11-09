@@ -1251,106 +1251,16 @@ with tab2:
         ).add_to(m)
 
     st_folium(m, width=1000, height=600)
-
-# --- NEW: Add Snow Container for Overlay Effect ---
-snow_html = """
-<div id="snow-container"></div>
-<script>
-const snowContainer = parent.document.getElementById("snow-container") || (function() {
-    const div = parent.document.createElement('div');
-    div.id = 'snow-container';
-    parent.document.body.appendChild(div);
-    return div;
-})();
-
-const snowContent = ['&#10052', '&#10053', '&#10054'];
-
-const random = (num) => Math.floor(Math.random() * num);
-
-const getRandomStyles = () => {
-  const top = random(100);
-  const left = random(100);
-  const dur = random(20) + 20;  // Slower for quiet falling (20-40s)
-  const size = random(15) + 15;  // Smaller crystals
-  return `
-    top: -${top}%;
-    left: ${left}%;
-    font-size: ${size}px;
-    animation-duration: ${dur}s;
-    opacity: 0.3;  // Transparent crystals
-  `;
-};
-
-const createSnow = (num) => {
-  for (var i = num; i > 0; i--) {
-    var snow = parent.document.createElement("div");
-    snow.className = "snow";
-    snow.style.cssText = getRandomStyles();
-    snow.innerHTML = snowContent[random(3)];
-    snowContainer.appendChild(snow);
-  }
-};
-
-if (!parent.document.querySelector('.snow')) {
-  createSnow(50);  // More flakes for full-screen immersion
-}
-</script>
-"""
-st.markdown(snow_html, unsafe_allow_html=True)
-
+    
 st.markdown(f"""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 
 <style>
-/* Fall and Sway Animations for Quiet, Gentle Snow */
-@keyframes fall {{
-  0% {{
-    opacity: 0;
-  }}
-  30% {{
-    opacity: 1;
-  }}
-  100% {{
-    top: 100vh;
-    opacity: 0.5;  // Fade out gently
-  }}
-}}
-
-@keyframes sway {{
-  0% {{
-    margin-left: 0;
-  }}
-  25% {{
-    margin-left: 20px;  // Softer sway for quiet effect
-  }}
-  50% {{
-    margin-left: -20px;
-  }}
-  75% {{
-    margin-left: 20px;
-  }}
-  100% {{
-    margin-left: 0;
-  }}
-}}
-
-#snow-container {{  
-  height: 100vh;
-  overflow: hidden;
-  position: fixed;  // Fixed for full-screen overlay
-  top: 0;
-  left: 0;
-  width: 100vw;
-  z-index: 999;  // On top of everything
-  pointer-events: none;  // Doesn't block interactions
-}}
-
-.snow {{
-  animation: fall linear infinite, sway ease-in-out infinite;
-  color: #87CEEB;  // Sky blue for crystal look
-  position: absolute;
-  filter: blur(1px);  // Soft, dreamy crystals
+/* Snowfall animation setup (눈 결정체 모양으로 수정) */
+@keyframes snowfall {{
+    0% {{ background-position: 0% 0%, 0% 0%, 0% 0% }}
+    100% {{ background-position: 500px 1000px, 250px 500px, -100px 300px }}
 }}
 
 /* 크리스마스 아이콘 움직임 애니메이션 */
@@ -1383,11 +1293,21 @@ st.markdown(f"""
     --expander-bg: #333333;
 }}
 
-/* App Background - Dark Night Sky for Christmas Feel */
+/* Snow effect applied to the root container (눈 결정체 모양 및 투명도, 밀도, 속도 조정) */
 .stApp {{
-    background: linear-gradient(to bottom, #2d91c2 0%, #1e528e 100%);  // Night sky gradient
+    background-color: var(--bg-dark); 
     color: var(--text-light); 
     font-family: Arial, sans-serif;
+    
+    /* 눈 결정체 모양 SVG를 사용하여 더 투명하고 빠르게 내리도록 수정 */
+    background-image:
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><rect width='100' height='100' fill='none'/><path d='M50 0 L60 40 L100 50 L60 60 L50 100 L40 60 L0 50 L40 40 Z' fill='rgba(255, 255, 255, 0.4)'/></svg>"),
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><rect width='100' height='100' fill='none'/><path d='M50 0 L60 40 L100 50 L60 60 L50 100 L40 60 L0 50 L40 40 Z' fill='rgba(255, 255, 255, 0.3)'/></svg>"),
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><rect width='100' height='100' fill='none'/><path d='M50 0 L60 40 L100 50 L60 60 L50 100 L40 60 L0 50 L40 40 Z' fill='rgba(255, 255, 255, 0.2)'/></svg>");
+    
+    background-size: 200px 200px, 100px 100px, 70px 70px; /* 크기를 줄여 더 많은 수의 눈 결정체 */
+    
+    animation: snowfall 20s linear infinite; /* 속도 빠르게 (40s -> 20s) */
 }}
 
 /* Header Styling */
