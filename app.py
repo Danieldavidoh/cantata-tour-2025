@@ -27,7 +27,7 @@ LANG = {
         "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
         "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵",
         "warning": "도시와 장소를 입력하세요", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
-        "add_city": "도시 추가 버튼", "register": "등록", "update": "수정", "remove": "제거",
+        "add_city": "추가", "register": "등록", "update": "수정", "remove": "제거",
         "date": "등록일"
     },
     "en": {
@@ -35,7 +35,7 @@ LANG = {
         "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
         "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps",
         "warning": "Enter city and venue", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
-        "add_city": "Add City Button", "register": "Register", "update": "Update", "remove": "Remove",
+        "add_city": "Add", "register": "Register", "update": "Update", "remove": "Remove",
         "date": "Date"
     },
     "hi": {
@@ -43,7 +43,7 @@ LANG = {
         "tab_notice": "सूचना", "tab_map": "टूर रूट", "indoor": "इनडोर", "outdoor": "आउटडोर",
         "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप्स",
         "warning": "शहर और स्थल दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट",
-        "add_city": "शहर जोड़ें बटन", "register": "रजिस्टर", "update": "अपडेट", "remove": "हटाएं",
+        "add_city": "जोड़ें", "register": "रजिस्टर", "update": "अपडेट", "remove": "हटाएं",
         "date": "तारीख"
     }
 }
