@@ -457,7 +457,7 @@ if st.session_state.map_open:
 # --- 사이드바 & 모바일 ---
 st.markdown(f'''
 <button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.query_selector('.overlay').classList.toggle('open');">☰</button>
-<div class="overlay" onclick="document.querySelector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
+<div class="overlay" onclick="document.query_selector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
 <div class="sidebar-mobile">
     <h3 style="color:white;">{_("menu")}</h3>
     <select onchange="window.location.href='?lang='+this.value" style="width:100%; padding:8px; margin:10px 0;">
