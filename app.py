@@ -59,7 +59,8 @@ LANG = {
 }
 
 # --- 세션 초기화 ---
-defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "logged_in_user": None}
+# show_login_form 상태 추가하여 로그인 로직 안정화
+defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "logged_in_user": None, "show_login_form": False}
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -78,7 +79,7 @@ def load_json(f):
             with open(f, "r", encoding="utf-8") as file:
                 return json.load(file)
         except json.JSONDecodeError:
-            st.error(f"Error reading {f}: Invalid JSON format. Initializing empty list.")
+            # st.error(f"Error reading {f}: Invalid JSON format. Initializing empty list.")
             return []
     return []
 
@@ -209,7 +210,6 @@ title_html = f"""
     </div>
 """
 st.markdown(title_html, unsafe_allow_html=True)
-# st.title(f"{_('title_cantata')} {_('title_year')} - {_('title_region')}") # 이전 제목 표시 코드
 
 # 언어 선택 버튼 (상단 고정)
 col_lang, col_auth = st.columns([1, 3])
@@ -235,28 +235,37 @@ with col_lang:
         st.session_state.lang = selected_lang_key
         st.rerun()
 
+# --- 로그인 / 로그아웃 로직 (오류 수정) ---
 with col_auth:
     if st.session_state.admin:
         if st.button(_("logout"), key="logout_btn"):
             st.session_state.admin = False
             st.session_state.logged_in_user = None
+            st.session_state.show_login_form = False # 로그아웃 시 폼 숨김
             st.success("Logged out.")
             st.rerun()
     else:
+        # 로그인 버튼 클릭 시 폼 표시 상태 변경
         if st.button(_("login"), key="login_btn"):
-            # 간단한 비밀번호 입력 팝업 또는 페이지 이동
-            with st.form("login_form"):
+            st.session_state.show_login_form = not st.session_state.show_login_form
+        
+        # 폼 표시 상태가 True일 때만 폼을 렌더링
+        if st.session_state.show_login_form:
+            with st.form("login_form_permanent", clear_on_submit=False):
                 st.write("Admin Login")
                 password = st.text_input("Password", type="password")
-                submitted = st.form_submit_button("Submit")
+                submitted = st.form_submit_button(_("login"))
+                
                 if submitted:
                     if password == ADMIN_PASS:
                         st.session_state.admin = True
                         st.session_state.logged_in_user = "Admin"
+                        st.session_state.show_login_form = False # 성공하면 폼 숨김
                         st.success("Logged in as Admin.")
                         st.rerun()
                     else:
                         st.error("Incorrect password.")
+                        # 실패해도 폼을 유지하기 위해 show_login_form=True 유지
 
 
 # --- 탭 구성 ---
@@ -297,15 +306,17 @@ with tab1:
         notices_to_display = sorted(tour_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
         
         for notice in notices_to_display:
+            # KeyError 방지: item.get() 사용
+            notice_id = notice.get('id')
+            if not notice_id: continue 
+            
             notice_type = notice.get('type', 'General')
-            # ID 키가 없는 항목은 건너뛰어 KeyError 방지
-            if 'id' not in notice: continue 
             
             with st.expander(f"[{notice_type}] {notice['title']} ({notice.get('date', 'N/A')[:10]})", expanded=False):
                 col_del, col_title = st.columns([1, 4])
                 with col_del:
-                    if st.button(_("remove"), key=f"del_n_{notice['id']}", help="Delete Notice"):
-                        tour_notices = [n for n in tour_notices if n.get('id') != notice['id']]
+                    if st.button(_("remove"), key=f"del_n_{notice_id}", help="Delete Notice"):
+                        tour_notices[:] = [n for n in tour_notices if n.get('id') != notice_id]
                         save_json(NOTICE_FILE, tour_notices)
                         st.success("Notice deleted.")
                         st.rerun()
@@ -314,11 +325,11 @@ with tab1:
                     st.markdown(f"**Content:** {notice['content']}")
                 
                 # 간단한 업데이트 로직 추가
-                with st.form(f"update_notice_{notice['id']}", clear_on_submit=True):
-                    updated_content = st.text_area("Update Content", value=notice['content'])
+                with st.form(f"update_notice_{notice_id}", clear_on_submit=True):
+                    updated_content = st.text_area("Update Content", value=notice.get('content', ''))
                     if st.form_submit_button(_("update")):
                         for n in tour_notices:
-                            if n.get('id') == notice['id']:
+                            if n.get('id') == notice_id:
                                 n['content'] = updated_content
                                 n['type'] = notice_type
                                 save_json(NOTICE_FILE, tour_notices)
@@ -326,16 +337,20 @@ with tab1:
                                 st.rerun()
                         
     else:
-        # --- 사용자: 공지사항 보기 ---
+        # --- 사용자: 공지사항 보기 (KeyError 수정) ---
         if not tour_notices:
             st.info("No notices available.")
         else:
             notices_to_display = sorted(tour_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
             for notice in notices_to_display:
+                # KeyError 방지: item.get() 사용
                 if 'id' not in notice: continue
                 notice_type = notice.get('type', 'General')
-                st.markdown(f"**[{notice_type}] {notice['title']}** - *{notice.get('date', 'N/A')[:16]}*")
-                st.info(notice.get('content', ''))
+                notice_title = notice.get('title', 'No Title')
+                notice_content = notice.get('content', 'No content available.')
+                
+                st.markdown(f"**[{notice_type}] {notice_title}** - *{notice.get('date', 'N/A')[:16]}*")
+                st.info(notice_content)
                 st.markdown("---")
 
 
@@ -407,6 +422,7 @@ with tab2:
             sorted_schedule_items = sorted(schedule_dict.items(), key=lambda x: x[1].get('date', '9999-12-31'))
 
             for item_id, item in sorted_schedule_items:
+                # Key access is safe here because it came from schedule_dict
                 with st.expander(f"[{item.get('date', 'N/A')}] {item['city']} - {item['venue']}", expanded=False):
                     col_u, col_d = st.columns([1, 5])
                     
@@ -505,9 +521,9 @@ with tab2:
         
         # 팝업 내용
         popup_html = f"""
-        <b>City:</b> {item['city']}<br>
+        <b>City:</b> {item.get('city', 'N/A')}<br>
         <b>Date:</b> {date_str}<br>
-        <b>Venue:</b> {item['venue']}<br>
+        <b>Venue:</b> {item.get('venue', 'N/A')}<br>
         <b>Seats:</b> {item.get('seats', 'N/A')}<br>
         """
         
@@ -517,6 +533,7 @@ with tab2:
         
         # 요청 반영: DivIcon을 사용하여 2/3 크기 (scale 0.666) 및 투명도 적용
         # Font Awesome 아이콘을 사용해 크기를 조절
+        city_initial = item.get('city', 'A')[0]
         marker_icon_html = f"""
             <div style="
                 transform: scale(0.666); 
@@ -525,14 +542,14 @@ with tab2:
                 white-space: nowrap;
             ">
                 <i class="fa fa-map-marker fa-3x" style="color: {color};"></i>
-                <div style="font-size: 10px; color: black; font-weight: bold; position: absolute; top: 12px; left: 13px;">{item['city'][0]}</div>
+                <div style="font-size: 10px; color: black; font-weight: bold; position: absolute; top: 12px; left: 13px;">{city_initial}</div>
             </div>
         """
             
         folium.Marker(
             [lat, lon],
             popup=folium.Popup(popup_html, max_width=300),
-            tooltip=f"{item['city']} - {date_str}",
+            tooltip=f"{item.get('city', 'N/A')} - {date_str}",
             icon=folium.DivIcon(
                 icon_size=(30, 45),
                 icon_anchor=(15, 45),
@@ -708,7 +725,8 @@ section[data-testid="stSidebar"] {
 /* 일반 텍스트 입력 필드 배경 */
 div[data-testid="stTextInput"] > div > div > input,
 div[data-testid="stNumberInput"] > div > div > input,
-div[data-testid="stTextArea"] > div > textarea {
+div[data-testid="stTextArea"] > div > textarea,
+div[data-testid="stForm"] {
     background-color: rgba(255, 255, 255, 0.9);
     color: black;
 }
@@ -730,6 +748,12 @@ div[data-testid="stTextArea"] > div > textarea {
 .stButton > button:hover {
     background-color: #cc0000;
     border-color: #ff4b4b;
+}
+
+/* Selectbox와 Date Input의 흰색 배경 투명도 조정 */
+div[data-testid="stSelectbox"] > div > div,
+div[data-testid="stDateInput"] > div > div {
+    background-color: rgba(255, 255, 255, 0.9);
 }
 
 </style>
