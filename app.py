@@ -19,12 +19,10 @@ try:
     from streamlit_autorefresh import st_autorefresh
 except ImportError:
     st_autorefresh = lambda **kwargs: None
-    # st.warning("`streamlit_autorefresh` 라이브러리가 설치되지 않았습니다. 자동 새로고침이 작동하지 않을 수 있습니다.")
 
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
 # --- 자동 새로고침 ---
-# 관리자가 아닐 경우 10초마다 새로고침
 if not st.session_state.get("admin", False):
     st_autorefresh(interval=10000, key="auto_refresh_user")
 
@@ -197,20 +195,15 @@ def save_uploaded_files(uploaded_files):
         file_path = os.path.join(UPLOAD_DIR, unique_filename)
         
         # 파일을 디스크에 저장
-        try:
-            with open(file_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            
-            file_info_list.append({
-                "name": uploaded_file.name,
-                "path": file_path,
-                "type": uploaded_file.type,
-                "size": uploaded_file.size
-            })
-        except Exception as e:
-            st.error(f"파일 저장 오류: {e}")
-            pass
-            
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        
+        file_info_list.append({
+            "name": uploaded_file.name,
+            "path": file_path,
+            "type": uploaded_file.type,
+            "size": uploaded_file.size
+        })
     return file_info_list
 
 # --- JSON 헬퍼 ---
@@ -367,25 +360,20 @@ with col_lang:
         st.session_state.lang = selected_lang_key
         st.rerun()
 
-# --- 로그인 / 로그아웃 로직 (버튼 문제 수정) ---
-def handle_login_button_click():
-    """로그인 버튼 클릭 시 폼 표시 상태를 토글하고 강제 재실행합니다."""
-    st.session_state.show_login_form = not st.session_state.show_login_form
-    st.rerun()
-
+# --- 로그인 / 로그아웃 로직 ---
 with col_auth:
     if st.session_state.admin:
         if st.button(_("logout"), key="logout_btn"):
             st.session_state.admin = False
             st.session_state.logged_in_user = None
-            st.session_state.show_login_form = False
+            st.session_state.show_login_form = False # 로그아웃 시 폼 숨김
             st.success(_("logged_out_success"))
             play_alert_sound()
             st.rerun()
     else:
-        # 로그인 버튼 클릭 시 on_click 대신 명시적 핸들러를 사용해 즉시 재실행을 보장
+        # 로그인 버튼 안먹음 오류 수정: on_click 핸들러를 사용하지 않고, 폼 표시 상태를 직접 제어합니다.
         if st.button(_("login"), key="login_btn"):
-            handle_login_button_click()
+            st.session_state.show_login_form = not st.session_state.show_login_form
         
         # 폼 표시 상태가 True일 때만 폼을 렌더링
         if st.session_state.show_login_form:
@@ -398,12 +386,13 @@ with col_auth:
                     if password == ADMIN_PASS:
                         st.session_state.admin = True
                         st.session_state.logged_in_user = "Admin"
-                        st.session_state.show_login_form = False
+                        st.session_state.show_login_form = False # 성공하면 폼 숨김
                         st.success(_("logged_in_success"))
                         play_alert_sound()
                         st.rerun()
                     else:
                         st.error(_("incorrect_password"))
+                        # 실패해도 폼을 유지하기 위해 show_login_form=True 유지
 
 
 # --- 탭 구성 ---
@@ -492,8 +481,8 @@ with tab1:
                     if attached_files:
                         st.markdown(f"**{_('attached_files')}:**")
                         for file_info in attached_files:
-                            icon = "🖼️" if file_info['type'].startswith('image/') else "📄"
-                            st.markdown(f"- {icon} {file_info['name']} ({round(file_info['size'] / 1024, 1)} KB)")
+                            # 로컬 경로 대신 파일 이름만 표시합니다. (Streamlit Cloud 환경에서 로컬 파일 다운로드 어려움)
+                            st.markdown(f"- {file_info['name']} ({round(file_info['size'] / 1024, 1)} KB)")
                     else:
                         st.markdown(f"**{_('attached_files')}:** {_('no_files')}")
                 
@@ -538,6 +527,7 @@ with tab1:
                 if attached_files:
                     st.markdown(f"**{_('attached_files')}:**")
                     for file_info in attached_files:
+                         # 파일 타입에 따라 아이콘 표시
                         icon = "🖼️" if file_info['type'].startswith('image/') else "📄"
                         st.markdown(f"- {icon} {file_info['name']} ({round(file_info['size'] / 1024, 1)} KB)")
 
@@ -725,19 +715,18 @@ with tab2:
         opacity_val = 0.25 if is_past else 1.0
         
         # 팝업 내용 (번역 및 실내/실외, 구글맵 포함)
-        translated_type = type_options_map_rev.get(item.get('type', 'outdoor'), _("outdoor"))
         map_type_icon = '🏠' if item.get('type') == 'indoor' else '🌳'
         popup_html = f"""
         <b>{_('city')}:</b> {item.get('city', 'N/A')}<br>
         <b>{_('date')}:</b> {date_str}<br>
         <b>{_('venue')}:</b> {item.get('venue', 'N/A')}<br>
-        <b>{_('type')}:</b> {map_type_icon} {translated_type}<br>
         <b>{_('seats')}:</b> {item.get('seats', 'N/A')}<br>
+        <b>{_('type')}:</b> {map_type_icon} {translated_type}<br>
         """
         
         if item.get('google_link'):
             google_link_url = item['google_link'] 
-            popup_html += f'<a href="{google_link_url}" target="_blank">{_("google_link")}</a><br>'
+            popup_html += f'<a href="{google_link_url}" target="_blank">{_("google_link")}</a>'
         
         # 요청 반영: DivIcon을 사용하여 2/3 크기 (scale 0.666) 아이콘으로 조정 (항상 빨간색)
         city_initial = item.get('city', 'A')[0]
@@ -757,6 +746,7 @@ with tab2:
         folium.Marker(
             [lat, lon],
             popup=folium.Popup(popup_html, max_width=300),
+            # tooltip=f"{item.get('city', 'N/A')} - {date_str}", # 작은 말풍선 제거
             icon=folium.DivIcon(
                 icon_size=(30, 45),
                 icon_anchor=(15, 45),
@@ -799,6 +789,7 @@ with tab2:
             ).add_to(m)
             
         # 요청 반영: 도시간 연결선 애니메이션 속도를 1/2로 (delay 3000 -> 6000)
+        # Note: 1/2 속도를 위해 3000(1/3)에서 6000으로 조정했습니다.
         if len(future_segments) > 1:
             AntPath(
                 future_segments, 
@@ -807,7 +798,7 @@ with tab2:
                 color='#FF4B4B', 
                 weight=5, 
                 opacity=0.8,
-                options={"delay": 6000, "dash_factor": 0.1, "color": "#FF4B4B"} # 속도 1/2로 조정 (3000ms의 2배)
+                options={"delay": 6000, "dash_factor": 0.1, "color": "#FF4B4B"} # 속도 1/2로 조정
             ).add_to(m)
             
     elif locations:
@@ -864,4 +855,77 @@ st.markdown(f"""
 .main-title {{
     font-size: 3em;
     margin-bottom: 0.5em;
-    text-shadow: 2px 2
+    text-shadow: 2px 2px 4px #000000;
+}}
+
+[data-testid="stAppViewContainer"] {{ 
+    /* 배경 이미지를 제거하고 다크 배경색 적용 */
+    background-color: #1E1E1E;
+    color: #FFFFFF;
+    background-attachment: fixed; 
+}}
+
+/* Streamlit 기본 텍스트 색상 오버라이드 */
+.stText {{
+    color: #FFFFFF;
+}}
+
+/* 탭 스타일 */
+.stTabs [data-baseweb="tab-list"] button {{
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 8px 8px 0 0;
+}}
+.stTabs [data-baseweb="tab-list"] button [data-testid="stText"] {{
+    font-weight: bold;
+    color: #FFFFFF;
+    text-shadow: 1px 1px 2px #000;
+}}
+
+/* 사이드바 배경 */
+section[data-testid="stSidebar"] {{
+    background-color: #333333;
+}}
+
+/* 입력 필드 배경 */
+div[data-testid="stTextInput"] > div > div > input,
+div[data-testid="stNumberInput"] > div > div > input,
+div[data-testid="stTextArea"] > div > textarea,
+div[data-testid="stForm"] {{
+    background-color: #444444;
+    color: #FFFFFF;
+    border: 1px solid #777777;
+}}
+
+/* Expander 배경 */
+[data-testid$="stExpander"] {{
+    background-color: #2E2E2E;
+    border-radius: 8px;
+    border: 1px solid #555555;
+}}
+
+/* 버튼 스타일 */
+.stButton > button {{
+    background-color: #4CAF50; /* Green */
+    color: white;
+    border: 1px solid #388E3C;
+    font-weight: bold;
+}}
+.stButton > button:hover {{
+    background-color: #388E3C;
+    border-color: #4CAF50;
+}}
+
+/* Selectbox와 Date Input의 배경 */
+div[data-testid="stSelectbox"] > div > div,
+div[data-testid="stDateInput"] > div > div {{
+    background-color: #444444;
+    color: #FFFFFF;
+}}
+
+/* st.info/st.warning 등의 텍스트 색상 */
+div[data-testid="stAlert"] {{
+    color: #FFFFFF !important;
+}}
+
+</style>
+""", unsafe_allow_html=True)
