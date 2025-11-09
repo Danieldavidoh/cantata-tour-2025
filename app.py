@@ -316,11 +316,11 @@ if st.session_state.map_open:
         lat, lon = c["lat"], c["lon"]
         indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
         google_link = c.get("google_link", "")
-        link_text = f'<a href="{google_link}" target="_blank"><i class="fa fa-car"></i> Google Maps</a>' if google_link else ""
+        link_text = f'<a href="{google_link}" target="_blank">Google Maps</a>' if google_link else ""
         edit_link = ''
         if st.session_state.admin:
             edit_link = f'<br><a href="?edit={c["city"]}" target="_self">Edit</a>'
-        popup_html = f"<b>{c['city']}</b><br><b>{_('venue')}</b>: {c.get('venue','—')}<br><b>{_('seats')}</b>: {c.get('seats','—')}<br><b>{indoor_text}</b><br><b>{_('note')}</b>: {c.get('note','—')}<br>{link_text}{edit_link}"
+        popup_html = f"<b>{c['city']}</b><br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br>{_('note')}: {c.get('note','—')}<br>{link_text}{edit_link}"
         folium.Marker(
             (lat, lon), popup=folium.Popup(popup_html, max_width=300),
             icon=folium.Icon(color="red", icon="music", prefix="fa")
@@ -330,8 +330,8 @@ if st.session_state.map_open:
             AntPath([(lat, lon), (nxt["lat"], nxt["lon"])], color="#e74c3c", weight=6, opacity=0.7).add_to(m)
     st_folium(m, width=900, height=550, key="tour_map")
 
-    st.query_params = st.experimental_get_query_params()
-    query_params = st.query_params
+    st.experimental_set_query_params()
+    query_params = st.experimental_get_query_params()
     if st.session_state.admin and 'edit' in query_params:
         city_name = query_params['edit'][0]
         city_to_edit = next((c for c in cities if c['city'] == city_name), None)
