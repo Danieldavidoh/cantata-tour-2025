@@ -1,7 +1,7 @@
 import json
 import os
 import uuid
-import base64 # <-- 올바르게 base64 임포트됨
+import base64
 import random
 import streamlit as st
 from datetime import datetime, date, timedelta
@@ -9,7 +9,7 @@ import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
 from pytz import timezone
-from math import radians, cos, sin, asin, sqrt # <-- 거리 계산을 위해 추가
+from math import radians, cos, sin, asin, sqrt
 
 # --- 파일 저장 경로 설정 ---
 UPLOAD_DIR = "uploads"
@@ -85,7 +85,7 @@ LANG = {
         "post_success": "포스트가 성공적으로 업로드되었습니다!",
         "no_posts": "현재 포스트가 없습니다.",
         "admin_only_files": "첨부 파일은 관리자만 확인 가능합니다.",
-        "probability": "가능성" # <-- 수정: '%' 제거
+        "probability": "가능성"
     },
     "en": {
         "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
@@ -138,7 +138,7 @@ LANG = {
         "post_success": "Post uploaded successfully!",
         "no_posts": "No posts available.",
         "admin_only_files": "Attached files can only be viewed by Admin.",
-        "probability": "Probability" # <-- 수정: '%' 제거
+        "probability": "Probability"
     },
     "hi": {
         "title_cantata": "कैंटाटा टूर", "title_year": "२०२५", "title_region": "महाराष्ट्र",
@@ -191,7 +191,7 @@ LANG = {
         "post_success": "पोस्ट सफलतापूर्वक अपलोड हुई!",
         "no_posts": "कोई पोस्ट उपलब्ध नहीं है।",
         "admin_only_files": "संलग्न फ़ाइलें केवल व्यवस्थापक द्वारा देखी जा सकती हैं।",
-        "probability": "संभावना" # <-- 수정: '%' 제거
+        "probability": "संभावना"
     }
 }
 
@@ -236,7 +236,7 @@ def get_file_as_base64(file_path):
     try:
         with open(file_path, "rb") as f:
             file_bytes = f.read()
-            # 오타 수정: base66 -> base64
+            # 수정: base66 -> base64
             base64_encoded_data = base64.b64encode(file_bytes).decode('utf-8')
             return base64_encoded_data
     except Exception:
@@ -421,7 +421,7 @@ city_dict = {
     "Wardha": {"lat": 20.745445, "lon": 78.602452}, "Wardha Road": {"lat": 20.75, "lon": 78.6},
     "Yavatmal": {"lat": 20.389917, "lon": 78.130051},
     
-    # NEW: 추가된 도시들의 대략적인 좌표 (주변 도시를 기반으로 임의 설정)
+    # NEW: 추가된 도시들의 대략적인 좌표
     "Miraj": {"lat": 16.8286, "lon": 74.6300},
     "Kodoli": {"lat": 16.8920, "lon": 74.2465},
     "Mira Road": {"lat": 19.2847, "lon": 72.8687},
@@ -438,14 +438,43 @@ city_options = major_cities_available + remaining_cities
 tour_notices = load_json(NOTICE_FILE)
 user_posts = load_json(USER_POST_FILE)
 
-# 요청 반영: 새로운 스케줄 데이터로 tour_schedule을 덮어씁니다.
+# 요청 반영: 새로운 스케줄 데이터
+new_schedule_data = [
+    {"date": "2025-12-01", "city": "Nagpur", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-02", "city": "Amravati", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-03", "city": "Chandrapur", "probability": 80, "venue": "TBD", "type": "outdoor", "seats": "0", "note": "CNI"},
+    {"date": "2025-12-05", "city": "Jalna", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-06", "city": "Aurangabad", "probability": 30, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-07", "city": "Nashik", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-08", "city": "Mumbai", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-09", "city": "Pune", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-10", "city": "Sangli", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-11", "city": "Kolhapur", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-12", "city": "Miraj", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-13", "city": "Ichalkaranji", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-14", "city": "Kodoli", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-15", "city": "Karad", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-16", "city": "Satara", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-17", "city": "Aurangabad", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-18", "city": "Parbhani", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-19", "city": "Shirur", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-20", "city": "Pune", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-21", "city": "Palghar", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-22", "city": "Ambernath", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-23", "city": "Mira Road", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-24", "city": "Wadala", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-25", "city": "Solapur", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": "Christmas"},
+    {"date": "2025-12-26", "city": "Bandra", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+    {"date": "2025-12-27", "city": "Solapur", "probability": 100, "venue": "TBD", "type": "outdoor", "seats": "0", "note": ""},
+]
+
 tour_schedule = []
 for entry in new_schedule_data:
     city_name = entry['city']
     coords = city_dict.get(city_name)
     
     if coords is None:
-        coords = city_dict.get("Aurangabad", {'lat': 19.876165, 'lon': 75.343314}) # Fallback
+        coords = city_dict.get("Aurangabad", {'lat': 19.876165, 'lon': 75.343314})
         
     tour_schedule.append({
         "id": str(uuid.uuid4()),
@@ -454,10 +483,10 @@ for entry in new_schedule_data:
         "lat": coords["lat"],
         "lon": coords["lon"],
         "date": entry['date'],
-        "type": "outdoor",
-        "seats": "0", 
+        "type": entry.get('type', "outdoor"),
+        "seats": entry.get('seats', "0"), 
         "note": entry.get('note', ""),
-        "google_link": "",
+        "google_link": entry.get('google_link', ""),
         "probability": entry.get('probability', 100),
         "reg_date": entry['date'] 
     })
@@ -475,6 +504,10 @@ def safe_rerun():
     else:
         pass
 
-# 요청 반영: 제목 위에 크리스마스 아이콘 추가
+# 요청 반영: 제목 위에 크리스마스 아이콘 추가 (SyntaxError 수정)
 christmas_icons = {
-    "gift": "🎁", "candy": "🍭", "sock": "🧦", "sleigh": "
+    "gift": "🎁", 
+    "candy": "🍭", 
+    "sock": "🧦", 
+    # 수정: sleigh 값을 한 줄로 정의하여 SyntaxError 해결
+    "sleigh": "
