@@ -10,25 +10,25 @@ from streamlit_folium import st_folium
 from folium.plugins import AntPath
 from pytz import timezone
 
+# --- 파일 저장 경로 설정 ---
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 # 가짜 라이브러리 임포트 (st_autorefresh는 Streamlit 환경에서만 유효)
 try:
     from streamlit_autorefresh import st_autorefresh
 except ImportError:
     st_autorefresh = lambda **kwargs: None
-    # st.warning("`streamlit_autorefresh` 라이브러리가 설치되지 않았습니다. 자동 새로고침이 작동하지 않을 수 있습니다.")
 
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
 # --- 자동 새로고침 ---
-# 관리자가 아닐 경우 10초마다 새로고침 (요청 반영: 5초 -> 10초)
 if not st.session_state.get("admin", False):
     st_autorefresh(interval=10000, key="auto_refresh_user")
 
 # --- 파일 경로 ---
 NOTICE_FILE = "notice.json"
 CITY_FILE = "cities.json"
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # --- 다국어 설정 ---
 LANG = {
@@ -72,7 +72,10 @@ LANG = {
         "venue_placeholder": "공연 장소를 입력하세요",
         "note_placeholder": "특이사항을 입력하세요",
         "google_link_placeholder": "구글맵 URL을 입력하세요",
-        "seats_tooltip": "예상 관객 인원"
+        "seats_tooltip": "예상 관객 인원",
+        "file_attachment": "파일 첨부",
+        "attached_files": "첨부 파일",
+        "no_files": "없음"
     },
     "en": {
         "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
@@ -114,7 +117,10 @@ LANG = {
         "venue_placeholder": "Enter venue name",
         "note_placeholder": "Enter notes/special remarks",
         "google_link_placeholder": "Enter Google Maps URL",
-        "seats_tooltip": "Expected audience count"
+        "seats_tooltip": "Expected audience count",
+        "file_attachment": "File Attachment",
+        "attached_files": "Attached Files",
+        "no_files": "None"
     },
     "hi": {
         "title_cantata": "कैंटाटा टूर", "title_year": "२०२५", "title_region": "महाराष्ट्र",
@@ -156,7 +162,10 @@ LANG = {
         "venue_placeholder": "स्थल का नाम दर्ज करें",
         "note_placeholder": "नोट्स/विशेष टिप्पणी दर्ज करें",
         "google_link_placeholder": "गूगल मैप्स URL दर्ज करें",
-        "seats_tooltip": "अपेक्षित दर्शक संख्या"
+        "seats_tooltip": "अपेक्षित दर्शक संख्या",
+        "file_attachment": "फ़ाइल संलग्नक",
+        "attached_files": "संलग्न फ़ाइलें",
+        "no_files": "कोई नहीं"
     }
 }
 
@@ -177,6 +186,26 @@ def _(key):
 def play_alert_sound():
     st.session_state.play_sound = True
 
+# --- 파일 첨부/저장 함수 ---
+def save_uploaded_files(uploaded_files):
+    file_info_list = []
+    for uploaded_file in uploaded_files:
+        # 파일명을 UUID로 저장하여 충돌 방지
+        unique_filename = f"{uuid.uuid4()}_{uploaded_file.name}"
+        file_path = os.path.join(UPLOAD_DIR, unique_filename)
+        
+        # 파일을 디스크에 저장
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        
+        file_info_list.append({
+            "name": uploaded_file.name,
+            "path": file_path,
+            "type": uploaded_file.type,
+            "size": uploaded_file.size
+        })
+    return file_info_list
+
 # --- JSON 헬퍼 ---
 def load_json(f):
     if os.path.exists(f):
@@ -184,7 +213,6 @@ def load_json(f):
             with open(f, "r", encoding="utf-8") as file:
                 return json.load(file)
         except json.JSONDecodeError:
-            # st.error(f"Error reading {f}: Invalid JSON format. Initializing empty list.")
             return []
     return []
 
@@ -343,7 +371,7 @@ with col_auth:
             play_alert_sound()
             st.rerun()
     else:
-        # 로그인 버튼 클릭 시 폼 표시 상태 변경
+        # 로그인 버튼 안먹음 오류 수정: on_click 핸들러를 사용하지 않고, 폼 표시 상태를 직접 제어합니다.
         if st.button(_("login"), key="login_btn"):
             st.session_state.show_login_form = not st.session_state.show_login_form
         
@@ -383,23 +411,33 @@ with tab1:
                 notice_title = st.text_input(_("title_cantata"))
                 notice_content = st.text_area(_("note"))
                 
+                # 파일/이미지 첨부 필드 추가 (요청 반영)
+                uploaded_files = st.file_uploader(
+                    _("file_attachment"),
+                    type=["png", "jpg", "jpeg", "pdf", "txt"],
+                    accept_multiple_files=True,
+                    key="notice_file_uploader"
+                )
+                
                 # 내부적으로는 항상 English key를 사용하고, 사용자에게는 번역된 값을 보여줍니다.
                 type_options = {"General": _("general"), "Urgent": _("urgent")}
                 selected_display_type = st.radio(_("type"), list(type_options.values()))
-                
-                # Display value를 이용해 내부 key를 찾습니다.
                 notice_type = list(type_options.keys())[list(type_options.values()).index(selected_display_type)]
                 
                 submitted = st.form_submit_button(_("register"))
+                
                 if submitted and notice_title and notice_content:
+                    file_info_list = save_uploaded_files(uploaded_files)
+                    
                     new_notice = {
                         "id": str(uuid.uuid4()),
                         "title": notice_title,
                         "content": notice_content,
-                        "type": notice_type, # English key로 저장
-                        "date": datetime.now(timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S") # IST 기준 시간
+                        "type": notice_type,
+                        "files": file_info_list, # 파일 정보 저장
+                        "date": datetime.now(timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S")
                     }
-                    tour_notices.insert(0, new_notice) # 최신순으로 맨 앞에 추가
+                    tour_notices.insert(0, new_notice)
                     save_json(NOTICE_FILE, tour_notices)
                     st.success(_("notice_reg_success"))
                     play_alert_sound()
@@ -410,24 +448,25 @@ with tab1:
         # --- 관리자: 공지사항 목록 및 수정/삭제 ---
         st.subheader(_("existing_notices"))
         
-        # 안정성 강화: 유효한 형식의 공지사항만 필터링하고 날짜순으로 정렬
         valid_notices = [n for n in tour_notices if isinstance(n, dict) and n.get('id') and n.get('title')]
         notices_to_display = sorted(valid_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
-        
-        # 번역을 위해 type_options을 다시 정의
         type_options_rev = {"General": _("general"), "Urgent": _("urgent")}
         
         for notice in notices_to_display:
-            notice_id = notice['id'] # 이제 'id'는 반드시 존재
-            # 저장된 English key를 이용해 번역된 텍스트를 가져옵니다.
+            notice_id = notice['id']
             notice_type_key = notice.get('type', 'General')
             translated_type = type_options_rev.get(notice_type_key, _("general"))
-            notice_title = notice['title'] # 이제 'title'은 반드시 존재
+            notice_title = notice['title']
             
             with st.expander(f"[{translated_type}] {notice_title} ({notice.get('date', 'N/A')[:10]})", expanded=False):
                 col_del, col_title = st.columns([1, 4])
                 with col_del:
                     if st.button(_("remove"), key=f"del_n_{notice_id}", help=_("remove")):
+                        # 실제 파일 삭제 로직 추가 (선택 사항이지만 안전을 위해 구현)
+                        for file_info in notice.get('files', []):
+                            if os.path.exists(file_info['path']):
+                                os.remove(file_info['path'])
+                        
                         tour_notices[:] = [n for n in tour_notices if n.get('id') != notice_id]
                         save_json(NOTICE_FILE, tour_notices)
                         st.success(_("notice_del_success"))
@@ -436,10 +475,19 @@ with tab1:
                 
                 with col_title:
                     st.markdown(f"**{_('content')}:** {notice.get('content', _('no_content'))}")
+                    
+                    # 첨부 파일 표시
+                    attached_files = notice.get('files', [])
+                    if attached_files:
+                        st.markdown(f"**{_('attached_files')}:**")
+                        for file_info in attached_files:
+                            # 로컬 경로 대신 파일 이름만 표시합니다. (Streamlit Cloud 환경에서 로컬 파일 다운로드 어려움)
+                            st.markdown(f"- {file_info['name']} ({round(file_info['size'] / 1024, 1)} KB)")
+                    else:
+                        st.markdown(f"**{_('attached_files')}:** {_('no_files')}")
                 
-                # 간단한 업데이트 로직 추가
+                # 업데이트 로직은 복잡하여 파일 수정 기능을 제외하고 텍스트만 업데이트하도록 간소화
                 with st.form(f"update_notice_{notice_id}", clear_on_submit=True):
-                    # 현재 타입을 찾아서 초기값으로 설정
                     current_type_index = list(type_options_rev.keys()).index(notice_type_key)
                     updated_display_type = st.radio(_("type"), list(type_options_rev.values()), index=current_type_index, key=f"update_type_{notice_id}")
                     updated_type_key = list(type_options_rev.keys())[list(type_options_rev.values()).index(updated_display_type)]
@@ -450,7 +498,7 @@ with tab1:
                         for n in tour_notices:
                             if n.get('id') == notice_id:
                                 n['content'] = updated_content
-                                n['type'] = updated_type_key # English key로 저장
+                                n['type'] = updated_type_key
                                 save_json(NOTICE_FILE, tour_notices)
                                 st.success(_("notice_upd_success"))
                                 play_alert_sound()
@@ -468,14 +516,20 @@ with tab1:
             for notice in notices_to_display:
                 notice_type_key = notice.get('type', 'General')
                 translated_type = type_options_rev.get(notice_type_key, _("general"))
-                
                 notice_title = notice.get('title', _("no_title"))
                 notice_content = notice.get('content', _("no_content"))
                 
                 st.markdown(f"**[{translated_type}] {notice_title}** - *{notice.get('date', 'N/A')[:16]}*")
                 st.info(notice_content)
-                # 요청 반영: 공지사항 아래의 "---" 구분선 제거
-                # st.markdown("---") 
+                
+                # 첨부 파일 표시
+                attached_files = notice.get('files', [])
+                if attached_files:
+                    st.markdown(f"**{_('attached_files')}:**")
+                    for file_info in attached_files:
+                         # 파일 타입에 따라 아이콘 표시
+                        icon = "🖼️" if file_info['type'].startswith('image/') else "📄"
+                        st.markdown(f"- {icon} {file_info['name']} ({round(file_info['size'] / 1024, 1)} KB)")
 
 
 # =============================================================================
@@ -501,7 +555,7 @@ with tab2:
                 selected_display_type = col_l.radio(_("type"), list(type_options_map.keys()))
                 type_sel = type_options_map[selected_display_type] # Internal key
                 
-                # 요청 반영: 예상인원 기본값을 500으로, step을 50으로 변경
+                # 예상인원 기본값을 500으로, step을 50으로 변경
                 expected_seats = col_s.number_input(_("seats"), min_value=0, value=500, step=50, help=_("seats_tooltip"))
                 google_link = col_n.text_input(_("google_link"), placeholder=_("google_link_placeholder"))
                 
@@ -537,8 +591,6 @@ with tab2:
                         
         
         # --- 관리자: 일정 보기 및 수정/삭제 (안정성 강화) ---
-        
-        # 안정성 강화: 유효한 형식의 일정만 필터링
         valid_schedule = [
             item 
             for item in tour_schedule 
@@ -547,29 +599,21 @@ with tab2:
         
         if valid_schedule:
             st.subheader(_("tour_schedule_management"))
-            
-            # id를 기준으로 딕셔너리로 변환
             schedule_dict = {item['id']: item for item in valid_schedule}
-            
-            # 날짜를 기준으로 정렬
             sorted_schedule_items = sorted(schedule_dict.items(), key=lambda x: x[1].get('date', '9999-12-31'))
-            
             type_options_map_rev = {"indoor": _("indoor"), "outdoor": _("outdoor")} # Internal Key -> Display
 
             for item_id, item in sorted_schedule_items:
-                # 내부 키를 이용하여 번역된 타입 텍스트를 가져옴
                 translated_type = type_options_map_rev.get(item.get('type', 'outdoor'), _("outdoor"))
                 
                 with st.expander(f"[{item.get('date', 'N/A')}] {item['city']} - {item['venue']} ({translated_type})", expanded=False):
                     col_u, col_d = st.columns([1, 5])
                     
                     with col_u:
-                        # 수정 버튼 클릭 시 편집 모드로 전환
                         if st.button(_("update"), key=f"upd_s_{item_id}"):
                             st.session_state[f"edit_mode_{item_id}"] = True
                             st.rerun()
                         if st.button(_("remove"), key=f"del_s_{item_id}"):
-                            # tour_schedule 리스트를 직접 수정
                             tour_schedule[:] = [s for s in tour_schedule if s.get('id') != item_id]
                             save_json(CITY_FILE, tour_schedule)
                             st.success(f"{item['city']} {_('schedule_del_success')}")
@@ -582,7 +626,6 @@ with tab2:
                             
                             updated_city = col_uc.selectbox(_("city"), city_options, index=city_options.index(item.get('city', "공연없음")))
                             
-                            # 날짜 형식 처리 개선
                             try:
                                 initial_date = datetime.strptime(item.get('date', '2025-01-01'), "%Y-%m-%d").date()
                             except ValueError:
@@ -592,18 +635,13 @@ with tab2:
                             updated_venue = col_uv.text_input(_("venue"), value=item.get('venue'))
                             
                             col_ul, col_us, col_ug = st.columns(3)
-                            
-                            # 현재 타입에 맞는 인덱스를 찾아서 초기값으로 설정
                             current_map_type = item.get('type', 'outdoor')
                             current_map_index = 0 if current_map_type == "indoor" else 1
-                            
                             map_type_list = list(type_options_map_rev.values())
                             updated_display_type = col_ul.radio(_("type"), map_type_list, index=current_map_index, key=f"update_map_type_{item_id}")
-                            # Display value를 이용해 내부 key를 찾습니다.
                             updated_type = "indoor" if updated_display_type == _("indoor") else "outdoor"
                             
                             seats_value = item.get('seats', '0')
-                            # 요청 반영: step을 50으로 변경
                             updated_seats = col_us.number_input(_("seats"), min_value=0, value=int(seats_value) if str(seats_value).isdigit() else 500, step=50)
                             updated_google = col_ug.text_input(_("google_link"), value=item.get('google_link', ''))
 
@@ -620,7 +658,7 @@ with tab2:
                                             "lat": coords["lat"],
                                             "lon": coords["lon"],
                                             "date": updated_date.strftime("%Y-%m-%d"),
-                                            "type": updated_type, # Internal key로 저장
+                                            "type": updated_type,
                                             "seats": str(updated_seats),
                                             "note": updated_note,
                                             "google_link": updated_google,
@@ -645,23 +683,17 @@ with tab2:
             st.info(_("no_schedule"))
 
     # --- 지도 표시 (사용자 & 관리자 공통) ---
-    
-    # 1. 경로 데이터 준비 (날짜순 정렬 및 안정성 강화)
-    current_date = date.today() # 현재 날짜
+    current_date = date.today()
     schedule_for_map = sorted([
         s for s in tour_schedule 
         if s.get('date') and s.get('lat') is not None and s.get('lon') is not None and s.get('id')
     ], key=lambda x: x['date'])
     
-    # 2. 지도 중심 설정 (일단 Pune로 설정)
-    start_coords = [18.52043, 73.856743] # Pune
+    start_coords = [18.52043, 73.856743]
     if schedule_for_map:
-        # 첫 번째 공연 도시로 중심 이동
         start_coords = [schedule_for_map[0]['lat'], schedule_for_map[0]['lon']]
 
     m = folium.Map(location=start_coords, zoom_start=8)
-
-    # 3. 마커 및 경로 그리기
     locations = []
     
     for item in schedule_for_map:
@@ -672,30 +704,31 @@ with tab2:
         try:
             event_date = datetime.strptime(date_str, "%Y-%m-%d").date()
         except ValueError:
-            # 날짜 형식 오류 시, 미래로 간주하여 표시
             event_date = current_date + timedelta(days=365)
         
         is_past = event_date < current_date
         
-        # 마커 색상 설정 (내부 키 사용)
-        color = 'blue' if item.get('type') == 'indoor' else 'red'
+        # 요청 반영: 아이콘 색상은 항상 빨간색
+        icon_color = 'red' 
         
-        # 지난 도시 30% 투명도, 미래 도시 100% 투명도
-        opacity_val = 0.3 if is_past else 1.0
+        # 요청 반영: 지난 도시는 25% 투명도
+        opacity_val = 0.25 if is_past else 1.0
         
-        # 팝업 내용 (번역 적용)
+        # 팝업 내용 (번역 및 실내/실외, 구글맵 포함)
+        map_type_icon = '🏠' if item.get('type') == 'indoor' else '🌳'
         popup_html = f"""
         <b>{_('city')}:</b> {item.get('city', 'N/A')}<br>
         <b>{_('date')}:</b> {date_str}<br>
         <b>{_('venue')}:</b> {item.get('venue', 'N/A')}<br>
         <b>{_('seats')}:</b> {item.get('seats', 'N/A')}<br>
+        <b>{_('type')}:</b> {map_type_icon} {translated_type}<br>
         """
         
         if item.get('google_link'):
             google_link_url = item['google_link'] 
             popup_html += f'<a href="{google_link_url}" target="_blank">{_("google_link")}</a>'
         
-        # DivIcon을 사용하여 2/3 크기 (scale 0.666) 및 투명도 적용
+        # 요청 반영: DivIcon을 사용하여 2/3 크기 (scale 0.666) 아이콘으로 조정 (항상 빨간색)
         city_initial = item.get('city', 'A')[0]
         marker_icon_html = f"""
             <div style="
@@ -704,15 +737,16 @@ with tab2:
                 text-align: center;
                 white-space: nowrap;
             ">
-                <i class="fa fa-map-marker fa-3x" style="color: {color};"></i>
+                <i class="fa fa-map-marker fa-3x" style="color: {icon_color};"></i>
                 <div style="font-size: 10px; color: black; font-weight: bold; position: absolute; top: 12px; left: 13px;">{city_initial}</div>
             </div>
         """
-            
+        
+        # 요청 반영: 말풍선 터치 시 나오는 작은 말풍선 제거 (tooltip 제거)
         folium.Marker(
             [lat, lon],
             popup=folium.Popup(popup_html, max_width=300),
-            tooltip=f"{item.get('city', 'N/A')} - {date_str}",
+            # tooltip=f"{item.get('city', 'N/A')} - {date_str}", # 작은 말풍선 제거
             icon=folium.DivIcon(
                 icon_size=(30, 45),
                 icon_anchor=(15, 45),
@@ -723,9 +757,7 @@ with tab2:
         locations.append([lat, lon])
 
     # 4. AntPath (경로 애니메이션) - 과거/미래 분리 및 스타일 적용
-    
     if len(locations) > 1:
-        # 현재/미래 공연이 시작되는 인덱스를 찾습니다.
         current_index = -1
         for i, item in enumerate(schedule_for_map):
             try:
@@ -734,59 +766,56 @@ with tab2:
                     current_index = i
                     break
             except ValueError:
-                # 날짜 형식 오류 시, 이 항목은 건너뜀
                 continue
         
-        if current_index == -1: # 모든 일정이 과거 또는 날짜 오류
+        if current_index == -1: 
             past_segments = locations
             future_segments = []
-        elif current_index == 0: # 모든 일정이 미래/현재 시작
+        elif current_index == 0: 
             past_segments = []
             future_segments = locations
         else: 
-            # 과거 세그먼트: 시작 ~ 현재/다음 도시 (PolyLine 사용)
             past_segments = locations[:current_index + 1]
-            # 미래 세그먼트: 현재/다음 도시 ~ 끝 (AntPath 사용)
             future_segments = locations[current_index:]
 
-        # 지난 도시/라인 30% 투명도의 빨간색 선
+        # 요청 반영: 지난 도시/라인 25% 투명도의 빨간색 선
         if len(past_segments) > 1:
             folium.PolyLine(
                 locations=past_segments,
-                color="#FF4B4B", # Streamlit Red
+                color="#FF4B4B",
                 weight=5,
-                opacity=0.3,
+                opacity=0.25, # 25% 투명도
                 tooltip=_("past_route")
             ).add_to(m)
             
-        # 도시간 연결선 80% 투명도의 빨간색 AntPath
+        # 요청 반영: 도시간 연결선 애니메이션 속도를 1/2로 (delay 3000 -> 6000)
+        # Note: 1/2 속도를 위해 3000(1/3)에서 6000으로 조정했습니다.
         if len(future_segments) > 1:
             AntPath(
                 future_segments, 
                 use="regular", 
                 dash_array='5, 5', 
-                color='#FF4B4B', # Streamlit Red
+                color='#FF4B4B', 
                 weight=5, 
                 opacity=0.8,
-                # 요청 반영: 애니메이션 속도를 1/3로 (1000 -> 3000)
-                options={"delay": 3000, "dash_factor": 0.1, "color": "#FF4B4B"}
+                options={"delay": 6000, "dash_factor": 0.1, "color": "#FF4B4B"} # 속도 1/2로 조정
             ).add_to(m)
             
     elif locations:
-        # 도시가 하나만 있는 경우, 해당 위치에 원을 그려 표시
+        # 단일 도시일 때도 25% 투명도 적용
         try:
             single_item_date = datetime.strptime(schedule_for_map[0]['date'], "%Y-%m-%d").date()
             single_is_past = single_item_date < current_date
         except ValueError:
-            single_is_past = False # 날짜 오류 시 미래로 간주
+            single_is_past = False
             
         folium.Circle(
             location=locations[0],
-            radius=1000, # 1km
+            radius=1000,
             color='#FF4B4B',
             fill=True,
             fill_color='#FF4B4B',
-            fill_opacity=0.3 if single_is_past else 0.8,
+            fill_opacity=0.25 if single_is_past else 0.8,
             tooltip=_("single_location")
         ).add_to(m)
 
@@ -811,11 +840,10 @@ if st.session_state.play_sound:
 
 
 # --- CSS 적용 (최하단에 위치시켜야 함) ---
-# NameError를 유발하던 CSS 블록의 문법 오류를 수정했습니다.
 st.markdown(f"""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-/* 기본 배경/글꼴 색상 설정 (CSS 제거 요청에 따라 중립적인 색상으로 설정) */
+/* 기본 배경/글꼴 색상 설정 */
 
 /* 제목 컨테이너 기본 스타일 */
 .header-container {{ 
