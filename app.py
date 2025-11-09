@@ -438,8 +438,8 @@ with col_auth:
             st.session_state.admin = False
             st.session_state.logged_in_user = None
             st.session_state.show_login_form = False
-            st.success(_("logged_out_success"))
             play_alert_sound()
+            # st.success(_("logged_out_success")) # 숨겨짐
             st.rerun()
     else:
         # 로그인 버튼 클릭 시 on_click 대신 명시적 핸들러를 사용해 즉시 재실행을 보장
@@ -458,11 +458,12 @@ with col_auth:
                         st.session_state.admin = True
                         st.session_state.logged_in_user = "Admin"
                         st.session_state.show_login_form = False
-                        st.success(_("logged_in_success"))
                         play_alert_sound()
+                        # st.success(_("logged_in_success")) # 숨겨짐
                         st.rerun()
                     else:
-                        st.error(_("incorrect_password"))
+                        # st.error(_("incorrect_password")) # 숨겨짐
+                        pass
 
 
 # --- 탭 구성 ---
@@ -509,11 +510,12 @@ with tab1:
                     }
                     tour_notices.insert(0, new_notice)
                     save_json(NOTICE_FILE, tour_notices)
-                    st.success(_("notice_reg_success"))
+                    # st.success(_("notice_reg_success")) # 숨겨짐
                     play_alert_sound()
                     st.rerun()
                 elif submitted:
-                    st.warning(_("fill_in_fields"))
+                    # st.warning(_("fill_in_fields")) # 숨겨짐
+                    pass
         
         # --- 관리자: 공지사항 목록 및 수정/삭제 ---
         st.subheader(_("existing_notices"))
@@ -539,7 +541,7 @@ with tab1:
                         
                         tour_notices[:] = [n for n in tour_notices if n.get('id') != notice_id]
                         save_json(NOTICE_FILE, tour_notices)
-                        st.success(_("notice_del_success"))
+                        # st.success(_("notice_del_success")) # 숨겨짐
                         play_alert_sound()
                         st.rerun()
                 
@@ -563,7 +565,8 @@ with tab1:
                                         use_column_width='always' # 항상 인라인으로 표시
                                     )
                                 else:
-                                    st.warning(f"🖼️ {file_info['name']} (Image load error)")
+                                    # st.warning(f"🖼️ {file_info['name']} (Image load error)") # 숨겨짐
+                                    pass
                             
                             # 2. 이미지 외 파일 (또는 이미지 로드 실패 시) 다운로드 버튼 표시
                             else:
@@ -579,9 +582,11 @@ with tab1:
                                                 key=f"admin_download_{notice_id}_{file_info['name']}"
                                             )
                                     except Exception:
-                                        st.error(f"📄 {file_info['name']} (File access denied)")
+                                        # st.error(f"📄 {file_info['name']} (File access denied)") # 숨겨짐
+                                        pass
                                 else:
-                                    st.warning(f"📄 {file_info['name']} ({_('no_files')})")
+                                    # st.warning(f"📄 {file_info['name']} ({_('no_files')})") # 숨겨짐
+                                    pass
                     else:
                         st.markdown(f"**{_('attached_files')}:** {_('no_files')}")
                 
@@ -599,7 +604,7 @@ with tab1:
                                 n['content'] = updated_content
                                 n['type'] = updated_type_key
                                 save_json(NOTICE_FILE, tour_notices)
-                                st.success(_("notice_upd_success"))
+                                # st.success(_("notice_upd_success")) # 숨겨짐
                                 play_alert_sound()
                                 st.rerun()
         
@@ -642,9 +647,8 @@ with tab1:
                                         key=f"user_download_{notice_id}_{file_info['name']}"
                                     )
                             except Exception:
-                                st.warning(f"📄 {file_info['name']} (File access denied)")
-                        else:
-                            st.warning(f"📄 {file_info['name']} ({_('no_files')})")
+                                # st.warning(f"📄 {file_info['name']} (File access denied)") # 숨겨짐
+                                pass
 
 
 # =============================================================================
@@ -680,9 +684,11 @@ with tab2:
                 
                 if submitted:
                     if city_name_input == "공연없음" or not venue_name or not schedule_date:
-                        st.error(_("warning"))
+                        # st.error(_("warning")) # 숨겨짐
+                        pass
                     elif city_name_input not in city_dict:
-                        st.error(f"Coordinates for '{city_name_input}' not found in city_dict. {_('city_coords_error')}")
+                        # st.error(f"Coordinates for '{city_name_input}' not found in city_dict. {_('city_coords_error')}") # 숨겨짐
+                        pass
                     else:
                         city_coords = city_dict[city_name_input]
                         new_schedule_entry = {
@@ -700,7 +706,7 @@ with tab2:
                         }
                         tour_schedule.append(new_schedule_entry)
                         save_json(CITY_FILE, tour_schedule)
-                        st.success(f"{_('schedule_reg_success')} ({city_name_input})")
+                        # st.success(f"{_('schedule_reg_success')} ({city_name_input})") # 숨겨짐
                         play_alert_sound()
                         st.rerun()
                         
@@ -731,7 +737,7 @@ with tab2:
                         if st.button(_("remove"), key=f"del_s_{item_id}"):
                             tour_schedule[:] = [s for s in tour_schedule if s.get('id') != item_id]
                             save_json(CITY_FILE, tour_schedule)
-                            st.success(f"{item['city']} {_('schedule_del_success')}")
+                            # st.success(f"{item['city']} {_('schedule_del_success')}") # 숨겨짐
                             play_alert_sound()
                             st.rerun()
 
@@ -781,7 +787,7 @@ with tab2:
                                         }
                                         save_json(CITY_FILE, tour_schedule)
                                         st.session_state[f"edit_mode_{item_id}"] = False
-                                        st.success(_("schedule_upd_success"))
+                                        # st.success(_("schedule_upd_success")) # 숨겨짐
                                         play_alert_sound()
                                         st.rerun()
                             
@@ -833,13 +839,19 @@ with tab2:
         type_options_map_rev = {"indoor": _("indoor"), "outdoor": _("outdoor")} # Internal Key -> Display
         translated_type = type_options_map_rev.get(item.get('type', 'outdoor'), _("outdoor"))
         map_type_icon = '🏠' if item.get('type') == 'indoor' else '🌳'
+        
+        # --- 수정된 부분: 도시 이름을 빨간색으로 표시 ---
+        city_name_display = item.get('city', 'N/A')
+        red_city_name = f'<span style="color: #FF4B4B; font-weight: bold;">{city_name_display}</span>'
+        
         popup_html = f"""
-        <b>{_('city')}:</b> {item.get('city', 'N/A')}<br>
+        <b>{_('city')}:</b> {red_city_name}<br>
         <b>{_('date')}:</b> {date_str}<br>
         <b>{_('venue')}:</b> {item.get('venue', 'N/A')}<br>
         <b>{_('type')}:</b> {map_type_icon} {translated_type}<br>
         <b>{_('seats')}:</b> {item.get('seats', 'N/A')}<br>
         """
+        # -----------------------------------------------
         
         if item.get('google_link'):
             google_link_url = item['google_link'] 
@@ -1047,6 +1059,11 @@ st.markdown(f"""
 .stAlert.warning {{
     border-color: #FFC107;
     background-color: rgba(255, 193, 7, 0.1);
+}}
+
+/* Streamlit Alert 메시지 숨기기 (사용자 요청 반영) */
+div[data-testid="stAlert"] {{
+    display: none !important;
 }}
 
 /* Streamlit Selectbox/Input 스타일 */
