@@ -477,7 +477,8 @@ with tab1:
 
     if st.session_state.admin:
         # --- 관리자: 공지사항 등록/수정 폼 ---
-        with st.expander(_("register"), expanded=True):
+        # 초기 상태: 닫힘 (요청 반영)
+        with st.expander(_("register"), expanded=False):
             with st.form("notice_form", clear_on_submit=True):
                 notice_title = st.text_input(_("title_cantata"))
                 notice_content = st.text_area(_("note"))
@@ -530,6 +531,7 @@ with tab1:
             translated_type = type_options_rev.get(notice_type_key, _("general"))
             notice_title = notice['title']
             
+            # 관리자 모드는 기존과 같이 개별 공지를 Expander로 표시 (초기 닫힘)
             with st.expander(f"[{translated_type}] {notice_title} ({notice.get('date', 'N/A')[:10]})", expanded=False):
                 col_del, col_title = st.columns([1, 4])
                 with col_del:
@@ -548,7 +550,7 @@ with tab1:
                 with col_title:
                     st.markdown(f"**{_('content')}:** {notice.get('content', _('no_content'))}")
                     
-                    # --- 관리자 모드: 파일 첨부 표시 (이미지는 인라인, 나머지는 다운로드) ---
+                    # --- 파일 첨부 표시 (이미지는 인라인, 나머지는 다운로드) ---
                     attached_files = notice.get('files', [])
                     if attached_files:
                         st.markdown(f"**{_('attached_files')}:**")
@@ -624,46 +626,48 @@ with tab1:
                 notice_title = notice.get('title', _("no_title"))
                 notice_content = notice.get('content', _("no_content"))
                 
-                # 공지사항 목록 하단 텍스트 제거
-                st.markdown(f"**[{translated_type}] {notice_title}** - *{notice.get('date', 'N/A')[:16]}*")
-                st.info(notice_content)
-                
-                # --- 사용자 모드: 파일 첨부 표시 (이미지는 인라인, 나머지는 다운로드) ---
-                attached_files = notice.get('files', [])
-                if attached_files:
-                    st.markdown(f"**{_('attached_files')}:**")
-                    for file_info in attached_files:
-                        file_size_kb = round(file_info['size'] / 1024, 1)
-                        
-                        if os.path.exists(file_info['path']):
-                            # 1. 이미지 파일은 인라인으로 표시
-                            if file_info['type'].startswith('image/'):
-                                base64_data = get_file_as_base64(file_info['path'])
-                                if base64_data:
-                                    st.image(
-                                        f"data:{file_info['type']};base64,{base64_data}",
-                                        caption=f"🖼️ {file_info['name']} ({file_size_kb} KB)",
-                                        use_column_width='always'
-                                    )
-                                else:
-                                    # Fallback (Hidden)
-                                    pass
+                # --- 수정된 부분: Expander로 감싸고 닫힘 상태로 시작 ---
+                header_text = f"[{translated_type}] {notice_title} - *{notice.get('date', 'N/A')[:16]}*"
+                with st.expander(header_text, expanded=False): 
+                    
+                    st.info(notice_content)
+                    
+                    # --- 사용자 모드: 파일 첨부 표시 (이미지는 인라인, 나머지는 다운로드) ---
+                    attached_files = notice.get('files', [])
+                    if attached_files:
+                        st.markdown(f"**{_('attached_files')}:**")
+                        for file_info in attached_files:
+                            file_size_kb = round(file_info['size'] / 1024, 1)
                             
-                            # 2. 이미지 외 파일은 다운로드 버튼으로 표시
-                            else:
-                                icon = "📄"
-                                try:
-                                    with open(file_info['path'], "rb") as f:
-                                        st.download_button(
-                                            label=f"⬇️ {icon} {file_info['name']} ({file_size_kb} KB)",
-                                            data=f.read(),
-                                            file_name=file_info['name'],
-                                            mime=file_info['type'],
-                                            key=f"user_download_{notice_id}_{file_info['name']}"
+                            if os.path.exists(file_info['path']):
+                                # 1. 이미지 파일은 인라인으로 표시 (요청 반영)
+                                if file_info['type'].startswith('image/'):
+                                    base64_data = get_file_as_base64(file_info['path'])
+                                    if base64_data:
+                                        st.image(
+                                            f"data:{file_info['type']};base64,{base64_data}",
+                                            caption=f"🖼️ {file_info['name']} ({file_size_kb} KB)",
+                                            use_column_width='always'
                                         )
-                                except Exception:
-                                    # st.warning(...) # 숨겨짐
-                                    pass
+                                    else:
+                                        # Fallback (Hidden)
+                                        pass
+                                
+                                # 2. 이미지 외 파일은 다운로드 버튼으로 표시 (요청 반영)
+                                else:
+                                    icon = "📄"
+                                    try:
+                                        with open(file_info['path'], "rb") as f:
+                                            st.download_button(
+                                                label=f"⬇️ {icon} {file_info['name']} ({file_size_kb} KB)",
+                                                data=f.read(),
+                                                file_name=file_info['name'],
+                                                mime=file_info['type'],
+                                                key=f"user_download_{notice_id}_{file_info['name']}"
+                                            )
+                                    except Exception:
+                                        # st.warning(...) # 숨겨짐
+                                        pass
 
 
 # =============================================================================
@@ -676,7 +680,8 @@ with tab2:
     if st.session_state.admin:
         st.markdown(f"**{_('register')} {_('tab_map')} {_('set_data')}**")
         
-        with st.expander(_("add_city"), expanded=True):
+        # 초기 상태: 닫힘 (요청 반영)
+        with st.expander(_("add_city"), expanded=False):
             with st.form("schedule_form", clear_on_submit=True):
                 col_c, col_d, col_v = st.columns(3)
                 
