@@ -474,7 +474,8 @@ with tab1:
                 
                 st.markdown(f"**[{translated_type}] {notice_title}** - *{notice.get('date', 'N/A')[:16]}*")
                 st.info(notice_content)
-                st.markdown("---")
+                # 요청 반영: 공지사항 아래의 "---" 구분선 제거
+                # st.markdown("---") 
 
 
 # =============================================================================
@@ -500,8 +501,8 @@ with tab2:
                 selected_display_type = col_l.radio(_("type"), list(type_options_map.keys()))
                 type_sel = type_options_map[selected_display_type] # Internal key
                 
-                # 요청 반영: 예상인원 기본값을 100에서 500으로 변경
-                expected_seats = col_s.number_input(_("seats"), min_value=0, value=500, help=_("seats_tooltip"))
+                # 요청 반영: 예상인원 기본값을 500으로, step을 50으로 변경
+                expected_seats = col_s.number_input(_("seats"), min_value=0, value=500, step=50, help=_("seats_tooltip"))
                 google_link = col_n.text_input(_("google_link"), placeholder=_("google_link_placeholder"))
                 
                 note = st.text_area(_("note"), placeholder=_("note_placeholder"))
@@ -602,7 +603,8 @@ with tab2:
                             updated_type = "indoor" if updated_display_type == _("indoor") else "outdoor"
                             
                             seats_value = item.get('seats', '0')
-                            updated_seats = col_us.number_input(_("seats"), min_value=0, value=int(seats_value) if str(seats_value).isdigit() else 0)
+                            # 요청 반영: step을 50으로 변경
+                            updated_seats = col_us.number_input(_("seats"), min_value=0, value=int(seats_value) if str(seats_value).isdigit() else 500, step=50)
                             updated_google = col_ug.text_input(_("google_link"), value=item.get('google_link', ''))
 
                             updated_note = st.text_area(_("note"), value=item.get('note'))
@@ -766,7 +768,8 @@ with tab2:
                 color='#FF4B4B', # Streamlit Red
                 weight=5, 
                 opacity=0.8,
-                options={"delay": 1000, "dash_factor": 0.1, "color": "#FF4B4B"}
+                # 요청 반영: 애니메이션 속도를 1/3로 (1000 -> 3000)
+                options={"delay": 3000, "dash_factor": 0.1, "color": "#FF4B4B"}
             ).add_to(m)
             
     elif locations:
@@ -793,15 +796,15 @@ with tab2:
     # 범례 표시
     st.info(f"{_('legend')}: 🔴 {_('outdoor')} | 🔵 {_('indoor')}")
 
-# --- 알림음 재생 스크립트 (요청 반영) ---
+# --- 알림음 재생 스크립트 (요청 반영: 일반모드에서 울리고, 캐롤로 변경) ---
 if st.session_state.play_sound:
     # 플래그를 즉시 재설정
     st.session_state.play_sound = False
     
-    # 짧은 알림음 파일을 HTML 오디오 태그로 삽입하여 자동 재생
+    # 크리스마스 캐롤 링크로 변경
     st.markdown("""
         <audio autoplay>
-            <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mp3">
+            <source src="https://assets.mixkit.co/sfx/preview/mixkit-carol-of-the-bells-christmas-music-1447.mp3" type="audio/mp3">
             Your browser does not support the audio element.
         </audio>
     """, unsafe_allow_html=True)
