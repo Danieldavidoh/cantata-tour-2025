@@ -10,54 +10,71 @@ from math import radians, sin, cos, sqrt, atan2
 
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
-# 자동 새로고침
+# --- 자동 새로고침 ---
 if not st.session_state.get("admin", False):
     st_autorefresh(interval=5000, key="auto_refresh_user")
 
-# 파일 경로
+# --- 파일 경로 ---
 NOTICE_FILE = "notice.json"
 CITY_FILE = "cities.json"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# 다국어
+# --- 다국어 (힌디 추가) ---
 LANG = {
-    "ko": {"title_cantata": "칸타타 투어", "title_year": "2025", "title_region": "마하라스트라",
-           "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
-           "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵",
-           "warning": "도시와 장소를 입력하세요", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
-           "add_city": "도시 추가 버튼", "register": "등록", "update": "수정", "remove": "제거",
-           "date": "등록일"},
-    "en": {"title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
-           "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
-           "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps",
-           "warning": "Enter city and venue", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
-           "add_city": "Add City Button", "register": "Register", "update": "Update", "remove": "Remove",
-           "date": "Date"}
+    "ko": {
+        "title_cantata": "칸타타 투어", "title_year": "2025", "title_region": "마하라스트라",
+        "tab_notice": "공지", "tab_map": "투어 경로", "indoor": "실내", "outdoor": "실외",
+        "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵",
+        "warning": "도시와 장소를 입력하세요", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
+        "add_city": "도시 추가 버튼", "register": "등록", "update": "수정", "remove": "제거",
+        "date": "공연 날짜"
+    },
+    "en": {
+        "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
+        "tab_notice": "Notice", "tab_map": "Tour Route", "indoor": "Indoor", "outdoor": "Outdoor",
+        "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps",
+        "warning": "Enter city and venue", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
+        "add_city": "Add City Button", "register": "Register", "update": "Update", "remove": "Remove",
+        "date": "Performance Date"
+    },
+    "hi": {
+        "title_cantata": "कैंटाटा टूर", "title_year": "2025", "title_region": "महाराष्ट्र",
+        "tab_notice": "सूचना", "tab_map": "टूर रूट", "indoor": "इनडोर", "outdoor": "आउटडोर",
+        "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप्स",
+        "warning": "शहर और स्थल दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट",
+        "add_city": "शहर जोड़ें बटन", "register": "रजिस्टर", "update": "अपडेट", "remove": "हटाएं",
+        "date": "प्रदर्शन तिथि"
+    }
 }
 
-# 세션 초기화
+# --- 세션 초기화 (lang 보장) ---
 defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False}
 for k, v in defaults.items():
-    if k not in st.session_state: st.session_state[k] = v
-    elif k == "lang" and not isinstance(st.session_state[k], str): st.session_state[k] = "ko"
+    if k not in st.session_state:
+        st.session_state[k] = v
+    elif k == "lang" and not isinstance(st.session_state[k], str):
+        st.session_state[k] = "ko"
 
-# 번역 함수
-_ = lambda key: LANG.get(st.session_state.lang if isinstance(st.session_state.lang, str) else "ko", LANG["ko"]).get(key, key)
+# --- 번역 함수 ---
+def _(key):
+    lang = st.session_state.lang if isinstance(st.session_state.lang, str) else "ko"
+    return LANG.get(lang, LANG["ko"]).get(key, key)
 
-# JSON 헬퍼
-load_json = lambda f: json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
-save_json = lambda f, d: json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+# --- JSON 헬퍼 ---
+def load_json(f): return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
+def save_json(f, d): json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
-# 초기 도시
+# --- 초기 도시 ---
 DEFAULT_CITIES = [
     {"city": "Mumbai", "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True, "date": "", "lat": 19.07609, "lon": 72.877426},
     {"city": "Pune", "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True, "date": "", "lat": 18.52043, "lon": 73.856743},
     {"city": "Nagpur", "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True, "date": "", "lat": 21.1458, "lon": 79.088154}
 ]
-if not os.path.exists(CITY_FILE): save_json(CITY_FILE, DEFAULT_CITIES)
+if not os.path.exists(CITY_FILE):
+    save_json(CITY_FILE, DEFAULT_CITIES)
 
-# 거리 계산
+# --- 거리 계산 ---
 def calculate_distance(lat1, lon1, lat2, lon2):
     R = 6371.0
     lat1_rad, lon1_rad, lat2_rad, lon2_rad = map(radians, [lat1, lon1, lat2, lon2])
@@ -66,7 +83,7 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return R * c
 
-# 시간 계산
+# --- 시간 계산 ---
 def calculate_time(distance):
     speed = 100
     time_hours = distance / speed
@@ -74,11 +91,11 @@ def calculate_time(distance):
     minutes = int((time_hours - hours) * 60)
     return f"{hours}h {minutes}m"
 
-# CSS (스크롤 최소화)
+# --- CSS (초기 화면 고정, 스크롤 없음) ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-    [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-attachment: fixed; padding-top: 0 !important; margin-top: 0 !important; }
+    [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-attachment: fixed; padding: 0 !important; margin: 0 !important; overflow: hidden; height: 100vh; }
     .header-container { text-align: center; margin: 0 !important; padding: 0 !important; }
     .christmas-decoration { display: flex; justify-content: center; gap: 12px; margin-bottom: 0 !important; padding: 0 !important; }
     .christmas-decoration i { color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6); animation: float 3s ease-in-out infinite; }
@@ -116,22 +133,22 @@ st.markdown('''
 st.markdown(f'<h1 class="main-title"><span style="color:red;">{_("title_cantata")}</span> <span style="color:white;">{_("title_year")}</span> <span style="color:green; font-size:67%;">{_("title_region")}</span></h1>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 탭 버튼 ---
+# --- 탭 버튼 (아이콘 추가) ---
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 with col1:
-    if st.button(_("tab_notice"), key="btn_notice", use_container_width=True):
+    if st.button(f"<i class='fas fa-bell'></i> {_('tab_notice')}", key="btn_notice", use_container_width=True):
         st.session_state.notice_open = not st.session_state.notice_open
         st.session_state.map_open = False
         st.rerun()
 with col2:
-    if st.button(_("tab_map"), key="btn_map", use_container_width=True):
+    if st.button(f"<i class='fas fa-map-marker-alt'></i> {_('tab_map')}", key="btn_map", use_container_width=True):
         st.session_state.map_open = not st.session_state.map_open
         st.session_state.notice_open = False
         st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 공지 ---
+# --- 공지 (날짜: 오늘 표시) ---
 if st.session_state.notice_open:
     if st.session_state.admin:
         with st.expander("공지 작성"):
@@ -157,7 +174,10 @@ if st.session_state.notice_open:
                     else:
                         st.warning(_("warning"))
     for i, n in enumerate(load_json(NOTICE_FILE)):
-        with st.expander(f"{n['date']} | {n['title']}", expanded=False):
+        notice_date = datetime.strptime(n['date'], "%m/%d %H:%M")
+        today = datetime.now().date()
+        display_date = "오늘 " + notice_date.strftime("%H:%M") if notice_date.date() == today else n['date']
+        with st.expander(f"{display_date} | {n['title']}", expanded=False):
             st.markdown(n["content"])
             if n.get("image") and os.path.exists(n["image"]): st.image(n["image"], use_column_width=True)
             if n.get("file") and os.path.exists(n["file"]):
@@ -198,7 +218,7 @@ if st.session_state.map_open:
                         new_city["lat"] = next(c["lat"] for c in DEFAULT_CITIES if c["city"] == selected_city)
                         new_city["lon"] = next(c["lon"] for c in DEFAULT_CITIES if c["city"] == selected_city)
                     with col_btn:
-                        pass  # 기존 + 버튼 삭제
+                        pass
 
                     with st.expander(f"{new_city['city']} 상세 정보", expanded=False):
                         col1, col2 = st.columns(2)
@@ -251,12 +271,12 @@ if st.session_state.map_open:
         indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
         popup_html = f"""
         <b>{c['city']}</b><br>
+        <b>{_('date')}:</b> {c.get('date','—')}<br>
         <b>{_('venue')}:</b> {c.get('venue','—')}<br>
         <b>{_('seats')}:</b> {c.get('seats','—')}<br>
         <b>유형:</b> {indoor_text}<br>
-        <b>{_('google_link')}:</b> <i class="fas fa-car"></i> <a href="{c.get('google_link','')}" target="_blank">Link</a><br>
+        <b>{_('google_link')}:</b> <i class="fas fa-car"></i> <a href="https://www.google.com/maps/dir/?api=1&destination={lat},{lon}" target="_blank">Navigation</a><br>
         <b>{_('note')}:</b> {c.get('note','—')}<br>
-        <b>{_('date')}:</b> {c.get('date','—')}<br>
         """
         if st.session_state.admin:
             popup_html += f'<button onclick="alert(\'수정 기능 구현 중\')">수정</button>'
@@ -291,6 +311,7 @@ st.markdown(f'''
     <select onchange="window.location.href='?lang='+this.value" style="width:100%; padding:8px; margin:10px 0;">
         <option value="ko" {'selected' if st.session_state.lang=="ko" else ''}>한국어</option>
         <option value="en" {'selected' if st.session_state.lang=="en" else ''}>English</option>
+        <option value="hi" {'selected' if st.session_state.lang=="hi" else ''}>हिंदी</option>
     </select>
     {'''
         <input type="password" placeholder="비밀번호" id="mobile_pw" style="width:100%; padding:8px; margin:10px 0;">
@@ -302,12 +323,15 @@ st.markdown(f'''
 ''', unsafe_allow_html=True)
 
 with st.sidebar:
-    sel = st.selectbox("언어", ["한국어", "English"], index=0 if st.session_state.lang == "ko" else 1)
+    sel = st.selectbox("언어", ["한국어", "English", "हिंदी"], index=0 if st.session_state.lang == "ko" else 1 if st.session_state.lang == "en" else 2)
     if sel == "English" and st.session_state.lang != "en":
         st.session_state.lang = "en"
         st.rerun()
     elif sel == "한국어" and st.session_state.lang != "ko":
         st.session_state.lang = "ko"
+        st.rerun()
+    elif sel == "हिंदी" and st.session_state.lang != "hi":
+        st.session_state.lang = "hi"
         st.rerun()
 
     if not st.session_state.admin:
