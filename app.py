@@ -241,8 +241,7 @@ def get_file_as_base64(file_path):
     try:
         with open(file_path, "rb") as f:
             file_bytes = f.read()
-            # **수정된 부분: base66 -> base64**
-            base64_encoded_data = base64.b64encode(file_bytes).decode('utf-8')
+            base64_encoded_data = base66.b64encode(file_bytes).decode('utf-8')
             return base64_encoded_data
     except Exception:
         # 파일이 없거나 접근할 수 없을 경우
@@ -549,7 +548,7 @@ for _ in range(7): # 7개의 아이콘 생성
 
 title_html = f"""
     <div class="header-container" style="position: relative; overflow: visible; height: 100px;">
-        {icon_html} <h1 class="main-title" style="position: relative; z-index: 101;">
+        {icon_html} <!-- 크리스마스 아이콘들 --><h1 class="main-title" style="position: relative; z-index: 101;">
             <span style="color: #BB3333;">{_('title_cantata')}</span>
             <span style="color: #FAFAFA;">{_('title_year')}</span>
             <span style="color: #66BB66; font-size: 0.66em;">{_('title_region')}</span>
@@ -1153,7 +1152,7 @@ with tab2:
 st.markdown(f"""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-<style>
+<!-- Snowfall animation setup --><style>
 /* Snowfall animation setup (눈 결정체 모양으로 수정) */
 @keyframes snowfall {{
     0% {{ background-position: 0% 0%, 0% 0%, 0% 0% }}
@@ -1232,6 +1231,3 @@ st.markdown(f"""
 /* 폼 배경색 */
 .stForm {{
     padding: 15px;
-}}
-</style>
-""")
