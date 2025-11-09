@@ -265,13 +265,15 @@ if st.session_state.map_open:
         indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
         popup_html = f"""
         <b>{c['city']}</b><br>
-        {_('venue')}: {c.get('venue','—')}<br>
-        {_('seats')}: {c.get('seats','—')}<br>
-        {indoor_text}<br>
-        {_('google_link')}: <a href="{c.get('google_link','')}" target="_blank">Link</a><br>
-        {_('note')}: {c.get('note','—')}<br>
-        {_('date')}: {c.get('date','—')}
+        <b>{_('venue')}:</b> {c.get('venue','—')}<br>
+        <b>{_('seats')}:</b> {c.get('seats','—')}<br>
+        <b>유형:</b> {indoor_text}<br>
+        <b>{_('google_link')}:</b> <i class="fas fa-car"></i> <a href="{c.get('google_link','')}" target="_blank">Link</a><br>
+        <b>{_('note')}:</b> {c.get('note','—')}<br>
+        <b>{_('date')}:</b> {c.get('date','—')}<br>
         """
+        if st.session_state.admin:
+            popup_html += f'<button onclick="alert(\'수정 기능 구현 중\')">수정</button>'
         folium.Marker(
             (lat, lon), popup=folium.Popup(popup_html, max_width=300),
             icon=folium.Icon(color="red", icon="music", prefix="fa")
@@ -286,10 +288,10 @@ if st.session_state.map_open:
             # 거리/시간 계산
             dist = calculate_distance(lat, lon, nxt["lat"], nxt["lon"])
             time = calculate_time(dist)
-            # 텍스트 마커 (진행 방향, 회전 없음)
+            # 텍스트 마커 (박스 제거, 검은색 텍스트, 평행)
             folium.Marker(
                 [mid_lat, mid_lon],
-                icon=folium.DivIcon(html=f'<div style="background:white; padding:2px 5px; border:1px solid black; white-space:nowrap;">{dist:.0f}km / {time}</div>')
+                icon=folium.DivIcon(html=f'<div style="color:black; font-weight:bold; white-space:nowrap;">{dist:.0f}km / {time}</div>')
             ).add_to(m)
 
     st_folium(m, width=900, height=600, key="tour_map")  # 높이 증가로 스크롤 최소화
