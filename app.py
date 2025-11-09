@@ -20,9 +20,9 @@ except ImportError:
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
 # --- 자동 새로고침 ---
-# 관리자가 아닐 경우 5초마다 새로고침 (실시간 업데이트 목적)
+# 관리자가 아닐 경우 10초마다 새로고침 (요청 반영: 5초 -> 10초)
 if not st.session_state.get("admin", False):
-    st_autorefresh(interval=5000, key="auto_refresh_user")
+    st_autorefresh(interval=10000, key="auto_refresh_user")
 
 # --- 파일 경로 ---
 NOTICE_FILE = "notice.json"
@@ -194,9 +194,25 @@ st.title(f"{_('title_cantata')} {_('title_year')} - {_('title_region')}")
 # 언어 선택 버튼 (상단 고정)
 col_lang, col_auth = st.columns([1, 3])
 with col_lang:
-    selected_lang = st.selectbox("Language", options=["ko", "en", "hi"], index=["ko", "en", "hi"].index(st.session_state.lang))
-    if selected_lang != st.session_state.lang:
-        st.session_state.lang = selected_lang
+    # 요청 반영: 언어 선택 옵션을 해당 언어명으로 표시
+    LANG_OPTIONS = {"ko": "한국어", "en": "English", "hi": "हिन्दी"}
+    lang_keys = list(LANG_OPTIONS.keys())
+    lang_display_names = list(LANG_OPTIONS.values())
+    
+    current_lang_index = lang_keys.index(st.session_state.lang)
+
+    selected_lang_display = st.selectbox(
+        "Language", 
+        options=lang_display_names, 
+        index=current_lang_index,
+        key="lang_select"
+    )
+    
+    # 표시된 이름으로 다시 키를 찾음
+    selected_lang_key = lang_keys[lang_display_names.index(selected_lang_display)]
+    
+    if selected_lang_key != st.session_state.lang:
+        st.session_state.lang = selected_lang_key
         st.rerun()
 
 with col_auth:
@@ -258,15 +274,18 @@ with tab1:
         
         # --- 관리자: 공지사항 목록 및 수정/삭제 ---
         st.subheader("Existing Notices")
-        notices_to_display = sorted(tour_notices, key=lambda x: x['date'], reverse=True)
+        notices_to_display = sorted(tour_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
         
         for notice in notices_to_display:
             notice_type = notice.get('type', 'General')
-            with st.expander(f"[{notice_type}] {notice['title']} ({notice['date'][:10]})", expanded=False):
+            # ID 키가 없는 항목은 건너뛰어 KeyError 방지
+            if 'id' not in notice: continue 
+            
+            with st.expander(f"[{notice_type}] {notice['title']} ({notice.get('date', 'N/A')[:10]})", expanded=False):
                 col_del, col_title = st.columns([1, 4])
                 with col_del:
                     if st.button(_("remove"), key=f"del_n_{notice['id']}", help="Delete Notice"):
-                        tour_notices = [n for n in tour_notices if n['id'] != notice['id']]
+                        tour_notices = [n for n in tour_notices if n.get('id') != notice['id']]
                         save_json(NOTICE_FILE, tour_notices)
                         st.success("Notice deleted.")
                         st.rerun()
@@ -279,7 +298,7 @@ with tab1:
                     updated_content = st.text_area("Update Content", value=notice['content'])
                     if st.form_submit_button(_("update")):
                         for n in tour_notices:
-                            if n['id'] == notice['id']:
+                            if n.get('id') == notice['id']:
                                 n['content'] = updated_content
                                 n['type'] = notice_type
                                 save_json(NOTICE_FILE, tour_notices)
@@ -291,11 +310,12 @@ with tab1:
         if not tour_notices:
             st.info("No notices available.")
         else:
-            notices_to_display = sorted(tour_notices, key=lambda x: x['date'], reverse=True)
+            notices_to_display = sorted(tour_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
             for notice in notices_to_display:
+                if 'id' not in notice: continue
                 notice_type = notice.get('type', 'General')
-                st.markdown(f"**[{notice_type}] {notice['title']}** - *{notice['date'][:16]}*")
-                st.info(notice['content'])
+                st.markdown(f"**[{notice_type}] {notice['title']}** - *{notice.get('date', 'N/A')[:16]}*")
+                st.info(notice.get('content', ''))
                 st.markdown("---")
 
 
@@ -356,8 +376,7 @@ with tab2:
         if tour_schedule:
             st.subheader("Tour Schedule Management")
             
-            # ID를 키로 사용하여 데이터를 딕셔너리로 변환 (수정 용이)
-            # FIX: KeyError 'id' 방지를 위해 'id' 키가 있는 항목만 필터링합니다.
+            # ID를 키로 사용하여 데이터를 딕셔너리로 변환 (KeyError 'id' 방지)
             schedule_dict = {
                 item['id']: item 
                 for item in tour_schedule 
@@ -392,7 +411,6 @@ with tab2:
                             
                             col_ul, col_us, col_ug = st.columns(3)
                             updated_type = col_ul.radio("Type", [_("indoor"), _("outdoor")], index=[_("indoor"), _("outdoor")].index(item.get('type', 'outdoor')))
-                            # int() 변환 전에 seats 값을 문자열로 가져옴
                             seats_value = item.get('seats', '0')
                             updated_seats = col_us.number_input("Seats", min_value=0, value=int(seats_value) if seats_value.isdigit() else 0)
                             updated_google = col_ug.text_input("Google Link", value=item.get('google_link', ''))
@@ -435,7 +453,7 @@ with tab2:
     # --- 지도 표시 (사용자 & 관리자 공통) ---
     
     # 1. 경로 데이터 준비 (날짜순 정렬)
-    # Ensure items have 'date', 'lat', 'lon', and 'id' before using them
+    current_date = date.today() # 현재 날짜
     schedule_for_map = sorted([
         s for s in tour_schedule if s.get('date') and s.get('lat') is not None and s.get('lon') is not None and s.get('id')
     ], key=lambda x: x['date'])
@@ -456,8 +474,14 @@ with tab2:
         lon = item['lon']
         date_str = item['date']
         
+        event_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        is_past = event_date < current_date
+        
         # 마커 색상 설정
         color = 'blue' if item.get('type') == 'indoor' else 'red'
+        
+        # 요청 반영: 지난 도시 30% 투명도, 미래 도시 100% 투명도
+        opacity_val = 0.3 if is_past else 1.0
         
         # 팝업 내용
         popup_html = f"""
@@ -467,38 +491,88 @@ with tab2:
         <b>Seats:</b> {item.get('seats', 'N/A')}<br>
         """
         
-        # === SYNTAX ERROR FIX APPLIED HERE ===
         if item.get('google_link'):
             google_link_url = item['google_link'] 
             popup_html += f'<a href="{google_link_url}" target="_blank">{_("google_link")}</a>'
-            
+        
+        # 요청 반영: DivIcon을 사용하여 2/3 크기 (scale 0.666) 및 투명도 적용
         folium.Marker(
             [lat, lon],
             popup=folium.Popup(popup_html, max_width=300),
             tooltip=f"{item['city']} - {date_str}",
-            icon=folium.Icon(color=color, icon='info-sign')
+            icon=folium.DivIcon(
+                icon_size=(30, 30),
+                icon_anchor=(15, 30),
+                html=f"""
+                    <div style="
+                        transform: scale(0.666); 
+                        opacity: {opacity_val};
+                    ">
+                        <i class="fa fa-info-circle fa-2x" style="color: {color};"></i>
+                    </div>
+                """
+            )
         ).add_to(m)
         
         locations.append([lat, lon])
 
-    # AntPath (경로 애니메이션)
+    # 4. AntPath (경로 애니메이션) - 과거/미래 분리 및 스타일 적용
+    
     if len(locations) > 1:
-        AntPath(locations, 
+        # 현재/미래 공연이 시작되는 인덱스를 찾습니다.
+        current_index = -1
+        for i, item in enumerate(schedule_for_map):
+            event_date = datetime.strptime(item['date'], "%Y-%m-%d").date()
+            if event_date >= current_date:
+                current_index = i
+                break
+        
+        if current_index == -1: # 모든 일정이 과거
+            past_segments = locations
+            future_segments = []
+        elif current_index == 0: # 모든 일정이 미래/현재 시작
+            past_segments = []
+            future_segments = locations
+        else: 
+            # 과거 세그먼트: 시작 ~ 현재/다음 도시
+            past_segments = locations[:current_index + 1]
+            # 미래 세그먼트: 현재/다음 도시 ~ 끝
+            future_segments = locations[current_index:]
+
+        # 요청 반영: 지난 도시/라인 30% 투명도의 빨간색 선
+        if len(past_segments) > 1:
+            folium.PolyLine(
+                locations=past_segments,
+                color="#FF0000",
+                weight=5,
+                opacity=0.3,
+                tooltip="Past Route"
+            ).add_to(m)
+            
+        # 요청 반영: 도시간 연결선 80% 투명도의 빨간색 AntPath
+        if len(future_segments) > 1:
+            AntPath(
+                future_segments, 
                 use="regular", 
                 dash_array='5, 5', 
-                color='green', 
+                color='#FF0000',
                 weight=5, 
-                options={"delay": 1000, "dash_factor": 0.1}
-        ).add_to(m)
+                opacity=0.8,
+                options={"delay": 1000, "dash_factor": 0.1, "color": "#FF0000"}
+            ).add_to(m)
+            
     elif locations:
         # 도시가 하나만 있는 경우, 해당 위치에 원을 그려 표시
+        single_item_date = datetime.strptime(schedule_for_map[0]['date'], "%Y-%m-%d").date()
+        single_is_past = single_item_date < current_date
+        
         folium.Circle(
             location=locations[0],
             radius=1000, # 1km
-            color='green',
+            color='red',
             fill=True,
-            fill_color='green',
-            fill_opacity=0.5,
+            fill_color='red',
+            fill_opacity=0.3 if single_is_past else 0.8,
             tooltip="Single Location"
         ).add_to(m)
 
