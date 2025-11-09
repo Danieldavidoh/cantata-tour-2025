@@ -195,7 +195,7 @@ LANG = {
 }
 
 # --- 세션 초기화 ---
-defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "logged_in_user": None, "show_login_form": False, "play_sound": False}
+defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "logged_in_user": None, "show_login_form": False}
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -206,10 +206,6 @@ for k, v in defaults.items():
 def _(key):
     lang = st.session_state.lang if isinstance(st.session_state.lang, str) else "ko"
     return LANG.get(lang, LANG["ko"]).get(key, key)
-
-# --- 알림음 함수 ---
-def play_alert_sound():
-    st.session_state.play_sound = True
 
 # --- 파일 첨부/저장 함수 ---
 def save_uploaded_files(uploaded_files):
@@ -258,7 +254,8 @@ def display_and_download_file(file_info, notice_id, is_admin=False, is_user_post
     
     if is_user_post and not is_admin:
         # 사용자 포스트의 파일은 일반 모드에서 숨김 (관리자만 확인 가능)
-        st.markdown(f"**{_('admin_only_files')}**")
+        # 파일이 첨부되었음을 알리는 텍스트만 표시
+        st.markdown(f"**{_('attached_files')}:** {_('admin_only_files')}")
         return
 
     if os.path.exists(file_path):
@@ -441,7 +438,8 @@ city_dict = {
 
 major_cities_available = [c for c in ["Mumbai", "Pune", "Nagpur", "Thane", "Nashik", "Kalyan", "Vasai-Virar", "Aurangabad", "Solapur", "Mira-Bhayandar", "Bhiwandi", "Amravati", "Nanded", "Kolhapur", "Ulhasnagar", "Sangli", "Malegaon", "Jalgaon", "Akola", "Latur", "Dhule", "Ahmadnagar", "Chandrapur", "Parbhani", "Ichalkaranji", "Jalna", "Ambernath", "Bhusawal", "Panvel", "Dombivli"] if c in city_dict]
 remaining_cities = sorted([c for c in city_dict if c not in major_cities_available])
-city_options = ["공연없음"] + major_cities_available + remaining_cities
+# 수정: "공연없음" 옵션 제거
+city_options = major_cities_available + remaining_cities
 
 
 # --- 데이터 로드 (공지사항 및 투어 일정) ---
@@ -478,9 +476,9 @@ ADMIN_PASS = "0009" # 비밀번호: '0009'
 title_html = f"""
     <div class="header-container">
         <h1 class="main-title">
-            <span style="color: #FF4B4B;">{_('title_cantata')}</span> 
-            <span style="color: white;">{_('title_year')}</span>
-            <span style="color: #008000; font-size: 0.66em;">{_('title_region')}</span>
+            <span style="color: #BB3333;">{_('title_cantata')}</span> <!-- 크리스마스 레드 -->
+            <span style="color: #FAFAFA;">{_('title_year')}</span>
+            <span style="color: #66BB66; font-size: 0.66em;">{_('title_region')}</span> <!-- 크리스마스 그린 -->
         </h1>
     </div>
 """
@@ -533,7 +531,6 @@ with col_auth:
             st.session_state.admin = False
             st.session_state.logged_in_user = None
             st.session_state.show_login_form = False
-            play_alert_sound()
             safe_rerun()
     else:
         # 로그인 버튼 클릭 시 on_click 대신 명시적 핸들러를 사용해 즉시 재실행을 보장
@@ -552,7 +549,6 @@ with col_auth:
                         st.session_state.admin = True
                         st.session_state.logged_in_user = "Admin"
                         st.session_state.show_login_form = False
-                        play_alert_sound()
                         safe_rerun()
                     else:
                         # 오류 메시지 숨김 처리
@@ -603,7 +599,6 @@ with tab1:
                     }
                     tour_notices.insert(0, new_notice)
                     save_json(NOTICE_FILE, tour_notices)
-                    play_alert_sound()
                     safe_rerun()
                 elif submitted:
                     pass
@@ -619,7 +614,11 @@ with tab1:
             translated_type = type_options_rev.get(notice_type_key, _("general"))
             notice_title = notice['title']
             
-            with st.expander(f"[{translated_type}] {notice_title} ({notice.get('date', 'N/A')[:10]})", expanded=False):
+            # 긴급 공지의 색상 처리
+            header_color = "#BB3333" if notice_type_key == "Urgent" else "#FAFAFA" # 버건디 레드
+            header_text = f'<span style="color: {header_color};">[{translated_type}]</span> {notice_title} ({notice.get("date", "N/A")[:10]})'
+            
+            with st.expander(header_text, expanded=False, unsafe_allow_html=True):
                 col_del, col_title = st.columns([1, 4])
                 with col_del:
                     if st.button(_("remove"), key=f"del_n_{notice_id}", help=_("remove")):
@@ -629,7 +628,6 @@ with tab1:
                         
                         tour_notices[:] = [n for n in tour_notices if n.get('id') != notice_id]
                         save_json(NOTICE_FILE, tour_notices)
-                        play_alert_sound()
                         safe_rerun()
                 
                 with col_title:
@@ -656,7 +654,6 @@ with tab1:
                                 n['content'] = updated_content
                                 n['type'] = updated_type_key
                                 save_json(NOTICE_FILE, tour_notices)
-                                play_alert_sound()
                                 safe_rerun()
         
     # 2. 일반 사용자 공지사항 & 포스트 보기
@@ -678,9 +675,12 @@ with tab1:
                 notice_title = notice.get('title', _("no_title"))
                 notice_content = notice.get('content', _("no_content"))
                 
+                # 긴급 공지의 색상 처리 (일반 모드)
+                header_color = "#BB3333" if notice_type_key == "Urgent" else "#FAFAFA"
+                header_text = f'<span style="color: {header_color};">[{translated_type}]</span> {notice_title} - *{notice.get("date", "N/A")[:16]}*'
+                
                 # Expander로 감싸고 닫힘 상태로 시작 (요청 반영)
-                header_text = f"[{translated_type}] {notice_title} - *{notice.get('date', 'N/A')[:16]}*"
-                with st.expander(header_text, expanded=False): 
+                with st.expander(header_text, expanded=False, unsafe_allow_html=True): 
                     
                     # st.info 대신 custom markdown 사용 (숨겨지는 문제 방지)
                     st.markdown(f'<div class="notice-content-box">{notice_content}</div>', unsafe_allow_html=True)
@@ -691,8 +691,6 @@ with tab1:
                         st.markdown(f"**{_('attached_files')}:**")
                         for file_info in attached_files:
                             display_and_download_file(file_info, notice_id, is_admin=False, is_user_post=False)
-
-        st.markdown("---")
     
     # 3. 사용자 포스트 섹션 (관리자/일반 사용자 공통)
     st.subheader(f"📸 {_('user_posts')}") 
@@ -722,7 +720,6 @@ with tab1:
                 }
                 user_posts.insert(0, new_post)
                 save_json(USER_POST_FILE, user_posts)
-                play_alert_sound()
                 safe_rerun()
             elif post_submitted:
                 pass
@@ -733,7 +730,6 @@ with tab1:
     if st.session_state.admin:
         # 관리자 모드: 모든 포스트 표시
         posts_to_display = sorted(valid_posts, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
-        st.markdown("---")
         st.markdown(f"**관리자**는 총 {len(posts_to_display)}개의 사용자 포스트를 확인할 수 있습니다.")
         for post in posts_to_display:
             post_id = post['id']
@@ -743,14 +739,9 @@ with tab1:
                 
                 attached_media = post.get('files', [])
                 if attached_media:
-                    st.markdown(f"**{_('attached_files')} (클라우드 저장소)**:")
                     for file_info in attached_media:
                         # 관리자는 파일 확인 가능
                         display_and_download_file(file_info, post_id, is_admin=True, is_user_post=True)
-                else:
-                    st.markdown(f"**{_('attached_files')}:** {_('no_files')}")
-                    
-                st.markdown("---")
     
     else:
         # 일반 사용자 모드: 포스트 목록만 표시 (첨부 파일은 관리자만 확인 가능)
@@ -766,11 +757,12 @@ with tab1:
                 st.markdown(f'<div class="notice-content-box">{post.get("content", _("no_content"))}</div>', unsafe_allow_html=True)
                 
                 # 일반 사용자는 파일이 첨부되었는지 여부와 함께 경고 메시지 표시
-                if post.get('files'):
-                    st.markdown(f"**{_('attached_files')}:** {_('admin_only_files')}")
+                attached_media = post.get('files', [])
+                if attached_media:
+                    # display_and_download_file 함수 내에서 is_user_post=True 로직을 통해 경고 텍스트 표시
+                    # 첨부된 파일이 여러 개일 수 있으므로 첫 번째 파일 정보를 전달 (경고 메시지 표시용)
+                    display_and_download_file(attached_media[0], post_id, is_admin=False, is_user_post=True)
                 
-                st.markdown("---")
-
 
 # =============================================================================
 # 탭 2: 투어 경로 (Map)
@@ -787,7 +779,8 @@ with tab2:
             with st.form("schedule_form", clear_on_submit=True):
                 col_c, col_d, col_v = st.columns(3)
                 
-                city_name_input = col_c.selectbox(_('city_name'), options=city_options, index=city_options.index("공연없음") if "공연없음" in city_options else 0)
+                # "공연없음"이 제거된 city_options 사용
+                city_name_input = col_c.selectbox(_('city_name'), options=city_options, index=0)
                 schedule_date = col_d.date_input(_("date"))
                 venue_name = col_v.text_input(_("venue"), placeholder=_("venue_placeholder"))
                 
@@ -805,7 +798,7 @@ with tab2:
                 submitted = st.form_submit_button(_("register"))
                 
                 if submitted:
-                    if city_name_input == "공연없음" or not venue_name or not schedule_date:
+                    if not city_name_input or not venue_name or not schedule_date:
                         pass
                     elif city_name_input not in city_dict:
                         pass
@@ -826,7 +819,6 @@ with tab2:
                         }
                         tour_schedule.append(new_schedule_entry)
                         save_json(CITY_FILE, tour_schedule)
-                        play_alert_sound()
                         safe_rerun()
                         
         
@@ -856,14 +848,13 @@ with tab2:
                         if st.button(_("remove"), key=f"del_s_{item_id}"):
                             tour_schedule[:] = [s for s in tour_schedule if s.get('id') != item_id]
                             save_json(CITY_FILE, tour_schedule)
-                            play_alert_sound()
                             safe_rerun()
 
                     if st.session_state.get(f"edit_mode_{item_id}"):
                         with st.form(f"edit_form_{item_id}"):
                             col_uc, col_ud, col_uv = st.columns(3)
                             
-                            updated_city = col_uc.selectbox(_("city"), city_options, index=city_options.index(item.get('city', "공연없음")))
+                            updated_city = col_uc.selectbox(_("city"), city_options, index=city_options.index(item.get('city', "Pune") if item.get('city') in city_options else city_options[0]))
                             
                             try:
                                 initial_date = datetime.strptime(item.get('date', '2025-01-01'), "%Y-%m-%d").date()
@@ -905,7 +896,6 @@ with tab2:
                                         }
                                         save_json(CITY_FILE, tour_schedule)
                                         st.session_state[f"edit_mode_{item_id}"] = False
-                                        play_alert_sound()
                                         safe_rerun()
                             
                     if not st.session_state.get(f"edit_mode_{item_id}"):
@@ -927,10 +917,10 @@ with tab2:
         if s.get('date') and s.get('lat') is not None and s.get('lon') is not None and s.get('id')
     ], key=lambda x: x['date'])
     
-    start_coords = [18.52043, 73.856743]
-    if schedule_for_map:
-        start_coords = [schedule_for_map[0]['lat'], schedule_for_map[0]['lon']]
-
+    # 수정: 기본 중심 좌표를 Aurangabad로 설정
+    AURANGABAD_COORDS = city_dict.get("Aurangabad", {'lat': 19.876165, 'lon': 75.343314})
+    start_coords = [AURANGABAD_COORDS['lat'], AURANGABAD_COORDS['lon']]
+    
     m = folium.Map(location=start_coords, zoom_start=8)
     locations = []
     
@@ -947,7 +937,7 @@ with tab2:
         is_past = event_date < current_date
         
         # 요청 반영: 아이콘 색상은 항상 빨간색
-        icon_color = 'red' 
+        icon_color = '#BB3333' # 버건디 레드 계열
         
         # 요청 반영: 지난 도시는 25% 투명도
         opacity_val = 0.25 if is_past else 1.0
@@ -959,7 +949,7 @@ with tab2:
         
         # --- 수정된 부분: 도시 이름을 빨간색으로 표시 ---
         city_name_display = item.get('city', 'N/A')
-        red_city_name = f'<span style="color: #FF4B4B; font-weight: bold;">{city_name_display}</span>'
+        red_city_name = f'<span style="color: #BB3333; font-weight: bold;">{city_name_display}</span>'
         
         popup_html = f"""
         <b>{_('city')}:</b> {red_city_name}<br>
@@ -1027,7 +1017,7 @@ with tab2:
         if len(past_segments) > 1:
             folium.PolyLine(
                 locations=past_segments,
-                color="#FF4B4B",
+                color="#BB3333",
                 weight=5,
                 opacity=0.25, # 25% 투명도
                 tooltip=_("past_route")
@@ -1040,10 +1030,10 @@ with tab2:
                 future_segments, 
                 use="regular", 
                 dash_array='5, 5', 
-                color='#FF4B4B', 
+                color='#BB3333', 
                 weight=5, 
                 opacity=0.8,
-                options={"delay": 12000, "dash_factor": 0.1, "color": "#FF4B4B"} # 속도를 1/2로 조정
+                options={"delay": 24000, "dash_factor": 0.1, "color": "#BB3333"} # 속도를 1/2로 조정 (24000ms)
             ).add_to(m)
 
             # 2. Add invisible PolyLines for hover tooltips on each segment
@@ -1065,7 +1055,7 @@ with tab2:
                         permanent=False, 
                         direction="top", 
                         sticky=True,
-                        style="background-color: #333; color: white; padding: 5px; border-radius: 5px;"
+                        style="background-color: #2D2D2D; color: #FAFAFA; padding: 5px; border-radius: 5px;"
                     )
                 ).add_to(m)
             
@@ -1080,9 +1070,9 @@ with tab2:
         folium.Circle(
             location=locations[0],
             radius=1000,
-            color='#FF4B4B',
+            color='#BB3333',
             fill=True,
-            fill_color='#FF4B4B',
+            fill_color='#BB3333',
             fill_opacity=0.25 if single_is_past else 0.8,
             tooltip=_("single_location")
         ).add_to(m)
@@ -1090,98 +1080,121 @@ with tab2:
     # 지도 표시
     st_folium(m, width=1000, height=600)
     
-    # 지도 아래 텍스트 제거 완료
+    # 지도 아래 불필요한 텍스트 제거 완료
 
 
 # --- CSS 적용 (최하단에 위치시켜야 함) ---
 st.markdown(f"""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<style>
-/* 기본 배경/글꼴 색상 설정 */
 
-/* 제목 컨테이너 기본 스타일 */
-.header-container {{ 
-    text-align: center; 
-    margin: 0 !important; 
-    padding-top: 20px;
-    position: relative;
+<!-- Snowfall animation inspired by the holidays. -->
+<style>
+/* Snowfall animation setup */
+@keyframes snowfall {{
+    0% {{ background-position: 0% 0%, 0% 0%, 0% 0% }}
+    100% {{ background-position: 500px 1000px, 250px 500px, -100px 300px }}
 }}
+
+/* Dark Christmas Theme Colors */
+:root {{
+    --bg-dark: #1A1A1A; /* Deep Dark */
+    --accent-red: #BB3333; /* Burgundy Red */
+    --accent-gold: #FFD700; /* Gold/Yellow */
+    --text-light: #FAFAFA; /* Light Text */
+    --form-bg: #2D2D2D;
+    --expander-bg: #333333;
+}}
+
+/* Snow effect applied to the root container */
+.stApp {{
+    background-color: var(--bg-dark); 
+    color: var(--text-light); 
+    font-family: Arial, sans-serif;
+    
+    /* Snow effect layer */
+    background-image:
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><rect width='100' height='100' fill='none'/><circle cx='5' cy='5' r='1.5' fill='rgba(255, 255, 255, 0.9)'/></svg>"),
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><rect width='100' height='100' fill='none'/><circle cx='10' cy='10' r='2' fill='rgba(255, 255, 255, 0.7)'/></svg>"),
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><rect width='100' height='100' fill='none'/><circle cx='15' cy='15' r='2.5' fill='rgba(255, 255, 255, 0.5)'/></svg>");
+    
+    /* Snow positioning and size */
+    background-size: 500px 500px, 250px 250px, 150px 150px; 
+    
+    /* Snow animation speed (slower for gentle fall) */
+    animation: snowfall 40s linear infinite; 
+}}
+
+/* Header Styling */
 .main-title {{
     font-size: 3em;
     margin-bottom: 0.5em;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
 }}
-/* Streamlit 기본 스타일 오버라이드 */
-.stApp {{
-    background-color: #1E1E1E; /* 어두운 배경 */
-    color: #FAFAFA; /* 밝은 글꼴 */
-    font-family: Arial, sans-serif;
-}}
+
 /* 탭 배경색/글꼴색 */
 .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {{
-    color: #FAFAFA !important;
+    color: var(--text-light) !important;
 }}
+
 /* 폼 배경색 */
 .stForm {{
     padding: 15px;
-    border: 1px solid #333333;
+    border: 1px solid #444444; /* Darker border */
     border-radius: 10px;
-    background-color: #2D2D2D;
-}}
-/* Expander 배경색 */
-.streamlit-expanderHeader {{
-    background-color: #333333;
-    color: #FAFAFA;
-    border-radius: 5px;
-    padding: 10px;
-}}
-/* 버튼 스타일 */
-.stButton>button {{
-    background-color: #FF4B4B;
-    color: white;
-    border-radius: 8px;
-    border: none;
-    padding: 8px 16px;
-    transition: background-color 0.3s;
-}}
-.stButton>button:hover {{
-    background-color: #FF6B6B;
-}}
-/* info, warning 스타일 */
-.stAlert.info, .stAlert.warning {{
-    border-left: 5px solid;
-    padding: 10px;
-    border-radius: 5px;
-    margin-top: 10px;
-}}
-.stAlert.info {{
-    border-color: #007BFF;
-    background-color: rgba(0, 123, 255, 0.1);
-}}
-.stAlert.warning {{
-    border-color: #FFC107;
-    background-color: rgba(255, 193, 7, 0.1);
+    background-color: var(--form-bg);
 }}
 
-/* Custom Content Box Style (mimicking st.info appearance, to avoid being hidden by stAlert CSS) */
+/* Expander 배경색 */
+.streamlit-expanderHeader {{
+    background-color: var(--expander-bg);
+    color: var(--text-light);
+    border-radius: 5px;
+    padding: 10px;
+    font-weight: bold;
+    border-bottom: 1px solid var(--accent-red); /* Subtle Red underline */
+}}
+
+/* 긴급 공지 제목 색상 (요청 반영) */
+/* st.expander 제목은 st.markdown(unsafe_allow_html=True)로 삽입되므로 span 태그의 색상만 제어 */
+.streamlit-expanderHeader span {{
+    font-weight: bold;
+}}
+
+
+/* 버튼 스타일 */
+.stButton>button {{
+    background-color: var(--accent-red); /* Burgundy Red */
+    color: white;
+    border-radius: 8px;
+    border: 1px solid var(--accent-red);
+    padding: 8px 16px;
+    transition: background-color 0.3s, border-color 0.3s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}}
+.stButton>button:hover {{
+    background-color: #CC4444; /* Slightly brighter red */
+    border-color: #FFD700; /* Gold hover effect */
+}}
+
+/* Custom Content Box Style (공지/포스트 내용 박스) */
 .notice-content-box {{
-    border-left: 5px solid #007BFF; /* Info blue */
-    background-color: rgba(0, 123, 255, 0.1); /* Light blue background */
+    border-left: 5px solid var(--accent-gold); /* Gold accent for info box */
+    background-color: rgba(255, 215, 0, 0.05); /* Very subtle light gold background */
     padding: 10px;
     border-radius: 5px;
     margin-top: 10px;
     margin-bottom: 10px;
+    color: #FAFAFA;
 }}
-
 
 /* Streamlit Alert 메시지 숨기기 (사용자 요청 반영: 모든 상태 알림 숨김) */
 div[data-testid="stAlert"] {{
     display: none !important;
 }}
 
-/* Streamlit Selectbox/Input 스타일 */
+/* Selectbox/Input Label Color */
 .stSelectbox>label, .stTextInput>label, .stTextArea>label, .stNumberInput>label {{
-    color: #BBBBBB;
+    color: var(--text-light);
 }}
 .stSelectbox div[data-baseweb="select"] {{
     background-color: #333333;
