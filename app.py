@@ -565,7 +565,7 @@ with tab1:
                                         use_column_width='always' # 항상 인라인으로 표시
                                     )
                                 else:
-                                    # st.warning(f"🖼️ {file_info['name']} (Image load error)") # 숨겨짐
+                                    # Fallback for failed image load (숨겨짐)
                                     pass
                             
                             # 2. 이미지 외 파일 (또는 이미지 로드 실패 시) 다운로드 버튼 표시
@@ -582,10 +582,10 @@ with tab1:
                                                 key=f"admin_download_{notice_id}_{file_info['name']}"
                                             )
                                     except Exception:
-                                        # st.error(f"📄 {file_info['name']} (File access denied)") # 숨겨짐
+                                        # st.error(...) # 숨겨짐
                                         pass
                                 else:
-                                    # st.warning(f"📄 {file_info['name']} ({_('no_files')})") # 숨겨짐
+                                    # st.warning(...) # 숨겨짐
                                     pass
                     else:
                         st.markdown(f"**{_('attached_files')}:** {_('no_files')}")
@@ -628,27 +628,42 @@ with tab1:
                 st.markdown(f"**[{translated_type}] {notice_title}** - *{notice.get('date', 'N/A')[:16]}*")
                 st.info(notice_content)
                 
-                # --- 사용자 모드: 파일 첨부 표시 (모두 다운로드 버튼) ---
+                # --- 사용자 모드: 파일 첨부 표시 (이미지는 인라인, 나머지는 다운로드) ---
                 attached_files = notice.get('files', [])
                 if attached_files:
                     st.markdown(f"**{_('attached_files')}:**")
                     for file_info in attached_files:
                         file_size_kb = round(file_info['size'] / 1024, 1)
-                        icon = "🖼️" if file_info['type'].startswith('image/') else "📄"
                         
                         if os.path.exists(file_info['path']):
-                            try:
-                                with open(file_info['path'], "rb") as f:
-                                    st.download_button(
-                                        label=f"⬇️ {icon} {file_info['name']} ({file_size_kb} KB)",
-                                        data=f.read(),
-                                        file_name=file_info['name'],
-                                        mime=file_info['type'],
-                                        key=f"user_download_{notice_id}_{file_info['name']}"
+                            # 1. 이미지 파일은 인라인으로 표시
+                            if file_info['type'].startswith('image/'):
+                                base64_data = get_file_as_base64(file_info['path'])
+                                if base64_data:
+                                    st.image(
+                                        f"data:{file_info['type']};base64,{base64_data}",
+                                        caption=f"🖼️ {file_info['name']} ({file_size_kb} KB)",
+                                        use_column_width='always'
                                     )
-                            except Exception:
-                                # st.warning(f"📄 {file_info['name']} (File access denied)") # 숨겨짐
-                                pass
+                                else:
+                                    # Fallback (Hidden)
+                                    pass
+                            
+                            # 2. 이미지 외 파일은 다운로드 버튼으로 표시
+                            else:
+                                icon = "📄"
+                                try:
+                                    with open(file_info['path'], "rb") as f:
+                                        st.download_button(
+                                            label=f"⬇️ {icon} {file_info['name']} ({file_size_kb} KB)",
+                                            data=f.read(),
+                                            file_name=file_info['name'],
+                                            mime=file_info['type'],
+                                            key=f"user_download_{notice_id}_{file_info['name']}"
+                                        )
+                                except Exception:
+                                    # st.warning(...) # 숨겨짐
+                                    pass
 
 
 # =============================================================================
