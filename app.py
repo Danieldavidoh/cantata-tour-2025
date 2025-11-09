@@ -500,7 +500,8 @@ with tab2:
                 selected_display_type = col_l.radio(_("type"), list(type_options_map.keys()))
                 type_sel = type_options_map[selected_display_type] # Internal key
                 
-                expected_seats = col_s.number_input(_("seats"), min_value=0, value=100, help=_("seats_tooltip"))
+                # 요청 반영: 예상인원 기본값을 100에서 500으로 변경
+                expected_seats = col_s.number_input(_("seats"), min_value=0, value=500, help=_("seats_tooltip"))
                 google_link = col_n.text_input(_("google_link"), placeholder=_("google_link_placeholder"))
                 
                 note = st.text_area(_("note"), placeholder=_("note_placeholder"))
@@ -798,9 +799,6 @@ if st.session_state.play_sound:
     st.session_state.play_sound = False
     
     # 짧은 알림음 파일을 HTML 오디오 태그로 삽입하여 자동 재생
-    # *주의: Streamlit 환경에서는 외부 URL이 차단될 수 있으므로, 작동하지 않을 경우
-    # 로컬 경로의 사운드 파일을 사용하거나 다른 방법을 고려해야 합니다.
-    # 여기서는 샘플로 공개된 짧은 mp3 파일 URL을 사용합니다.
     st.markdown("""
         <audio autoplay>
             <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mp3">
@@ -810,23 +808,24 @@ if st.session_state.play_sound:
 
 
 # --- CSS 적용 (최하단에 위치시켜야 함) ---
+# NameError를 유발하던 CSS 블록의 문법 오류를 수정했습니다.
 st.markdown(f"""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
 /* 기본 배경/글꼴 색상 설정 (CSS 제거 요청에 따라 중립적인 색상으로 설정) */
 
 /* 제목 컨테이너 기본 스타일 */
-.header-container { 
+.header-container {{ 
     text-align: center; 
     margin: 0 !important; 
     padding-top: 20px;
     position: relative;
-}
-.main-title {
+}}
+.main-title {{
     font-size: 3em;
     margin-bottom: 0.5em;
     text-shadow: 2px 2px 4px #000000;
-}
+}}
 
 [data-testid="stAppViewContainer"] {{ 
     /* 배경 이미지를 제거하고 다크 배경색 적용 */
