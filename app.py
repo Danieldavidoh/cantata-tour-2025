@@ -1,6 +1,6 @@
 import json, os, uuid, base64, random
 import streamlit as st
-from datetime import datetime, date
+from datetime import datetime, timedelta, date
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
@@ -28,7 +28,7 @@ LANG = {
         "venue": "공연 장소", "seats": "예상 인원", "note": "특이사항", "google_link": "구글맵",
         "warning": "도시와 장소를 입력하세요", "delete": "제거", "menu": "메뉴", "login": "로그인", "logout": "로그아웃",
         "add_city": "도시 추가 버튼", "register": "등록", "update": "수정", "remove": "제거",
-        "date": "공연 날짜"
+        "date": "공연 날짜", "type_label": "유형", "today": "오늘"
     },
     "en": {
         "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
@@ -36,7 +36,7 @@ LANG = {
         "venue": "Venue", "seats": "Expected", "note": "Note", "google_link": "Google Maps",
         "warning": "Enter city and venue", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
         "add_city": "Add City Button", "register": "Register", "update": "Update", "remove": "Remove",
-        "date": "Performance Date"
+        "date": "Performance Date", "type_label": "Type", "today": "Today"
     },
     "hi": {
         "title_cantata": "कैंटाटा टूर", "title_year": "2025", "title_region": "महाराष्ट्र",
@@ -44,12 +44,12 @@ LANG = {
         "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप्स",
         "warning": "शहर और स्थल दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट",
         "add_city": "शहर जोड़ें बटन", "register": "रजिस्टर", "update": "अपडेट", "remove": "हटाएं",
-        "date": "प्रदर्शन तिथि"
+        "date": "प्रदर्शन तिथि", "type_label": "प्रकार", "today": "आज"
     }
 }
 
 # --- 세션 초기화 (lang 보장) ---
-defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False}
+defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "edit_city_index": None}
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -91,11 +91,11 @@ def calculate_time(distance):
     minutes = int((time_hours - hours) * 60)
     return f"{hours}h {minutes}m"
 
-# --- CSS (초기 화면 고정, 스크롤 없음) ---
+# --- CSS (초기 화면 고정) ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-    [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-attachment: fixed; padding: 0 !important; margin: 0 !important; overflow: hidden; height: 100vh; }
+    [data-testid="stAppViewContainer"] { background: url("background_christmas_dark.png"); background-size: cover; background-attachment: fixed; padding: 0 !important; margin: 0 !important; overflow: hidden; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
     .header-container { text-align: center; margin: 0 !important; padding: 0 !important; }
     .christmas-decoration { display: flex; justify-content: center; gap: 12px; margin-bottom: 0 !important; padding: 0 !important; }
     .christmas-decoration i { color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.6); animation: float 3s ease-in-out infinite; }
@@ -137,12 +137,12 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('<div class="button-row">', unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 with col1:
-    if st.button(f"<i class='fas fa-bell'></i> {_('tab_notice')}", key="btn_notice", use_container_width=True):
+    if st.button(f"📢 {_('tab_notice')}", key="btn_notice", use_container_width=True):
         st.session_state.notice_open = not st.session_state.notice_open
         st.session_state.map_open = False
         st.rerun()
 with col2:
-    if st.button(f"<i class='fas fa-map-marker-alt'></i> {_('tab_map')}", key="btn_map", use_container_width=True):
+    if st.button(f"🗺️ {_('tab_map')}", key="btn_map", use_container_width=True):
         st.session_state.map_open = not st.session_state.map_open
         st.session_state.notice_open = False
         st.rerun()
@@ -176,7 +176,7 @@ if st.session_state.notice_open:
     for i, n in enumerate(load_json(NOTICE_FILE)):
         notice_date = datetime.strptime(n['date'], "%m/%d %H:%M")
         today = datetime.now().date()
-        display_date = "오늘 " + notice_date.strftime("%H:%M") if notice_date.date() == today else n['date']
+        display_date = _("today") + " " + notice_date.strftime("%H:%M") if notice_date.date() == today else n['date']
         with st.expander(f"{display_date} | {n['title']}", expanded=False):
             st.markdown(n["content"])
             if n.get("image") and os.path.exists(n["image"]): st.image(n["image"], use_column_width=True)
@@ -272,78 +272,13 @@ if st.session_state.map_open:
         popup_html = f"""
         <b>{c['city']}</b><br>
         <b>{_('date')}:</b> {c.get('date','—')}<br>
-        <b>{_('venue')}:</b> {c.get('venue','—')}<br>
-        <b>{_('seats')}:</b> {c.get('seats','—')}<br>
-        <b>유형:</b> {indoor_text}<br>
+        <b>{_('type_label')}:</b> {indoor_text}<br>
         <b>{_('google_link')}:</b> <i class="fas fa-car"></i> <a href="https://www.google.com/maps/dir/?api=1&destination={lat},{lon}" target="_blank">Navigation</a><br>
         <b>{_('note')}:</b> {c.get('note','—')}<br>
+        <b>{_('venue')}:</b> {c.get('venue','—')}<br>
+        <b>{_('seats')}:</b> {c.get('seats','—')}<br>
         """
         if st.session_state.admin:
             popup_html += f'<button onclick="alert(\'수정 기능 구현 중\')">수정</button>'
         folium.Marker(
-            (lat, lon), popup=folium.Popup(popup_html, max_width=300),
-            icon=folium.Icon(color="red", icon="music", prefix="fa")
-        ).add_to(m)
-        if i < len(cities) - 1:
-            nxt = cities[i+1]
-            path = AntPath([(lat, lon), (nxt["lat"], nxt["lon"])], color="#e74c3c", weight=6, opacity=0.7)
-            path.add_to(m)
-            # 중간 지점 계산
-            mid_lat = (lat + nxt["lat"]) / 2
-            mid_lon = (lon + nxt["lon"]) / 2
-            # 거리/시간 계산
-            dist = calculate_distance(lat, lon, nxt["lat"], nxt["lon"])
-            time = calculate_time(dist)
-            # 텍스트 마커 (박스 제거, 검은색 텍스트, 평행)
-            folium.Marker(
-                [mid_lat, mid_lon],
-                icon=folium.DivIcon(html=f'<div style="color:black; font-weight:bold; white-space:nowrap;">{dist:.0f}km / {time}</div>')
-            ).add_to(m)
-
-    st_folium(m, width=900, height=600, key="tour_map")  # 높이 증가로 스크롤 최소화
-
-# --- 사이드바 & 모바일 ---
-st.markdown(f'''
-<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">☰</button>
-<div class="overlay" onclick="document.querySelector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
-<div class="sidebar-mobile">
-    <h3 style="color:white;">{_("menu")}</h3>
-    <select onchange="window.location.href='?lang='+this.value" style="width:100%; padding:8px; margin:10px 0;">
-        <option value="ko" {'selected' if st.session_state.lang=="ko" else ''}>한국어</option>
-        <option value="en" {'selected' if st.session_state.lang=="en" else ''}>English</option>
-        <option value="hi" {'selected' if st.session_state.lang=="hi" else ''}>हिंदी</option>
-    </select>
-    {'''
-        <input type="password" placeholder="비밀번호" id="mobile_pw" style="width:100%; padding:8px; margin:10px 0;">
-        <button onclick="if(document.getElementById('mobile_pw').value=='0009') window.location.href='?admin=true'; else alert('오류');" style="width:100%; padding:10px; background:#e74c3c; color:white; border:none; border-radius:8px;">{_("login")}</button>
-    ''' if not st.session_state.admin else f'''
-        <button onclick="window.location.href='?admin=false'" style="width:100%; padding:10px; background:#27ae60; color:white; border:none; border-radius:8px;">{_("logout")}</button>
-    ''' }
-</div>
-''', unsafe_allow_html=True)
-
-with st.sidebar:
-    sel = st.selectbox("언어", ["한국어", "English", "हिंदी"], index=0 if st.session_state.lang == "ko" else 1 if st.session_state.lang == "en" else 2)
-    if sel == "English" and st.session_state.lang != "en":
-        st.session_state.lang = "en"
-        st.rerun()
-    elif sel == "한국어" and st.session_state.lang != "ko":
-        st.session_state.lang = "ko"
-        st.rerun()
-    elif sel == "हिंदी" and st.session_state.lang != "hi":
-        st.session_state.lang = "hi"
-        st.rerun()
-
-    if not st.session_state.admin:
-        pw = st.text_input("비밀번호", type="password")
-        if st.button("로그인"):
-            if pw == "0009":
-                st.session_state.admin = True
-                st.rerun()
-            else:
-                st.error("비밀번호 오류")
-    else:
-        st.success("관리자 모드")
-        if st.button("로그아웃"):
-            st.session_state.admin = False
-            st.rerun()
+            (lat
