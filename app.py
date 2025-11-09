@@ -15,7 +15,7 @@ from math import radians, cos, sin, asin, sqrt
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# --- 파일 경로 정의 (최상단으로 이동하여 NameError 방지) ---
+# --- 파일 경로 정의 ---
 NOTICE_FILE = "notice.json"
 CITY_FILE = "cities.json"
 USER_POST_FILE = "user_posts.json"
@@ -25,12 +25,6 @@ try:
     from streamlit_autorefresh import st_autorefresh
 except ImportError:
     st_autorefresh = lambda **kwargs: None
-
-st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
-
-# --- 자동 새로고침 ---
-if not st.session_state.get("admin", False):
-    st_autorefresh(interval=10000, key="auto_refresh_user")
 
 # --- 다국어 설정 ---
 LANG = {
