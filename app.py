@@ -324,7 +324,7 @@ if st.session_state.map_open:
         # 새로 추가된 도시들
         if 'new_cities' in st.session_state:
             for idx, new_city in enumerate(st.session_state.new_cities):
-                with st.expander(f"{new_city['city']}", expanded=True, key=f"exp_{idx}"):
+                with st.expander(f"{new_city['city']}", expanded=True):
                     col1, col2 = st.columns(2)
                     with col1:
                         current_date = new_city.get("date")
