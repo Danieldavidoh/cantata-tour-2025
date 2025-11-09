@@ -320,7 +320,10 @@ if st.session_state.map_open:
         indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
         google_link = c.get("google_link", "")
         link_text = f'<a href="{google_link}" target="_blank">Google Maps</a>' if google_link else ""
-        popup_html = f"<b>{c['city']}</b><br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br>{_('note')}: {c.get('note','—')}<br>{link_text}"
+        edit_link = ''
+        if st.session_state.admin:
+            edit_link = f'<br><a href="?edit={c["city"]}" target="_self">Edit</a>'
+        popup_html = f"<b>{c['city']}</b><br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br>{_('note')}: {c.get('note','—')}<br>{link_text}{edit_link}"
         folium.Marker(
             (lat, lon), popup=folium.Popup(popup_html, max_width=300),
             icon=folium.Icon(color="red", icon="music", prefix="fa")
@@ -329,6 +332,56 @@ if st.session_state.map_open:
             nxt = cities[i+1]
             AntPath([(lat, lon), (nxt["lat"], nxt["lon"])], color="#e74c3c", weight=6, opacity=0.7).add_to(m)
     st_folium(m, width=900, height=550, key="tour_map")
+
+    query_params = st.query_params
+    if st.session_state.admin and 'edit' in query_params:
+        city_name = query_params['edit'][0]
+        city_to_edit = next((c for c in cities if c['city'] == city_name), None)
+        if city_to_edit:
+            with st.expander(f"Edit {city_name}", expanded=True):
+                col1, col2 = st.columns(2)
+                with col1:
+                    current_date = city_to_edit.get("date")
+                    if isinstance(current_date, str) and current_date:
+                        try:
+                            current_date = datetime.strptime(current_date, "%Y-%m-%d").date()
+                        except:
+                            current_date = date.today()
+                    elif not isinstance(current_date, date):
+                        current_date = date.today()
+                    new_date = st.date_input(_("date"), value=current_date)
+                    city_to_edit["date"] = new_date
+                    city_to_edit["venue"] = st.text_input(_("venue"), value=city_to_edit.get("venue", ""))
+                    city_to_edit["seats"] = st.number_input(_("seats"), min_value=0, value=int(city_to_edit.get("seats", 500)), step=50)
+                with col2:
+                    city_to_edit["google_link"] = st.text_input(_("google_link"), value=city_to_edit.get("google_link", ""))
+                    city_to_edit["note"] = st.text_input(_("note"), value=city_to_edit.get("note", ""))
+
+                col_radio, col_save, col_cancel = st.columns([3, 1, 1])
+                with col_radio:
+                    venue_type = st.radio(
+                        "공연 장소 유형", [_("indoor"), _("outdoor")],
+                        index=0 if city_to_edit.get("indoor", True) else 1,
+                        horizontal=True
+                    )
+                    city_to_edit["indoor"] = venue_type == _("indoor")
+                with col_save:
+                    if st.button(_("update")):
+                        if city_to_edit.get("venue"):
+                            city_to_edit["date"] = city_to_edit["date"].strftime("%Y-%m-%d")
+                            city_to_edit["seats"] = str(city_to_edit["seats"])
+                            save_json(CITY_FILE, cities)
+                            del st.query_params['edit']
+                            st.success("수정 완료!")
+                            st.rerun()
+                        else:
+                            st.warning(_("warning"))
+                with col_cancel:
+                    if st.button(_("remove")):
+                        cities = [c for c in cities if c['city'] != city_name]
+                        save_json(CITY_FILE, cities)
+                        del st.query_params['edit']
+                        st.rerun()
 
     if st.session_state.admin:
         if 'new_cities' not in st.session_state:
