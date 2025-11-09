@@ -378,7 +378,7 @@ with col_auth:
         if st.button(_("logout"), key="logout_btn"):
             st.session_state.admin = False
             st.session_state.logged_in_user = None
-            st.session_state.show_login_form = False
+            st.session_state.show_login_form = False # 로그아웃 시 폼 숨김
             st.success(_("logged_out_success"))
             play_alert_sound()
             st.rerun()
@@ -398,16 +398,20 @@ with col_auth:
                     if password == ADMIN_PASS:
                         st.session_state.admin = True
                         st.session_state.logged_in_user = "Admin"
-                        st.session_state.show_login_form = False
+                        st.session_state.show_login_form = False # 성공하면 폼 숨김
                         st.success(_("logged_in_success"))
                         play_alert_sound()
                         st.rerun()
                     else:
                         st.error(_("incorrect_password"))
+                        # 실패해도 폼을 유지하기 위해 show_login_form=True 유지
 
 
 # --- 탭 구성 ---
-tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
+# 탭의 이름을 변수에 저장하여 탭 선택 로직 구현 가능성을 열어 둡니다.
+tab_names = [_("tab_notice"), _("tab_map")]
+tab1, tab2 = st.tabs(tab_names)
+
 
 # =============================================================================
 # 탭 1: 공지사항 (Notice)
@@ -887,4 +891,54 @@ st.markdown(f"""
 .stTabs [data-baseweb="tab-list"] button [data-testid="stText"] {{
     font-weight: bold;
     color: #FFFFFF;
-    text-shadow
+    text-shadow: 1px 1px 2px #000;
+}}
+
+/* 사이드바 배경 */
+section[data-testid="stSidebar"] {{
+    background-color: #333333;
+}}
+
+/* 입력 필드 배경 */
+div[data-testid="stTextInput"] > div > div > input,
+div[data-testid="stNumberInput"] > div > div > input,
+div[data-testid="stTextArea"] > div > textarea,
+div[data-testid="stForm"] {{
+    background-color: #444444;
+    color: #FFFFFF;
+    border: 1px solid #777777;
+}}
+
+/* Expander 배경 */
+[data-testid$="stExpander"] {{
+    background-color: #2E2E2E;
+    border-radius: 8px;
+    border: 1px solid #555555;
+}}
+
+/* 버튼 스타일 */
+.stButton > button {{
+    background-color: #4CAF50; /* Green */
+    color: white;
+    border: 1px solid #388E3C;
+    font-weight: bold;
+}}
+.stButton > button:hover {{
+    background-color: #388E3C;
+    border-color: #4CAF50;
+}}
+
+/* Selectbox와 Date Input의 배경 */
+div[data-testid="stSelectbox"] > div > div,
+div[data-testid="stDateInput"] > div > div {{
+    background-color: #444444;
+    color: #FFFFFF;
+}}
+
+/* st.info/st.warning 등의 텍스트 색상 */
+div[data-testid="stAlert"] {{
+    color: #FFFFFF !important;
+}}
+
+</style>
+""", unsafe_allow_html=True)
