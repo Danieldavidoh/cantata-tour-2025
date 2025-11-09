@@ -236,7 +236,6 @@ def get_file_as_base64(file_path):
     try:
         with open(file_path, "rb") as f:
             file_bytes = f.read()
-            # 수정: base66 -> base64
             base64_encoded_data = base64.b64encode(file_bytes).decode('utf-8')
             return base64_encoded_data
     except Exception:
@@ -538,17 +537,23 @@ for _ in range(7): # 7개의 아이콘 생성
             z-index: 101; /* 제목 위에 오도록 */
         ">{icon_char}</span>
     """
-
-title_html = f"""
+# f-string 오류 수정을 위해 title_html을 일반 문자열로 변환
+title_html = """
     <div class="header-container" style="position: relative; overflow: visible; height: 100px;">
         {icon_html} 
         <h1 class="main-title" style="position: relative; z-index: 102;">
-            <span style="color: #BB3333;">{_('title_cantata')}</span>
-            <span style="color: #FAFAFA;">{_('title_year')}</span>
-            <span style="color: #66BB66; font-size: 0.66em;">{_('title_region')}</span>
+            <span style="color: #BB3333;">{title_cantata}</span>
+            <span style="color: #FAFAFA;">{title_year}</span>
+            <span style="color: #66BB66; font-size: 0.66em;">{title_region}</span>
         </h1>
     </div>
-"""
+""".format(
+    icon_html=icon_html,
+    title_cantata=_('title_cantata'),
+    title_year=_('title_year'),
+    title_region=_('title_region')
+)
+
 st.markdown(title_html, unsafe_allow_html=True)
 
 # 언어 선택 버튼 (상단 고정)
@@ -665,9 +670,6 @@ with tab1:
             notice_title = notice['title']
             
             prefix = "🚨 " if notice_type_key == "Urgent" else ""
-            header_color = "#BB3333" if notice_type_key == "Urgent" else "#FAFAFA"
-            
-            # Expander 제목에 HTML 사용하지 않음 (오류 방지), 대신 텍스트 색상과 이모지 사용
             header_text = f"{prefix}[{translated_type}] {notice_title} ({notice.get('date', 'N/A')[:10]})"
             
             with st.expander(header_text, expanded=False):
