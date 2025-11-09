@@ -200,7 +200,6 @@ for k, v in defaults.items():
 # --- 번역 함수 ---
 def _(key):
     lang = st.session_state.lang if isinstance(st.session_state.lang, str) else "ko"
-    # 수정: LANG 딕셔너리에서 키를 찾지 못할 경우 대비
     return LANG.get(lang, LANG["ko"]).get(key, key)
 
 # --- 파일 첨부/저장 함수 ---
@@ -532,8 +531,13 @@ for _ in range(7): # 7개의 아이콘 생성
             z-index: 101; /* 제목 위에 오도록 */
         ">{icon_char}</span>
     """
-# 오류 수정: f-string 대신 .format()을 사용하여 변수를 안전하게 삽입
-title_html = """
+# 오류 수정: .format() 대신 Python 변수를 직접 사용하도록 단순화 (f-string으로 회귀)
+# 단, title_html 정의를 st.markdown 호출 바로 전에 배치하여 _ 함수 호출이 안전하도록 보장
+title_cantata = _('title_cantata')
+title_year = _('title_year')
+title_region = _('title_region')
+
+title_html = f"""
     <div class="header-container" style="position: relative; overflow: visible; height: 100px;">
         {icon_html} 
         <h1 class="main-title" style="position: relative; z-index: 102;">
@@ -542,12 +546,7 @@ title_html = """
             <span style="color: #66BB66; font-size: 0.66em;">{title_region}</span>
         </h1>
     </div>
-""".format(
-    icon_html=icon_html,
-    title_cantata=_('title_cantata'),
-    title_year=_('title_year'),
-    title_region=_('title_region')
-)
+"""
 
 st.markdown(title_html, unsafe_allow_html=True)
 
