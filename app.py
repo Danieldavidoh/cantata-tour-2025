@@ -220,7 +220,7 @@ LANG = {
 }
 
 # --- 세션 초기화 ---
-defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "logged_in_user": None, "show_login_form": False}
+defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "logged_in_user": None, "show_login_form": False, "show_notice_delete_conf": False, "show_schedule_delete_conf": False}
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -473,16 +473,16 @@ tour_schedule = load_json(CITY_FILE)
 user_posts = load_json(USER_POST_FILE) # <-- 사용자 포스트 로드
 
 # 관리자 비밀번호 로드 및 초기 설정 (0691)
-# ADMIN_PASS = "0009" # 이전 비밀번호
 ADMIN_PASS_DEFAULT = "0691" # 요청된 새 비밀번호
 admin_pass_data = load_json(ADMIN_PASS_FILE)
 
-# ADMIN_PASS를 파일에서 로드하거나, 파일이 없으면 0691로 설정 후 저장
+# ADMIN_PASS를 전역 변수로 선언하고 초기화
 if isinstance(admin_pass_data, dict) and 'password' in admin_pass_data:
-    ADMIN_PASS = admin_pass_data['password']
+    ADMIN_PASS = admin_pass_data.get('password', ADMIN_PASS_DEFAULT)
 else:
     ADMIN_PASS = ADMIN_PASS_DEFAULT
     save_json(ADMIN_PASS_FILE, {"password": ADMIN_PASS})
+
 
 # 만약 city_dict에 있는 도시 정보가 없다면 초기화
 if not tour_schedule:
@@ -596,9 +596,11 @@ if st.session_state.admin:
             if change_submitted:
                 if current_pass == ADMIN_PASS:
                     if new_pass:
-                        save_json(ADMIN_PASS_FILE, {"password": new_pass})
-                        # 세션 변수와 전역 변수 업데이트
+                        # 🚨 오류 수정: global 선언을 먼저 수행
                         global ADMIN_PASS
+                        
+                        save_json(ADMIN_PASS_FILE, {"password": new_pass})
+                        # 전역 변수 업데이트
                         ADMIN_PASS = new_pass 
                         st.success(_("password_changed_success"))
                         safe_rerun()
