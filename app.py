@@ -32,6 +32,7 @@ if not st.session_state.get("admin", False):
 # --- 파일 경로 ---
 NOTICE_FILE = "notice.json"
 CITY_FILE = "cities.json"
+USER_POST_FILE = "user_posts.json" # <-- 새 파일 구조
 
 # --- 다국어 설정 ---
 LANG = {
@@ -78,7 +79,13 @@ LANG = {
         "seats_tooltip": "예상 관객 인원",
         "file_attachment": "파일 첨부",
         "attached_files": "첨부 파일",
-        "no_files": "없음"
+        "no_files": "없음",
+        "user_posts": "사용자 포스트", # <-- 추가
+        "new_post": "새 포스트 작성", # <-- 추가
+        "post_content": "포스트 내용", # <-- 추가
+        "media_attachment": "사진/동영상 첨부", # <-- 추가
+        "post_success": "포스트가 성공적으로 업로드되었습니다!", # <-- 추가
+        "no_posts": "현재 포스트가 없습니다." # <-- 추가
     },
     "en": {
         "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
@@ -123,7 +130,13 @@ LANG = {
         "seats_tooltip": "Expected audience count",
         "file_attachment": "File Attachment",
         "attached_files": "Attached Files",
-        "no_files": "None"
+        "no_files": "None",
+        "user_posts": "User Posts",
+        "new_post": "Create New Post",
+        "post_content": "Post Content",
+        "media_attachment": "Attach Photo/Video",
+        "post_success": "Post uploaded successfully!",
+        "no_posts": "No posts available."
     },
     "hi": {
         "title_cantata": "कैंटाटा टूर", "title_year": "२०२५", "title_region": "महाराष्ट्र",
@@ -168,7 +181,13 @@ LANG = {
         "seats_tooltip": "अपेक्षित दर्शक संख्या",
         "file_attachment": "फ़ाइल संलग्नक",
         "attached_files": "संलग्न फ़ाइलें",
-        "no_files": "कोई नहीं"
+        "no_files": "कोई नहीं",
+        "user_posts": "उपयोगकर्ता पोस्ट",
+        "new_post": "नई पोस्ट बनाएं",
+        "post_content": "पोस्ट सामग्री",
+        "media_attachment": "फोटो/वीडियो संलग्न करें",
+        "post_success": "पोस्ट सफलतापूर्वक अपलोड हुई!",
+        "no_posts": "कोई पोस्ट उपलब्ध नहीं है।"
     }
 }
 
@@ -226,6 +245,57 @@ def get_file_as_base64(file_path):
         # 파일이 없거나 접근할 수 없을 경우
         return None
 
+# --- 미디어 인라인 표시 및 다운로드 헬퍼 함수 (재사용성을 위해 별도 정의) ---
+def display_and_download_file(file_info, notice_id, is_admin=False):
+    file_size_kb = round(file_info['size'] / 1024, 1)
+    file_type = file_info['type']
+    file_path = file_info['path']
+    file_name = file_info['name']
+    key_prefix = "admin" if is_admin else "user"
+
+    if os.path.exists(file_path):
+        # 1. 이미지 또는 비디오 파일은 인라인으로 표시
+        if file_type.startswith('image/'):
+            base64_data = get_file_as_base64(file_path)
+            if base64_data:
+                st.image(
+                    f"data:{file_type};base64,{base64_data}",
+                    caption=f"🖼️ {file_name} ({file_size_kb} KB)",
+                    use_column_width=True
+                )
+            else:
+                # Base64 인코딩 실패 시 다운로드 버튼 표시
+                st.markdown(f"**🖼️ {file_name} ({file_size_kb} KB)** (다운로드 버튼)")
+                st.download_button(
+                    label=f"⬇️ {file_name} 다운로드",
+                    data=open(file_path, "rb").read(),
+                    file_name=file_name,
+                    mime=file_type,
+                    key=f"{key_prefix}_download_{notice_id}_{file_name}_fallback"
+                )
+        
+        elif file_type.startswith('video/'):
+            # 비디오 파일은 st.video로 표시
+            st.video(open(file_path, 'rb').read(), format=file_type, start_time=0)
+            st.markdown(f"**🎬 {file_name} ({file_size_kb} KB)**")
+            
+        # 2. 기타 파일은 다운로드 버튼으로 표시
+        else:
+            icon = "📄"
+            try:
+                with open(file_path, "rb") as f:
+                    st.download_button(
+                        label=f"⬇️ {icon} {file_name} ({file_size_kb} KB)",
+                        data=f.read(),
+                        file_name=file_name,
+                        mime=file_type,
+                        key=f"{key_prefix}_download_{notice_id}_{file_name}"
+                    )
+            except Exception:
+                pass
+    else:
+        st.markdown(f"**{file_name}** (파일을 찾을 수 없습니다.)")
+
 
 # --- JSON 헬퍼 ---
 def load_json(f):
@@ -242,8 +312,9 @@ def save_json(f, d):
         with open(f, "w", encoding="utf-8") as file:
             json.dump(d, file, ensure_ascii=False, indent=2)
     except Exception as e:
-        st.error(f"Error saving {f}: {e}")
-
+        # Streamlit Alert 메시지 숨김 처리
+        pass
+        
 # --- NEW: 거리 및 시간 계산 함수 ---
 def haversine(lat1, lon1, lat2, lon2):
     """두 위도/경도 쌍 사이의 지구 표면 거리를 km 단위로 계산합니다 (Haversine 공식)."""
@@ -364,6 +435,7 @@ city_options = ["공연없음"] + major_cities_available + remaining_cities
 # --- 데이터 로드 (공지사항 및 투어 일정) ---
 tour_notices = load_json(NOTICE_FILE)
 tour_schedule = load_json(CITY_FILE) 
+user_posts = load_json(USER_POST_FILE) # <-- 사용자 포스트 로드
 
 # 만약 city_dict에 있는 도시 정보가 없다면 초기화
 if not tour_schedule:
@@ -482,17 +554,17 @@ tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
 # 탭 1: 공지사항 (Notice)
 # =============================================================================
 with tab1:
-    st.subheader(f"🔔 {_('tab_notice')}")
-
+    
+    # 1. 관리자 공지사항 관리
     if st.session_state.admin:
+        st.subheader(f"🔔 {_('existing_notices')} (관리자 모드)")
+        
         # --- 관리자: 공지사항 등록/수정 폼 ---
-        # 초기 상태: 닫힘 (요청 반영)
         with st.expander(_("register"), expanded=False):
             with st.form("notice_form", clear_on_submit=True):
                 notice_title = st.text_input(_("title_cantata"))
                 notice_content = st.text_area(_("note"))
                 
-                # 파일/이미지 첨부 필드 추가 (요청 반영)
                 uploaded_files = st.file_uploader(
                     _("file_attachment"),
                     type=["png", "jpg", "jpeg", "pdf", "txt", "zip"],
@@ -500,7 +572,6 @@ with tab1:
                     key="notice_file_uploader"
                 )
                 
-                # 내부적으로는 항상 English key를 사용하고, 사용자에게는 번역된 값을 보여줍니다.
                 type_options = {"General": _("general"), "Urgent": _("urgent")}
                 selected_display_type = st.radio(_("type"), list(type_options.values()))
                 notice_type = list(type_options.keys())[list(type_options.values()).index(selected_display_type)]
@@ -526,8 +597,6 @@ with tab1:
                     pass
         
         # --- 관리자: 공지사항 목록 및 수정/삭제 ---
-        st.subheader(_("existing_notices"))
-        
         valid_notices = [n for n in tour_notices if isinstance(n, dict) and n.get('id') and n.get('title')]
         notices_to_display = sorted(valid_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
         type_options_rev = {"General": _("general"), "Urgent": _("urgent")}
@@ -538,12 +607,10 @@ with tab1:
             translated_type = type_options_rev.get(notice_type_key, _("general"))
             notice_title = notice['title']
             
-            # 관리자 모드: 개별 공지를 Expander로 표시 (초기 닫힘)
             with st.expander(f"[{translated_type}] {notice_title} ({notice.get('date', 'N/A')[:10]})", expanded=False):
                 col_del, col_title = st.columns([1, 4])
                 with col_del:
                     if st.button(_("remove"), key=f"del_n_{notice_id}", help=_("remove")):
-                        # 실제 파일 삭제 로직 추가
                         for file_info in notice.get('files', []):
                             if os.path.exists(file_info['path']):
                                 os.remove(file_info['path'])
@@ -556,46 +623,14 @@ with tab1:
                 with col_title:
                     st.markdown(f"**{_('content')}:** {notice.get('content', _('no_content'))}")
                     
-                    # --- 파일 첨부 표시 (이미지는 인라인, 나머지는 다운로드) ---
                     attached_files = notice.get('files', [])
                     if attached_files:
                         st.markdown(f"**{_('attached_files')}:**")
                         for file_info in attached_files:
-                            file_size_kb = round(file_info['size'] / 1024, 1)
-                            
-                            # 1. 이미지 파일은 인라인으로 표시
-                            if file_info['type'].startswith('image/'):
-                                base64_data = get_file_as_base64(file_info['path'])
-                                if base64_data:
-                                    st.image(
-                                        f"data:{file_info['type']};base64,{base64_data}",
-                                        caption=f"🖼️ {file_info['name']} ({file_size_kb} KB)",
-                                        use_column_width=True 
-                                    )
-                                else:
-                                    pass
-                            
-                            # 2. 이미지 외 파일 (또는 이미지 로드 실패 시) 다운로드 버튼 표시
-                            else:
-                                icon = "📄"
-                                if os.path.exists(file_info['path']):
-                                    try:
-                                        with open(file_info['path'], "rb") as f:
-                                            st.download_button(
-                                                label=f"⬇️ {icon} {file_info['name']} ({file_size_kb} KB)",
-                                                data=f.read(),
-                                                file_name=file_info['name'],
-                                                mime=file_info['type'],
-                                                key=f"admin_download_{notice_id}_{file_info['name']}"
-                                            )
-                                    except Exception:
-                                        pass
-                                else:
-                                    pass
+                            display_and_download_file(file_info, notice_id, is_admin=True)
                     else:
                         st.markdown(f"**{_('attached_files')}:** {_('no_files')}")
                 
-                # 업데이트 로직은 복잡하여 파일 수정 기능을 제외하고 텍스트만 업데이트하도록 간소화
                 with st.form(f"update_notice_{notice_id}", clear_on_submit=True):
                     current_type_index = list(type_options_rev.keys()).index(notice_type_key)
                     updated_display_type = st.radio(_("type"), list(type_options_rev.values()), index=current_type_index, key=f"update_type_{notice_id}")
@@ -613,10 +648,13 @@ with tab1:
                                 safe_rerun()
         
     else:
-        # --- 사용자: 공지사항 보기 (요청 반영: Expander, 이미지 인라인, 파일 다운로드) ---
+        # 2. 일반 사용자 공지사항 & 포스트 보기
+        st.subheader(f"📢 {_('tab_notice')}")
+        
+        # --- 공지사항 목록 ---
         valid_notices = [n for n in tour_notices if isinstance(n, dict) and n.get('title')]
         if not valid_notices:
-            st.write(_("no_notices"))
+            st.write(_("no_notices")) # st.write로 변경하여 CSS에 숨겨지지 않도록 함
         else:
             notices_to_display = sorted(valid_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
             type_options_rev = {"General": _("general"), "Urgent": _("urgent")}
@@ -628,47 +666,73 @@ with tab1:
                 notice_title = notice.get('title', _("no_title"))
                 notice_content = notice.get('content', _("no_content"))
                 
-                # --- Expander로 감싸고 닫힘 상태로 시작 (요청 반영) ---
+                # Expander로 감싸고 닫힘 상태로 시작 (요청 반영)
                 header_text = f"[{translated_type}] {notice_title} - *{notice.get('date', 'N/A')[:16]}*"
                 with st.expander(header_text, expanded=False): 
                     
                     # st.info 대신 custom markdown 사용 (숨겨지는 문제 방지)
                     st.markdown(f'<div class="notice-content-box">{notice_content}</div>', unsafe_allow_html=True)
 
-                    # --- 파일 첨부 표시 (이미지는 인라인, 나머지는 다운로드) ---
+                    # --- 파일 첨부 표시 (이미지/비디오 인라인, 파일 다운로드) ---
                     attached_files = notice.get('files', [])
                     if attached_files:
                         st.markdown(f"**{_('attached_files')}:**")
                         for file_info in attached_files:
-                            file_size_kb = round(file_info['size'] / 1024, 1)
-                            
-                            if os.path.exists(file_info['path']):
-                                # 1. 이미지 파일은 인라인으로 표시
-                                if file_info['type'].startswith('image/'):
-                                    base64_data = get_file_as_base64(file_info['path'])
-                                    if base64_data:
-                                        st.image(
-                                            f"data:{file_info['type']};base64,{base64_data}",
-                                            caption=f"🖼️ {file_info['name']} ({file_size_kb} KB)",
-                                            use_column_width=True
-                                        )
-                                    else:
-                                        pass
-                                
-                                # 2. 이미지 외 파일은 다운로드 버튼으로 표시
-                                else:
-                                    icon = "📄"
-                                    try:
-                                        with open(file_info['path'], "rb") as f:
-                                            st.download_button(
-                                                label=f"⬇️ {icon} {file_info['name']} ({file_size_kb} KB)",
-                                                data=f.read(),
-                                                file_name=file_info['name'],
-                                                mime=file_info['type'],
-                                                key=f"user_download_{notice_id}_{file_info['name']}"
-                                            )
-                                    except Exception:
-                                        pass
+                            display_and_download_file(file_info, notice_id, is_admin=False)
+
+        st.markdown("---")
+        st.subheader(f"📸 {_('user_posts')}") # <-- 사용자 포스트 섹션
+        
+        # --- 사용자 포스트 작성 폼 (일반 사용자 모두 허용) ---
+        with st.expander(_("new_post"), expanded=False):
+            with st.form("user_post_form", clear_on_submit=True):
+                post_content = st.text_area(_("post_content"), placeholder="여행 후기, 사진 공유 등 자유롭게 작성하세요.")
+                uploaded_media = st.file_uploader(
+                    _("media_attachment"),
+                    type=["png", "jpg", "jpeg", "mp4", "mov"], # 이미지 및 동영상 허용
+                    accept_multiple_files=True,
+                    key="user_media_uploader"
+                )
+                
+                post_submitted = st.form_submit_button(_("register"))
+                
+                if post_submitted and (post_content or uploaded_media):
+                    media_info_list = save_uploaded_files(uploaded_media)
+                    
+                    new_post = {
+                        "id": str(uuid.uuid4()),
+                        "content": post_content,
+                        "files": media_info_list, 
+                        "date": datetime.now(timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S")
+                    }
+                    user_posts.insert(0, new_post)
+                    save_json(USER_POST_FILE, user_posts)
+                    play_alert_sound()
+                    safe_rerun()
+                elif post_submitted:
+                    # st.warning("내용 또는 파일을 첨부해야 합니다.") # 숨김 처리
+                    pass
+        
+        # --- 사용자 포스트 목록 표시 ---
+        valid_posts = [p for p in user_posts if isinstance(p, dict) and (p.get('content') or p.get('files'))]
+        if not valid_posts:
+            st.write(_("no_posts")) # st.write로 변경하여 CSS에 숨겨지지 않도록 함
+        else:
+            posts_to_display = sorted(valid_posts, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
+            
+            for post in posts_to_display:
+                post_id = post['id']
+                
+                st.markdown(f"**익명 사용자** - *{post.get('date', 'N/A')[:16]}*")
+                st.markdown(f'<div class="notice-content-box">{post.get("content", _("no_content"))}</div>', unsafe_allow_html=True)
+                
+                # --- 미디어 파일 표시 (이미지/비디오 인라인) ---
+                attached_media = post.get('files', [])
+                if attached_media:
+                    for file_info in attached_media:
+                        display_and_download_file(file_info, post_id, is_admin=False)
+                
+                st.markdown("---")
 
 
 # =============================================================================
