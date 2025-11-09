@@ -595,7 +595,8 @@ if st.session_state.admin:
             change_submitted = st.form_submit_button(_("update"))
 
             if change_submitted:
-                # 🚨 수정된 부분: global ADMIN_PASS 선언이 조건문 시작과 함께 위치
+                # 🚨 수정된 부분: global ADMIN_PASS 선언을 블록 최상단으로 이동
+                # ADMIN_PASS를 읽거나 쓰기 전에 선언되어야 합니다.
                 global ADMIN_PASS
                 
                 if current_pass == ADMIN_PASS:
