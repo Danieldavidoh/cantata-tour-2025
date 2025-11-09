@@ -594,11 +594,11 @@ if st.session_state.admin:
             change_submitted = st.form_submit_button(_("update"))
 
             if change_submitted:
+                # 🚨 오류 수정: global 선언을 블록 최상단으로 이동하여 읽기/쓰기 오류 해결
+                global ADMIN_PASS
+                
                 if current_pass == ADMIN_PASS:
                     if new_pass:
-                        # 🚨 오류 수정: global 선언을 먼저 수행
-                        global ADMIN_PASS
-                        
                         save_json(ADMIN_PASS_FILE, {"password": new_pass})
                         # 전역 변수 업데이트
                         ADMIN_PASS = new_pass 
