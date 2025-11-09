@@ -12,8 +12,6 @@ from pytz import timezone
 
 # 가짜 라이브러리 임포트 (st_autorefresh는 Streamlit 환경에서만 유효)
 try:
-    # Deprecation: st.experimental_rerun() is replaced with st.rerun()
-    # It's also possible the library is missing/corrupt, but we keep the try/except
     from streamlit_autorefresh import st_autorefresh
 except ImportError:
     st_autorefresh = lambda **kwargs: None
@@ -199,7 +197,7 @@ with col_lang:
     selected_lang = st.selectbox("Language", options=["ko", "en", "hi"], index=["ko", "en", "hi"].index(st.session_state.lang))
     if selected_lang != st.session_state.lang:
         st.session_state.lang = selected_lang
-        st.rerun() # FIX 1: Replaced st.experimental_rerun()
+        st.rerun()
 
 with col_auth:
     if st.session_state.admin:
@@ -207,7 +205,7 @@ with col_auth:
             st.session_state.admin = False
             st.session_state.logged_in_user = None
             st.success("Logged out.")
-            st.rerun() # FIX 1: Replaced st.experimental_rerun()
+            st.rerun()
     else:
         if st.button(_("login"), key="login_btn"):
             # 간단한 비밀번호 입력 팝업 또는 페이지 이동
@@ -220,7 +218,7 @@ with col_auth:
                         st.session_state.admin = True
                         st.session_state.logged_in_user = "Admin"
                         st.success("Logged in as Admin.")
-                        st.rerun() # FIX 1: Replaced st.experimental_rerun()
+                        st.rerun()
                     else:
                         st.error("Incorrect password.")
 
@@ -254,7 +252,7 @@ with tab1:
                     tour_notices.insert(0, new_notice) # 최신순으로 맨 앞에 추가
                     save_json(NOTICE_FILE, tour_notices)
                     st.success("Notice registered successfully!")
-                    st.rerun() # FIX 1: Replaced st.experimental_rerun()
+                    st.rerun()
                 elif submitted:
                     st.warning("Please fill in the title and content.")
         
@@ -263,7 +261,6 @@ with tab1:
         notices_to_display = sorted(tour_notices, key=lambda x: x['date'], reverse=True)
         
         for notice in notices_to_display:
-            # FIX 2: Use .get() to safely access 'type' key
             notice_type = notice.get('type', 'General')
             with st.expander(f"[{notice_type}] {notice['title']} ({notice['date'][:10]})", expanded=False):
                 col_del, col_title = st.columns([1, 4])
@@ -272,7 +269,7 @@ with tab1:
                         tour_notices = [n for n in tour_notices if n['id'] != notice['id']]
                         save_json(NOTICE_FILE, tour_notices)
                         st.success("Notice deleted.")
-                        st.rerun() # FIX 1: Replaced st.experimental_rerun()
+                        st.rerun()
                 
                 with col_title:
                     st.markdown(f"**Content:** {notice['content']}")
@@ -284,11 +281,10 @@ with tab1:
                         for n in tour_notices:
                             if n['id'] == notice['id']:
                                 n['content'] = updated_content
-                                # Ensure type key exists on update if it was missing before
                                 n['type'] = notice_type
                                 save_json(NOTICE_FILE, tour_notices)
                                 st.success("Notice updated.")
-                                st.rerun() # FIX 1: Replaced st.experimental_rerun()
+                                st.rerun()
                         
     else:
         # --- 사용자: 공지사항 보기 ---
@@ -297,7 +293,6 @@ with tab1:
         else:
             notices_to_display = sorted(tour_notices, key=lambda x: x['date'], reverse=True)
             for notice in notices_to_display:
-                # FIX 2: Use .get() to safely access 'type' key (KeyError fix)
                 notice_type = notice.get('type', 'General')
                 st.markdown(f"**[{notice_type}] {notice['title']}** - *{notice['date'][:16]}*")
                 st.info(notice['content'])
@@ -354,7 +349,7 @@ with tab2:
                         tour_schedule.append(new_schedule_entry)
                         save_json(CITY_FILE, tour_schedule)
                         st.success(f"Schedule for {city_name_input} registered.")
-                        st.rerun() # FIX 1: Replaced st.experimental_rerun()
+                        st.rerun()
                         
         
         # --- 관리자: 일정 보기 및 수정/삭제 ---
@@ -362,9 +357,17 @@ with tab2:
             st.subheader("Tour Schedule Management")
             
             # ID를 키로 사용하여 데이터를 딕셔너리로 변환 (수정 용이)
-            schedule_dict = {item['id']: item for item in tour_schedule}
+            # FIX: KeyError 'id' 방지를 위해 'id' 키가 있는 항목만 필터링합니다.
+            schedule_dict = {
+                item['id']: item 
+                for item in tour_schedule 
+                if 'id' in item
+            }
             
-            for item_id, item in sorted(schedule_dict.items(), key=lambda x: x[1].get('date', '9999-12-31')):
+            # id를 기준으로 정렬
+            sorted_schedule_items = sorted(schedule_dict.items(), key=lambda x: x[1].get('date', '9999-12-31'))
+
+            for item_id, item in sorted_schedule_items:
                 with st.expander(f"[{item.get('date', 'N/A')}] {item['city']} - {item['venue']}", expanded=False):
                     col_u, col_d = st.columns([1, 5])
                     
@@ -372,12 +375,12 @@ with tab2:
                         # 수정 버튼 클릭 시 편집 모드로 전환
                         if st.button(_("update"), key=f"upd_s_{item_id}"):
                             st.session_state[f"edit_mode_{item_id}"] = True
-                            st.rerun() # FIX 1: Replaced st.experimental_rerun()
+                            st.rerun()
                         if st.button(_("remove"), key=f"del_s_{item_id}"):
-                            tour_schedule[:] = [s for s in tour_schedule if s['id'] != item_id]
+                            tour_schedule[:] = [s for s in tour_schedule if s.get('id') != item_id]
                             save_json(CITY_FILE, tour_schedule)
                             st.success(f"Schedule entry for {item['city']} removed.")
-                            st.rerun() # FIX 1: Replaced st.experimental_rerun()
+                            st.rerun()
 
                     if st.session_state.get(f"edit_mode_{item_id}"):
                         with st.form(f"edit_form_{item_id}"):
@@ -398,8 +401,8 @@ with tab2:
                             
                             if st.form_submit_button(_("update")):
                                 for idx, s in enumerate(tour_schedule):
-                                    if s['id'] == item_id:
-                                        coords = city_dict.get(updated_city, {'lat': s['lat'], 'lon': s['lon']}) # 도시 변경 시 좌표 업데이트
+                                    if s.get('id') == item_id:
+                                        coords = city_dict.get(updated_city, {'lat': s.get('lat', 0), 'lon': s.get('lon', 0)})
                                         tour_schedule[idx] = {
                                             "id": item_id,
                                             "city": updated_city,
@@ -411,12 +414,12 @@ with tab2:
                                             "seats": str(updated_seats),
                                             "note": updated_note,
                                             "google_link": updated_google,
-                                            "reg_date": s['reg_date'] # 등록일 유지
+                                            "reg_date": s.get('reg_date', datetime.now(timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S"))
                                         }
                                         save_json(CITY_FILE, tour_schedule)
                                         st.session_state[f"edit_mode_{item_id}"] = False
                                         st.success("Schedule updated successfully.")
-                                        st.rerun() # FIX 1: Replaced st.experimental_rerun()
+                                        st.rerun()
                         
                     if not st.session_state.get(f"edit_mode_{item_id}"):
                         st.markdown(f"**{_('date')}:** {item.get('date', 'N/A')} ({item.get('reg_date', '')})")
@@ -424,15 +427,17 @@ with tab2:
                         st.markdown(f"**{_('seats')}:** {item.get('seats', 'N/A')}")
                         st.markdown(f"**Type:** {item.get('type', 'N/A')}")
                         if item.get('google_link'):
-                            st.markdown(f"**{_('google_link')}:** [{_('google_link')}]({item['google_link']})")
+                            google_link_url = item['google_link']
+                            st.markdown(f"**{_('google_link')}:** [{_('google_link')}]({google_link_url})")
                         st.markdown(f"**{_('note')}:** {item.get('note', 'N/A')}")
 
 
     # --- 지도 표시 (사용자 & 관리자 공통) ---
     
     # 1. 경로 데이터 준비 (날짜순 정렬)
+    # Ensure items have 'date', 'lat', 'lon', and 'id' before using them
     schedule_for_map = sorted([
-        s for s in tour_schedule if s.get('date') and s.get('lat') and s.get('lon')
+        s for s in tour_schedule if s.get('date') and s.get('lat') is not None and s.get('lon') is not None and s.get('id')
     ], key=lambda x: x['date'])
     
     # 2. 지도 중심 설정 (일단 Pune로 설정)
@@ -459,12 +464,11 @@ with tab2:
         <b>City:</b> {item['city']}<br>
         <b>Date:</b> {date_str}<br>
         <b>Venue:</b> {item['venue']}<br>
-        <b>Seats:</b> {item['seats']}<br>
+        <b>Seats:</b> {item.get('seats', 'N/A')}<br>
         """
         
         # === SYNTAX ERROR FIX APPLIED HERE ===
         if item.get('google_link'):
-            # 변수에 값을 할당하여 F-string 내부의 복잡도를 줄입니다.
             google_link_url = item['google_link'] 
             popup_html += f'<a href="{google_link_url}" target="_blank">{_("google_link")}</a>'
             
