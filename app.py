@@ -9,6 +9,7 @@ import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
 from pytz import timezone
+from math import radians, cos, sin, asin, sqrt # <-- 거리 계산을 위해 추가
 
 # --- 파일 저장 경로 설정 ---
 UPLOAD_DIR = "uploads"
@@ -242,6 +243,51 @@ def save_json(f, d):
             json.dump(d, file, ensure_ascii=False, indent=2)
     except Exception as e:
         st.error(f"Error saving {f}: {e}")
+
+# --- NEW: 거리 및 시간 계산 함수 ---
+def haversine(lat1, lon1, lat2, lon2):
+    """두 위도/경도 쌍 사이의 지구 표면 거리를 km 단위로 계산합니다 (Haversine 공식)."""
+    R = 6371  # 지구 반지름 (km)
+
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+
+    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+    c = 2 * asin(sqrt(a))
+    distance = R * c
+    return distance
+
+def calculate_distance_and_time(p1, p2):
+    """두 좌표 사이의 거리와 예상 소요 시간을 문자열로 반환합니다."""
+    lat1, lon1 = p1
+    lat2, lon2 = p2
+    distance_km = haversine(lat1, lon1, lat2, lon2)
+    
+    # 거리에 따라 예상 평균 속도 적용
+    if distance_km < 500:
+        avg_speed_kmh = 60
+    else:
+        avg_speed_kmh = 80
+        
+    travel_time_h = distance_km / avg_speed_kmh
+    
+    # 거리 형식 지정
+    distance_str = f"{distance_km:.1f} km"
+    
+    # 시간 형식 지정 (HH시간 MM분)
+    hours = int(travel_time_h)
+    minutes = int((travel_time_h - hours) * 60)
+    
+    # 한국어로 거리 및 시간 정보 문자열 구성
+    if hours > 0:
+        time_str = f"{hours}시간 {minutes}분"
+    else:
+        time_str = f"{minutes}분"
+
+    return f"거리: {distance_str} | 예상 시간: {time_str}"
+
 
 # --- 도시 목록 및 좌표 정의 (원래 코드에서 가져옴) ---
 city_dict = {
@@ -600,9 +646,6 @@ with tab1:
                         else:
                             st.warning(f"📄 {file_info['name']} ({_('no_files')})")
 
-                # else:  # 이 부분이 "첨부 파일: 없음" 텍스트를 출력하던 부분입니다. 제거됨.
-                #     st.markdown(f"**{_('attached_files')}:** {_('no_files')}")
-
 
 # =============================================================================
 # 탭 2: 투어 경로 (Map)
@@ -861,8 +904,9 @@ with tab2:
                 tooltip=_("past_route")
             ).add_to(m)
             
-        # 요청 반영: 도시간 연결선 애니메이션 속도를 1/2로 (delay 6000 -> 12000)
+        # Future segments (animated line and individual PolyLines for tooltip)
         if len(future_segments) > 1:
+            # 1. AntPath for the continuous animation effect (속도 1/2 조정)
             AntPath(
                 future_segments, 
                 use="regular", 
@@ -872,6 +916,29 @@ with tab2:
                 opacity=0.8,
                 options={"delay": 12000, "dash_factor": 0.1, "color": "#FF4B4B"} # 속도를 1/2로 조정
             ).add_to(m)
+
+            # 2. Add invisible PolyLines for hover tooltips on each segment
+            for i in range(len(future_segments) - 1):
+                p1 = future_segments[i]
+                p2 = future_segments[i+1]
+                
+                # 거리 및 시간 계산
+                segment_info = calculate_distance_and_time(p1, p2)
+                
+                # 투명한 PolyLine을 생성하여 툴팁 영역으로 사용 (쉬운 터치/호버 감지)
+                folium.PolyLine(
+                    locations=[p1, p2],
+                    color="transparent", 
+                    weight=15, # 두껍게 하여 호버 영역 확장
+                    opacity=0, 
+                    tooltip=folium.Tooltip(
+                        segment_info, 
+                        permanent=False, 
+                        direction="top", 
+                        sticky=True,
+                        style="background-color: #333; color: white; padding: 5px; border-radius: 5px;"
+                    )
+                ).add_to(m)
             
     elif locations:
         # 단일 도시일 때도 25% 투명도 적용
@@ -895,6 +962,21 @@ with tab2:
     st_folium(m, width=1000, height=600)
     
     # 범례 및 지도 아래 텍스트 제거 완료
+
+
+# --- 알림음 재생 스크립트 ---
+# (알림음 재생 기능은 유지되며, UI에 텍스트를 출력하지 않습니다.)
+if st.session_state.play_sound:
+    # 플래그를 즉시 재설정
+    st.session_state.play_sound = False
+    
+    # 크리스마스 캐롤 링크로 변경
+    st.markdown("""
+        <audio autoplay>
+            <source src="https://assets.mixkit.co/sfx/preview/mixkit-carol-of-the-bells-christmas-music-1447.mp3" type="audio/mp3">
+            Your browser does not support the audio element.
+        </audio>
+    """, unsafe_allow_html=True)
 
 
 # --- CSS 적용 (최하단에 위치시켜야 함) ---
