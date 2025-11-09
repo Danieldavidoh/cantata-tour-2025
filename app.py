@@ -37,6 +37,14 @@ LANG = {
         "warning": "Enter city and venue", "delete": "Remove", "menu": "Menu", "login": "Login", "logout": "Logout",
         "add_city": "Add City Button", "register": "Register", "update": "Update", "remove": "Remove",
         "date": "Date"
+    },
+    "hi": {
+        "title_cantata": "कैंटाटा टूर", "title_year": "२०२५", "title_region": "महाराष्ट्र",
+        "tab_notice": "सूचना", "tab_map": "टूर रूट", "indoor": "इनडोर", "outdoor": "आउटडोर",
+        "venue": "स्थल", "seats": "अपेक्षित", "note": "नोट", "google_link": "गूगल मैप्स",
+        "warning": "शहर और स्थल दर्ज करें", "delete": "हटाएं", "menu": "मेनू", "login": "लॉगिन", "logout": "लॉगआउट",
+        "add_city": "शहर जोड़ें बटन", "register": "रजिस्टर", "update": "अपडेट", "remove": "हटाएं",
+        "date": "तारीख"
     }
 }
 
@@ -229,6 +237,8 @@ st.markdown("""
 for i in range(52):
     st.markdown(f"<div class='snowflake' style='left:{random.randint(0,100)}vw; animation-duration:{random.randint(10,20)}s; font-size:{random.uniform(0.8,1.4)}em; animation-delay:{random.uniform(0,10)}s;'>❄</div>", unsafe_allow_html=True)
 
+st.markdown("<div style='height: 33vh;'></div>", unsafe_allow_html=True)
+
 # --- 헤더 ---
 st.markdown('<div class="header-container">', unsafe_allow_html=True)
 st.markdown('''
@@ -302,14 +312,14 @@ if st.session_state.map_open:
             st.session_state.new_cities = []
 
         # 도시 선택 박스 + 추가 버튼 (작은 박스 + 오른쪽 버튼)
-        col_select, col_add = st.columns([3, 1])
+        col_select, col_add = st.columns([2, 1])
         with col_select:
             selected_city = st.selectbox(
                 "도시", options=city_options, key="city_select_header", index=0,
                 help="추가할 도시 선택", label_visibility="collapsed"
             )
         with col_add:
-            if st.button("+", key="add_city_header_btn", help="도시 추가"):
+            if st.button(_("add_city"), key="add_city_header_btn", help="도시 추가"):
                 existing_cities = [c['city'] for c in cities] + [c['city'] for c in st.session_state.new_cities]
                 if selected_city != "공연없음" and selected_city not in existing_cities:
                     lat = city_dict[selected_city]["lat"]
@@ -381,6 +391,7 @@ st.markdown(f'''
     <select onchange="window.location.href='?lang='+this.value" style="width:100%; padding:8px; margin:10px 0;">
         <option value="ko" {'selected' if st.session_state.lang=="ko" else ''}>한국어</option>
         <option value="en" {'selected' if st.session_state.lang=="en" else ''}>English</option>
+        <option value="hi" {'selected' if st.session_state.lang=="hi" else ''}>हिंदी</option>
     </select>
     {'''
         <input type="password" placeholder="비밀번호" id="mobile_pw" style="width:100%; padding:8px; margin:10px 0;">
@@ -392,12 +403,15 @@ st.markdown(f'''
 ''', unsafe_allow_html=True)
 
 with st.sidebar:
-    sel = st.selectbox("언어", ["한국어", "English"], index=0 if st.session_state.lang == "ko" else 1)
+    sel = st.selectbox("언어", ["한국어", "English", "हिंदी"], index=0 if st.session_state.lang == "ko" else 1 if st.session_state.lang == "en" else 2)
     if sel == "English" and st.session_state.lang != "en":
         st.session_state.lang = "en"
         st.rerun()
     elif sel == "한국어" and st.session_state.lang != "ko":
         st.session_state.lang = "ko"
+        st.rerun()
+    elif sel == "हिंदी" and st.session_state.lang != "hi":
+        st.session_state.lang = "hi"
         st.rerun()
 
     if not st.session_state.admin:
