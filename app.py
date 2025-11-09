@@ -614,11 +614,12 @@ with tab1:
             translated_type = type_options_rev.get(notice_type_key, _("general"))
             notice_title = notice['title']
             
-            # 긴급 공지의 색상 처리
-            header_color = "#BB3333" if notice_type_key == "Urgent" else "#FAFAFA" # 버건디 레드
-            header_text = f'<span style="color: {header_color};">[{translated_type}]</span> {notice_title} ({notice.get("date", "N/A")[:10]})'
+            # 긴급 공지의 색상 처리 (HTML 제거)
+            prefix = "🚨 " if notice_type_key == "Urgent" else ""
+            header_text = f"{prefix}[{translated_type}] {notice_title} ({notice.get('date', 'N/A')[:10]})"
             
-            with st.expander(header_text, expanded=False, unsafe_allow_html=True):
+            # 수정: st.expander에 HTML 인수를 제거합니다.
+            with st.expander(header_text, expanded=False):
                 col_del, col_title = st.columns([1, 4])
                 with col_del:
                     if st.button(_("remove"), key=f"del_n_{notice_id}", help=_("remove")):
@@ -675,12 +676,12 @@ with tab1:
                 notice_title = notice.get('title', _("no_title"))
                 notice_content = notice.get('content', _("no_content"))
                 
-                # 긴급 공지의 색상 처리 (일반 모드)
-                header_color = "#BB3333" if notice_type_key == "Urgent" else "#FAFAFA"
-                header_text = f'<span style="color: {header_color};">[{translated_type}]</span> {notice_title} - *{notice.get("date", "N/A")[:16]}*'
+                # 긴급 공지의 색상 처리 (HTML 제거)
+                prefix = "🚨 " if notice_type_key == "Urgent" else ""
+                header_text = f"{prefix}[{translated_type}] {notice_title} - *{notice.get('date', 'N/A')[:16]}*"
                 
-                # Expander로 감싸고 닫힘 상태로 시작 (요청 반영)
-                with st.expander(header_text, expanded=False, unsafe_allow_html=True): 
+                # 수정: st.expander에 HTML 인수를 제거합니다.
+                with st.expander(header_text, expanded=False): 
                     
                     # st.info 대신 custom markdown 사용 (숨겨지는 문제 방지)
                     st.markdown(f'<div class="notice-content-box">{notice_content}</div>', unsafe_allow_html=True)
