@@ -1231,3 +1231,63 @@ st.markdown(f"""
 /* 폼 배경색 */
 .stForm {{
     padding: 15px;
+    border: 1px solid #444444;
+    border-radius: 10px;
+    background-color: var(--form-bg);
+}}
+
+/* Expander 배경색 */
+.streamlit-expanderHeader {{
+    background-color: var(--expander-bg);
+    color: var(--text-light);
+    border-radius: 5px;
+    padding: 10px;
+    font-weight: bold;
+    border-bottom: 1px solid var(--accent-red);
+}}
+
+.streamlit-expanderHeader span {{
+    font-weight: bold;
+}}
+
+
+/* 버튼 스타일 */
+.stButton>button {{
+    background-color: var(--accent-red);
+    color: white;
+    border-radius: 8px;
+    border: 1px solid var(--accent-red);
+    padding: 8px 16px;
+    transition: background-color 0.3s, border-color 0.3s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}}
+.stButton>button:hover {{
+    background-color: #CC4444;
+    border-color: #FFD700;
+}}
+
+/* Custom Content Box Style (공지/포스트 내용 박스) */
+.notice-content-box {{
+    border-left: 5px solid var(--accent-gold);
+    background-color: rgba(255, 215, 0, 0.05);
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    color: #FAFAFA;
+}}
+
+/* Streamlit Alert 메시지 숨기기 (사용자 요청 반영: 모든 상태 알림 숨김) */
+div[data-testid="stAlert"] {{
+    display: none !important;
+}}
+
+/* Selectbox/Input Label Color */
+.stSelectbox>label, .stTextInput>label, .stTextArea>label, .stNumberInput>label {{
+    color: var(--text-light);
+}}
+.stSelectbox div[data-baseweb="select"] {{
+    background-color: #333333;
+}}
+</style>
+""", unsafe_allow_html=True)
