@@ -315,32 +315,24 @@ if st.session_state.map_open:
 
     # --- 지도 (항상 Pune 중심) ---
     m = folium.Map(location=[18.52043, 73.856743], zoom_start=7, tiles="OpenStreetMap")
+    for i, c in enumerate(cities):
+        lat, lon = c["lat"], c["lon"]
+        indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
+        google_link = c.get("google_link", "")
+        link_text = f'<a href="{google_link}" target="_blank">Google Maps</a>' if google_link else ""
+        popup_html = f"<b>{c['city']}</b><br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}<br>{_('note')}: {c.get('note','—')}<br>{link_text}"
+        folium.Marker(
+            (lat, lon), popup=folium.Popup(popup_html, max_width=300),
+            icon=folium.Icon(color="red", icon="music", prefix="fa")
+        ).add_to(m)
+        if i < len(cities) - 1:
+            nxt = cities[i+1]
+            AntPath([(lat, lon), (nxt["lat"], nxt["lon"])], color="#e74c3c", weight=6, opacity=0.7).add_to(m)
     st_folium(m, width=900, height=550, key="tour_map")
 
     if st.session_state.admin:
         if 'new_cities' not in st.session_state:
             st.session_state.new_cities = []
-
-        # 도시 선택 박스 + 추가 버튼 (나란히 배치)
-        col_select, col_add = st.columns([2, 1])
-        with col_select:
-            selected_city = st.selectbox(
-                "도시", options=city_options, key="city_select_header", index=0,
-                help="추가할 도시 선택", label_visibility="collapsed"
-            )
-        with col_add:
-            if st.button(_("add_city"), key="add_city_header_btn", help="도시 추가"):
-                existing_cities = [c['city'] for c in cities] + [c['city'] for c in st.session_state.new_cities]
-                if selected_city != "공연없음" and selected_city not in existing_cities:
-                    lat = city_dict[selected_city]["lat"]
-                    lon = city_dict[selected_city]["lon"]
-                    new_city = {
-                        "city": selected_city, "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True,
-                        "date": date.today(), "lat": lat, "lon": lon
-                    }
-                    st.session_state.new_cities.append(new_city)
-                    st.session_state[f"expand_{selected_city}"] = True
-                    st.rerun()
 
         # 새로 추가된 도시들
         if 'new_cities' in st.session_state:
@@ -389,6 +381,27 @@ if st.session_state.map_open:
                         if st.button(_("remove"), key=f"rem_{idx}"):
                             st.session_state.new_cities.pop(idx)
                             st.rerun()
+
+        # 도시 선택 박스 + 추가 버튼 (나란히 배치)
+        col_select, col_add = st.columns([2, 1])
+        with col_select:
+            selected_city = st.selectbox(
+                "도시", options=city_options, key="city_select_header", index=0,
+                help="추가할 도시 선택", label_visibility="collapsed"
+            )
+        with col_add:
+            if st.button(_("add_city"), key="add_city_header_btn", help="도시 추가"):
+                existing_cities = [c['city'] for c in cities] + [c['city'] for c in st.session_state.new_cities]
+                if selected_city != "공연없음" and selected_city not in existing_cities:
+                    lat = city_dict[selected_city]["lat"]
+                    lon = city_dict[selected_city]["lon"]
+                    new_city = {
+                        "city": selected_city, "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True,
+                        "date": date.today(), "lat": lat, "lon": lon
+                    }
+                    st.session_state.new_cities.insert(0, new_city)
+                    st.session_state[f"expand_{selected_city}"] = True
+                    st.rerun()
 
 # --- 사이드바 & 모바일 ---
 st.markdown(f'''
