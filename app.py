@@ -6,6 +6,7 @@ from streamlit_folium import st_folium
 from folium.plugins import AntPath
 from pytz import timezone
 from streamlit_autorefresh import st_autorefresh
+import pandas as pd
 
 st.set_page_config(page_title="칸타타 투어 2025", layout="wide")
 
@@ -56,14 +57,147 @@ def _(key):
 def load_json(f): return json.load(open(f, "r", encoding="utf-8")) if os.path.exists(f) else []
 def save_json(f, d): json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
-# --- 초기 도시 ---
-DEFAULT_CITIES = [
-    {"city": "Mumbai", "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True, "date": "", "lat": 19.07609, "lon": 72.877426},
-    {"city": "Pune", "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True, "date": "", "lat": 18.52043, "lon": 73.856743},
-    {"city": "Nagpur", "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True, "date": "", "lat": 21.1458, "lon": 79.088154}
+# --- CSV 데이터 로드 및 도시 목록 생성 ---
+CSV_CITIES = [
+    {"city": "Ahmadnagar", "lat": 19.095193, "lon": 74.749596},
+    {"city": "Akola", "lat": 20.702269, "lon": 77.004699},
+    {"city": "Ambernath", "lat": 19.186354, "lon": 73.191948},
+    {"city": "Amravati", "lat": 20.93743, "lon": 77.779271},
+    {"city": "Aurangabad", "lat": 19.876165, "lon": 75.343314},
+    {"city": "Badlapur", "lat": 19.1088, "lon": 73.1311},
+    {"city": "Bhandara", "lat": 21.180052, "lon": 79.564987},
+    {"city": "Bhiwandi", "lat": 19.300282, "lon": 73.069645},
+    {"city": "Bhusawal", "lat": 21.02606, "lon": 75.830095},
+    {"city": "Chandrapur", "lat": 19.957275, "lon": 79.296875},
+    {"city": "Chiplun", "lat": 17.5322, "lon": 73.516},
+    {"city": "Dhule", "lat": 20.904964, "lon": 74.774651},
+    {"city": "Dombivli", "lat": 19.2183, "lon": 73.0865},
+    {"city": "Gondia", "lat": 21.4598, "lon": 80.195},
+    {"city": "Hingoli", "lat": 19.7146, "lon": 77.1424},
+    {"city": "Ichalkaranji", "lat": 16.6956, "lon": 74.4561},
+    {"city": "Jalgaon", "lat": 21.007542, "lon": 75.562554},
+    {"city": "Jalna", "lat": 19.833333, "lon": 75.883333},
+    {"city": "Kalyan", "lat": 19.240283, "lon": 73.13073},
+    {"city": "Karad", "lat": 17.284, "lon": 74.1779},
+    {"city": "Karanja", "lat": 20.7083, "lon": 76.93},
+    {"city": "Karanja Lad", "lat": 20.3969, "lon": 76.8908},
+    {"city": "Karjat", "lat": 18.9121, "lon": 73.3259},
+    {"city": "Kavathe Mahankal", "lat": 17.218, "lon": 74.416},
+    {"city": "Khamgaon", "lat": 20.691, "lon": 76.6886},
+    {"city": "Khopoli", "lat": 18.6958, "lon": 73.3207},
+    {"city": "Kolad", "lat": 18.5132, "lon": 73.2166},
+    {"city": "Kolhapur", "lat": 16.691031, "lon": 74.229523},
+    {"city": "Kopargaon", "lat": 19.883333, "lon": 74.483333},
+    {"city": "Koparkhairane", "lat": 19.0873, "lon": 72.9856},
+    {"city": "Kothrud", "lat": 18.507399, "lon": 73.807648},
+    {"city": "Kudal", "lat": 16.033333, "lon": 73.683333},
+    {"city": "Kurla", "lat": 19.0667, "lon": 72.8833},
+    {"city": "Latur", "lat": 18.406526, "lon": 76.560229},
+    {"city": "Lonavala", "lat": 18.75, "lon": 73.4},
+    {"city": "Mahad", "lat": 18.086, "lon": 73.3006},
+    {"city": "Malegaon", "lat": 20.555256, "lon": 74.525539},
+    {"city": "Malkapur", "lat": 20.4536, "lon": 76.3886},
+    {"city": "Manmad", "lat": 20.3333, "lon": 74.4333},
+    {"city": "Mira-Bhayandar", "lat": 19.271112, "lon": 72.854094},
+    {"city": "Mumbai", "lat": 19.07609, "lon": 72.877426},
+    {"city": "Nagpur", "lat": 21.1458, "lon": 79.088154},
+    {"city": "Nanded", "lat": 19.148733, "lon": 77.321011},
+    {"city": "Nandurbar", "lat": 21.317, "lon": 74.02},
+    {"city": "Nashik", "lat": 20.011645, "lon": 73.790332},
+    {"city": "Niphad", "lat": 20.074, "lon": 73.834},
+    {"city": "Osmanabad", "lat": 18.169111, "lon": 76.035309},
+    {"city": "Palghar", "lat": 19.691644, "lon": 72.768478},
+    {"city": "Panaji", "lat": 15.4909, "lon": 73.8278},
+    {"city": "Panvel", "lat": 18.989746, "lon": 73.117069},
+    {"city": "Parbhani", "lat": 19.270335, "lon": 76.773347},
+    {"city": "Peth", "lat": 18.125, "lon": 74.514},
+    {"city": "Phaltan", "lat": 17.9977, "lon": 74.4066},
+    {"city": "Pune", "lat": 18.52043, "lon": 73.856743},
+    {"city": "Raigad", "lat": 18.515048, "lon": 73.179436},
+    {"city": "Ramtek", "lat": 21.3142, "lon": 79.2676},
+    {"city": "Ratnagiri", "lat": 16.990174, "lon": 73.311902},
+    {"city": "Sangli", "lat": 16.855005, "lon": 74.56427},
+    {"city": "Sangole", "lat": 17.126, "lon": 75.0331},
+    {"city": "Saswad", "lat": 18.3461, "lon": 74.0335},
+    {"city": "Satara", "lat": 17.688481, "lon": 73.993631},
+    {"city": "Sawantwadi", "lat": 15.8964, "lon": 73.7626},
+    {"city": "Shahada", "lat": 21.1167, "lon": 74.5667},
+    {"city": "Shirdi", "lat": 19.7667, "lon": 74.4771},
+    {"city": "Shirpur", "lat": 21.1286, "lon": 74.4172},
+    {"city": "Shirur", "lat": 18.7939, "lon": 74.0305},
+    {"city": "Shrirampur", "lat": 19.6214, "lon": 73.8653},
+    {"city": "Sinnar", "lat": 19.8531, "lon": 73.9976},
+    {"city": "Solan", "lat": 30.9083, "lon": 77.0989},
+    {"city": "Solapur", "lat": 17.659921, "lon": 75.906393},
+    {"city": "Talegaon", "lat": 18.7519, "lon": 73.487},
+    {"city": "Thane", "lat": 19.218331, "lon": 72.978088},
+    {"city": "Achalpur", "lat": 20.1833, "lon": 77.6833},
+    {"city": "Akot", "lat": 21.1, "lon": 77.1167},
+    {"city": "Ambajogai", "lat": 18.9667, "lon": 76.6833},
+    {"city": "Amalner", "lat": 21.0333, "lon": 75.3333},
+    {"city": "Anjangaon Surji", "lat": 21.1167, "lon": 77.8667},
+    {"city": "Arvi", "lat": 20.45, "lon": 78.15},
+    {"city": "Ashti", "lat": 18.0, "lon": 76.25},
+    {"city": "Atpadi", "lat": 17.1667, "lon": 74.4167},
+    {"city": "Baramati", "lat": 18.15, "lon": 74.6},
+    {"city": "Barshi", "lat": 18.11, "lon": 76.06},
+    {"city": "Basmat", "lat": 18.7, "lon": 77.856},
+    {"city": "Bhokar", "lat": 19.5167, "lon": 77.3833},
+    {"city": "Biloli", "lat": 19.5333, "lon": 77.2167},
+    {"city": "Chikhli", "lat": 20.9, "lon": 76.0167},
+    {"city": "Daund", "lat": 18.4667, "lon": 74.65},
+    {"city": "Deola", "lat": 20.5667, "lon": 74.05},
+    {"city": "Dhanora", "lat": 20.7167, "lon": 79.0167},
+    {"city": "Dharni", "lat": 21.25, "lon": 78.2667},
+    {"city": "Dharur", "lat": 18.0833, "lon": 76.7},
+    {"city": "Digras", "lat": 19.45, "lon": 77.55},
+    {"city": "Dindori", "lat": 21.0, "lon": 79.0},
+    {"city": "Dondaicha", "lat": None, "lon": None},  # 좌표 누락
+    {"city": "Erandol", "lat": 21.0167, "lon": 75.2167},
+    {"city": "Faizpur", "lat": 21.1167, "lon": 75.7167},
+    {"city": "Gadhinglaj", "lat": 16.2333, "lon": 74.1333},
+    {"city": "Guhagar", "lat": 16.4, "lon": 73.4},
+    {"city": "Hinganghat", "lat": 20.0167, "lon": 78.7667},
+    {"city": "Igatpuri", "lat": 19.6961, "lon": 73.5212},
+    {"city": "Junnar", "lat": 19.2667, "lon": 73.8833},
+    {"city": "Kankavli", "lat": 16.3833, "lon": 73.5167},
+    {"city": "Koregaon", "lat": 17.2333, "lon": 74.1167},
+    {"city": "Kupwad", "lat": 16.7667, "lon": 74.4667},
+    {"city": "Lonar", "lat": 19.9833, "lon": 76.5167},
+    {"city": "Mangaon", "lat": 18.1869, "lon": 73.2555},
+    {"city": "Mangalwedha", "lat": 16.6667, "lon": 75.1333},
+    {"city": "Morshi", "lat": 20.0556, "lon": 77.7647},
+    {"city": "Pandharpur", "lat": 17.6658, "lon": 75.3203},
+    {"city": "Parli", "lat": 18.8778, "lon": 76.65},
+    {"city": "Rahuri", "lat": 19.2833, "lon": 74.5833},
+    {"city": "Raver", "lat": 20.5876, "lon": 75.9002},
+    {"city": "Sangamner", "lat": 19.3167, "lon": 74.5333},
+    {"city": "Savner", "lat": 21.0833, "lon": 79.1333},
+    {"city": "Sillod", "lat": 20.0667, "lon": 75.1833},
+    {"city": "Tumsar", "lat": 20.4623, "lon": 79.5429},
+    {"city": "Udgir", "lat": 18.4167, "lon": 77.1239},
+    {"city": "Ulhasnagar", "lat": 19.218451, "lon": 73.16024},
+    {"city": "Vasai-Virar", "lat": 19.391003, "lon": 72.839729},
+    {"city": "Wadgaon Road", "lat": 18.52, "lon": 73.85},
+    {"city": "Wadwani", "lat": 18.9, "lon": 76.69},
+    {"city": "Wai", "lat": 17.9524, "lon": 73.8775},
+    {"city": "Wani", "lat": 19.0, "lon": 78.002},
+    {"city": "Wardha", "lat": 20.745445, "lon": 78.602452},
+    {"city": "Wardha Road", "lat": 20.75, "lon": 78.6},
+    {"city": "Yavatmal", "lat": 20.389917, "lon": 78.130051}
 ]
+
+# 중복 제거 및 유효 좌표만 필터링
+city_dict = {}
+for c in CSV_CITIES:
+    if c["lat"] is not None and c["lon"] is not None:
+        city_dict[c["city"]] = {"lat": c["lat"], "lon": c["lon"]}
+
+city_options = ["공연없음"] + sorted(city_dict.keys())
+
+# --- 초기 도시 (기존 DEFAULT_CITIES는 더 이상 사용하지 않음) ---
 if not os.path.exists(CITY_FILE):
-    save_json(CITY_FILE, DEFAULT_CITIES)
+    save_json(CITY_FILE, [])
 
 # --- CSS ---
 st.markdown("""
@@ -88,6 +222,7 @@ st.markdown("""
     @media(min-width:769px) { .hamburger, .sidebar-mobile, .overlay { display:none !important; } }
     .stButton>button { border:none !important; }
     .add-city-btn { background:white !important; color:black !important; font-weight:bold; border-radius:50%; width:40px; height:40px; font-size:1.5rem; display:flex; align-items:center; justify-content:center; }
+    .selectbox-small { width: 70% !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -161,77 +296,80 @@ if st.session_state.notice_open:
 # --- 투어 경로 & 도시 추가 ---
 if st.session_state.map_open:
     cities = load_json(CITY_FILE)
-    city_options = ["공연없음", "Mumbai", "Pune", "Nagpur"]
 
     if st.session_state.admin:
         if 'new_cities' not in st.session_state:
             st.session_state.new_cities = []
 
-        col_select, col_add = st.columns([8, 1])
+        # 도시 선택 박스 + 추가 버튼 (작은 박스 + 오른쪽 버튼)
+        col_select, col_add = st.columns([3, 1])
         with col_select:
-            selected_city = st.selectbox("도시", options=city_options, key="city_select_header", index=0)
+            selected_city = st.selectbox(
+                "도시", options=city_options, key="city_select_header", index=0,
+                help="추가할 도시 선택", label_visibility="collapsed"
+            )
         with col_add:
             if st.button("+", key="add_city_header_btn", help="도시 추가"):
                 existing_cities = [c['city'] for c in cities] + [c['city'] for c in st.session_state.new_cities]
                 if selected_city != "공연없음" and selected_city not in existing_cities:
+                    lat = city_dict[selected_city]["lat"]
+                    lon = city_dict[selected_city]["lon"]
                     new_city = {
                         "city": selected_city, "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True,
-                        "date": date.today()
+                        "date": date.today(), "lat": lat, "lon": lon
                     }
-                    new_city["lat"] = next(c["lat"] for c in DEFAULT_CITIES if c["city"] == selected_city)
-                    new_city["lon"] = next(c["lon"] for c in DEFAULT_CITIES if c["city"] == selected_city)
                     st.session_state.new_cities.append(new_city)
                     st.rerun()
 
+        # 새로 추가된 도시들
         if 'new_cities' in st.session_state:
             for idx, new_city in enumerate(st.session_state.new_cities):
-                with st.container():
-                    with st.expander(f"{new_city['city']}", expanded=False):
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            current_date = new_city.get("date")
-                            if isinstance(current_date, str) and current_date:
-                                try:
-                                    current_date = datetime.strptime(current_date, "%Y-%m-%d").date()
-                                except:
-                                    current_date = date.today()
-                            elif not isinstance(current_date, date):
+                with st.expander(f"{new_city['city']}", expanded=True, key=f"exp_{idx}"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        current_date = new_city.get("date")
+                        if isinstance(current_date, str) and current_date:
+                            try:
+                                current_date = datetime.strptime(current_date, "%Y-%m-%d").date()
+                            except:
                                 current_date = date.today()
-                            new_city["date"] = st.date_input(_("date"), value=current_date, key=f"date_{idx}")
-                            new_city["venue"] = st.text_input(_("venue"), value=new_city.get("venue", ""), key=f"venue_{idx}")
-                            new_city["seats"] = st.number_input(_("seats"), min_value=0, value=int(new_city.get("seats", 500)), step=50, key=f"seats_{idx}")
-                        with col2:
-                            new_city["google_link"] = st.text_input(_("google_link"), value=new_city.get("google_link", ""), key=f"google_link_{idx}")
-                            new_city["note"] = st.text_input(_("note"), value=new_city.get("note", ""), key=f"note_{idx}")
+                        elif not isinstance(current_date, date):
+                            current_date = date.today()
+                        new_city["date"] = st.date_input(_("date"), value=current_date, key=f"date_{idx}")
+                        new_city["venue"] = st.text_input(_("venue"), value=new_city.get("venue", ""), key=f"venue_{idx}")
+                        new_city["seats"] = st.number_input(_("seats"), min_value=0, value=int(new_city.get("seats", 500)), step=50, key=f"seats_{idx}")
+                    with col2:
+                        new_city["google_link"] = st.text_input(_("google_link"), value=new_city.get("google_link", ""), key=f"google_link_{idx}")
+                        new_city["note"] = st.text_input(_("note"), value=new_city.get("note", ""), key=f"note_{idx}")
 
-                        col_radio, col_reg, col_rem = st.columns([3, 1, 1])
-                        with col_radio:
-                            venue_type = st.radio(
-                                "공연 장소 유형", [_("indoor"), _("outdoor")],
-                                index=0 if new_city.get("indoor", True) else 1,
-                                horizontal=True, key=f"venue_type_{idx}"
-                            )
-                            new_city["indoor"] = venue_type == _("indoor")
-                        with col_reg:
-                            if st.button(_("register"), key=f"reg_{idx}"):
-                                if new_city.get("venue"):
-                                    save_city = new_city.copy()
-                                    save_city["date"] = save_city["date"].strftime("%Y-%m-%d")
-                                    save_city["seats"] = str(save_city["seats"])
-                                    cities.append(save_city)
-                                    save_json(CITY_FILE, cities)
-                                    st.session_state.new_cities.pop(idx)
-                                    st.success("등록 완료!")
-                                    st.rerun()
-                                else:
-                                    st.warning(_("warning"))
-                        with col_rem:
-                            if st.button(_("remove"), key=f"rem_{idx}"):
+                    col_radio, col_reg, col_rem = st.columns([3, 1, 1])
+                    with col_radio:
+                        venue_type = st.radio(
+                            "공연 장소 유형", [_("indoor"), _("outdoor")],
+                            index=0 if new_city.get("indoor", True) else 1,
+                            horizontal=True, key=f"venue_type_{idx}"
+                        )
+                        new_city["indoor"] = venue_type == _("indoor")
+                    with col_reg:
+                        if st.button(_("register"), key=f"reg_{idx}"):
+                            if new_city.get("venue"):
+                                save_city = new_city.copy()
+                                save_city["date"] = save_city["date"].strftime("%Y-%m-%d")
+                                save_city["seats"] = str(save_city["seats"])
+                                cities.append(save_city)
+                                save_json(CITY_FILE, cities)
                                 st.session_state.new_cities.pop(idx)
+                                st.success("등록 완료!")
                                 st.rerun()
+                            else:
+                                st.warning(_("warning"))
+                    with col_rem:
+                        if st.button(_("remove"), key=f"rem_{idx}"):
+                            st.session_state.new_cities.pop(idx)
+                            st.rerun()
 
-    # --- 지도 ---
-    m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
+    # --- 지도 (항상 Pune 중심) ---
+    m = folium.Map(location=[18.52043, 73.856743], zoom_start=7, tiles="OpenStreetMap")
     st_folium(m, width=900, height=550, key="tour_map")
 
 # --- 사이드바 & 모바일 ---
