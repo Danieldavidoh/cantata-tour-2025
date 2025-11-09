@@ -86,7 +86,8 @@ LANG = {
         "media_attachment": "사진/동영상 첨부", # <-- 추가
         "post_success": "포스트가 성공적으로 업로드되었습니다!", # <-- 추가
         "no_posts": "현재 포스트가 없습니다.", # <-- 추가
-        "admin_only_files": "첨부 파일은 관리자만 확인 가능합니다." # <-- 추가
+        "admin_only_files": "첨부 파일은 관리자만 확인 가능합니다.", # <-- 추가
+        "probability": "가능성 (%)" # <-- NEW: 가능성 필드 추가
     },
     "en": {
         "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
@@ -138,7 +139,8 @@ LANG = {
         "media_attachment": "Attach Photo/Video",
         "post_success": "Post uploaded successfully!",
         "no_posts": "No posts available.",
-        "admin_only_files": "Attached files can only be viewed by Admin."
+        "admin_only_files": "Attached files can only be viewed by Admin.",
+        "probability": "Probability (%)" # <-- NEW
     },
     "hi": {
         "title_cantata": "कैंटाटा टूर", "title_year": "२०२५", "title_region": "महाराष्ट्र",
@@ -190,7 +192,8 @@ LANG = {
         "media_attachment": "फोटो/वीडियो संलग्न करें",
         "post_success": "पोस्ट सफलतापूर्वक अपलोड हुई!",
         "no_posts": "कोई पोस्ट उपलब्ध नहीं है।",
-        "admin_only_files": "संलग्न फ़ाइलें केवल व्यवस्थापक द्वारा देखी जा सकती हैं।"
+        "admin_only_files": "संलग्न फ़ाइलें केवल व्यवस्थापक द्वारा देखी जा सकती हैं।",
+        "probability": "संभावना (%)" # <-- NEW
     }
 }
 
@@ -463,6 +466,7 @@ if not tour_schedule:
             "seats": "0",
             "note": "Initial Data",
             "google_link": "",
+            "probability": 100, # NEW: 초기값 100%
             "reg_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })
     save_json(CITY_FILE, initial_schedule)
@@ -781,11 +785,13 @@ with tab2:
                 col_c, col_d, col_v = st.columns(3)
                 
                 # "공연없음"이 제거된 city_options 사용
-                city_name_input = col_c.selectbox(_('city_name'), options=city_options, index=0)
-                schedule_date = col_d.date_input(_("date"))
-                venue_name = col_v.text_input(_("venue"), placeholder=_("venue_placeholder"))
+                city_name_input = col_c.selectbox(_('city_name'), options=city_options, index=0, key="new_city_select")
+                schedule_date = col_d.date_input(_("date"), key="new_date_input")
+                venue_name = col_v.text_input(_("venue"), placeholder=_("venue_placeholder"), key="new_venue_input")
                 
-                col_l, col_s, col_n = st.columns(3)
+                # NEW: 가능성(%) 필드 추가
+                col_l, col_s, col_n, col_p = st.columns(4)
+                
                 type_options_map = {_("indoor"): "indoor", _("outdoor"): "outdoor"} # Display -> Internal Key
                 selected_display_type = col_l.radio(_("type"), list(type_options_map.keys()))
                 type_sel = type_options_map[selected_display_type] # Internal key
@@ -794,6 +800,10 @@ with tab2:
                 expected_seats = col_s.number_input(_("seats"), min_value=0, value=500, step=50, help=_("seats_tooltip"))
                 google_link = col_n.text_input(_("google_link"), placeholder=_("google_link_placeholder"))
                 
+                # NEW: 가능성 슬라이더
+                probability = col_p.slider(_("probability"), min_value=0, max_value=100, value=100, step=5)
+
+
                 note = st.text_area(_("note"), placeholder=_("note_placeholder"))
                 
                 submitted = st.form_submit_button(_("register"))
@@ -804,23 +814,34 @@ with tab2:
                     elif city_name_input not in city_dict:
                         pass
                     else:
-                        city_coords = city_dict[city_name_input]
-                        new_schedule_entry = {
-                            "id": str(uuid.uuid4()),
-                            "city": city_name_input,
-                            "venue": venue_name,
-                            "lat": city_coords["lat"],
-                            "lon": city_coords["lon"],
-                            "date": schedule_date.strftime("%Y-%m-%d"),
-                            "type": type_sel, # Internal key로 저장
-                            "seats": str(expected_seats),
-                            "note": note,
-                            "google_link": google_link,
-                            "reg_date": datetime.now(timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S")
-                        }
-                        tour_schedule.append(new_schedule_entry)
-                        save_json(CITY_FILE, tour_schedule)
-                        safe_rerun()
+                        # NEW: 도시/날짜 중복 검사
+                        is_duplicate = any(
+                            s.get('city') == city_name_input and s.get('date') == schedule_date.strftime("%Y-%m-%d")
+                            for s in tour_schedule
+                        )
+                        
+                        if is_duplicate:
+                            # 중복 시 경고 메시지 없이 등록 취소
+                            pass
+                        else:
+                            city_coords = city_dict[city_name_input]
+                            new_schedule_entry = {
+                                "id": str(uuid.uuid4()),
+                                "city": city_name_input,
+                                "venue": venue_name,
+                                "lat": city_coords["lat"],
+                                "lon": coords["lon"],
+                                "date": schedule_date.strftime("%Y-%m-%d"),
+                                "type": type_sel, # Internal key로 저장
+                                "seats": str(expected_seats),
+                                "note": note,
+                                "google_link": google_link,
+                                "probability": probability, # NEW: 가능성 저장
+                                "reg_date": datetime.now(timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S")
+                            }
+                            tour_schedule.append(new_schedule_entry)
+                            save_json(CITY_FILE, tour_schedule)
+                            safe_rerun()
                         
         
         # --- 관리자: 일정 보기 및 수정/삭제 (안정성 강화) ---
@@ -838,8 +859,11 @@ with tab2:
 
             for item_id, item in sorted_schedule_items:
                 translated_type = type_options_map_rev.get(item.get('type', 'outdoor'), _("outdoor"))
+                probability_val = item.get('probability', 100) # NEW: 확률 값 가져오기
                 
-                with st.expander(f"[{item.get('date', 'N/A')}] {item['city']} - {item['venue']} ({translated_type})", expanded=False):
+                header_text = f"[{item.get('date', 'N/A')}] {item['city']} - {item['venue']} ({translated_type}) | {_('probability')}: {probability_val}%"
+
+                with st.expander(header_text, expanded=False):
                     col_u, col_d = st.columns([1, 5])
                     
                     with col_u:
@@ -865,7 +889,7 @@ with tab2:
                             updated_date = col_ud.date_input(_("date"), value=initial_date)
                             updated_venue = col_uv.text_input(_("venue"), value=item.get('venue'))
                             
-                            col_ul, col_us, col_ug = st.columns(3)
+                            col_ul, col_us, col_ug, col_up = st.columns(4) # NEW: 4개 컬럼
                             current_map_type = item.get('type', 'outdoor')
                             current_map_index = 0 if current_map_type == "indoor" else 1
                             map_type_list = list(type_options_map_rev.values())
@@ -876,12 +900,18 @@ with tab2:
                             updated_seats = col_us.number_input(_("seats"), min_value=0, value=int(seats_value) if str(seats_value).isdigit() else 500, step=50)
                             updated_google = col_ug.text_input(_("google_link"), value=item.get('google_link', ''))
 
+                            # NEW: 가능성 슬라이더
+                            updated_probability = col_up.slider(_("probability"), min_value=0, max_value=100, value=item.get('probability', 100), step=5)
+
                             updated_note = st.text_area(_("note"), value=item.get('note'))
                             
                             if st.form_submit_button(_("update")):
                                 for idx, s in enumerate(tour_schedule):
                                     if s.get('id') == item_id:
                                         coords = city_dict.get(updated_city, {'lat': s.get('lat', 0), 'lon': s.get('lon', 0)})
+                                        
+                                        # 중복 검사는 수정 모드에서 건너뜁니다. (도시/날짜가 동일한 경우만 허용)
+
                                         tour_schedule[idx] = {
                                             "id": item_id,
                                             "city": updated_city,
@@ -893,6 +923,7 @@ with tab2:
                                             "seats": str(updated_seats),
                                             "note": updated_note,
                                             "google_link": updated_google,
+                                            "probability": updated_probability, # NEW: 가능성 저장
                                             "reg_date": s.get('reg_date', datetime.now(timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S"))
                                         }
                                         save_json(CITY_FILE, tour_schedule)
@@ -904,6 +935,7 @@ with tab2:
                         st.markdown(f"**{_('venue')}:** {item.get('venue', 'N/A')}")
                         st.markdown(f"**{_('seats')}:** {item.get('seats', 'N/A')}")
                         st.markdown(f"**{_('type')}:** {translated_type}")
+                        st.markdown(f"**{_('probability')}:** {probability_val}%") # NEW: 가능성 표시
                         if item.get('google_link'):
                             google_link_url = item['google_link']
                             st.markdown(f"**{_('google_link')}:** [{_('google_link')}]({google_link_url})")
@@ -947,23 +979,41 @@ with tab2:
         type_options_map_rev = {"indoor": _("indoor"), "outdoor": _("outdoor")} # Internal Key -> Display
         translated_type = type_options_map_rev.get(item.get('type', 'outdoor'), _("outdoor"))
         map_type_icon = '🏠' if item.get('type') == 'indoor' else '🌳'
+        probability_val = item.get('probability', 100) # NEW: 확률 값 가져오기
         
         # --- 수정된 부분: 도시 이름을 빨간색으로 표시 ---
         city_name_display = item.get('city', 'N/A')
         red_city_name = f'<span style="color: #BB3333; font-weight: bold;">{city_name_display}</span>'
         
+        # NEW: 가능성 막대 그래프 HTML 생성
+        # 막대 색상을 가능성(probability)에 따라 동적으로 변경
+        bar_color = "red" if probability_val < 50 else "gold" if probability_val < 90 else "#66BB66" # Green
+        
+        prob_bar_html = f"""
+        <div style="margin-top: 5px;">
+            <b>{_('probability')}:</b>
+            <div style="width: 100%; height: 10px; background-color: #333; border-radius: 5px; overflow: hidden; margin-top: 3px;">
+                <div style="width: {probability_val}%; height: 100%; background-color: {bar_color};"></div>
+            </div>
+            <span style="font-size: 12px; font-weight: bold; color: {bar_color};">{probability_val}%</span>
+        </div>
+        """
+        
         popup_html = f"""
-        <b>{_('city')}:</b> {red_city_name}<br>
-        <b>{_('date')}:</b> {date_str}<br>
-        <b>{_('venue')}:</b> {item.get('venue', 'N/A')}<br>
-        <b>{_('type')}:</b> {map_type_icon} {translated_type}<br>
-        <b>{_('seats')}:</b> {item.get('seats', 'N/A')}<br>
+        <div style="color: #FAFAFA; background-color: #1A1A1A; padding: 10px; border-radius: 8px;">
+            <b>{_('city')}:</b> {red_city_name}<br>
+            <b>{_('date')}:</b> {date_str}<br>
+            <b>{_('venue')}:</b> {item.get('venue', 'N/A')}<br>
+            <b>{_('type')}:</b> {map_type_icon} {translated_type}<br>
+            {prob_bar_html}
         """
         # -----------------------------------------------
         
         if item.get('google_link'):
             google_link_url = item['google_link'] 
-            popup_html += f'<a href="{google_link_url}" target="_blank">{_("google_link")}</a><br>'
+            popup_html += f'<a href="{google_link_url}" target="_blank" style="color: #FFD700; text-decoration: none; display: block; margin-top: 5px;">{_("google_link")}</a>'
+        
+        popup_html += "</div>" # 팝업 전체 닫기
         
         # 요청 반영: DivIcon을 사용하여 2/3 크기 (scale 0.666) 아이콘으로 조정 (항상 빨간색)
         city_initial = item.get('city', 'A')[0]
@@ -1030,11 +1080,13 @@ with tab2:
             AntPath(
                 future_segments, 
                 use="regular", 
-                dash_array='5, 5', 
+                # dash_array를 수정하여 화살표 모양으로 시뮬레이션
+                dash_array='30, 20', # 화살표 모양을 위한 점선 길이 조정
                 color='#BB3333', 
                 weight=5, 
                 opacity=0.8,
-                options={"delay": 24000, "dash_factor": 0.1, "color": "#BB3333"} # 속도를 1/2로 조정 (24000ms)
+                # dash_factor를 음수로 설정하여 역방향 이동 효과 (<<<<< 모양) 시뮬레이션
+                options={"delay": 24000, "dash_factor": -0.1, "color": "#BB3333"} 
             ).add_to(m)
 
             # 2. Add invisible PolyLines for hover tooltips on each segment
@@ -1155,8 +1207,7 @@ st.markdown(f"""
     border-bottom: 1px solid var(--accent-red); /* Subtle Red underline */
 }}
 
-/* 긴급 공지 제목 색상 (요청 반영) */
-/* st.expander 제목은 st.markdown(unsafe_allow_html=True)로 삽입되므로 span 태그의 색상만 제어 */
+/* 긴급 공지 제목 색상 (🚨 이모지를 사용하도록 변경했으므로, CSS 색상 설정은 제거) */
 .streamlit-expanderHeader span {{
     font-weight: bold;
 }}
