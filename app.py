@@ -315,12 +315,16 @@ if st.session_state.notice_open:
 if st.session_state.map_open:
     cities = load_json(CITY_FILE)
 
+    # --- 지도 (항상 Pune 중심) ---
+    m = folium.Map(location=[18.52043, 73.856743], zoom_start=7, tiles="OpenStreetMap")
+    st_folium(m, width=900, height=550, key="tour_map")
+
     if st.session_state.admin:
         if 'new_cities' not in st.session_state:
             st.session_state.new_cities = []
 
         # 도시 선택 박스 + 추가 버튼 (작은 박스 + 오른쪽 버튼)
-        col_select, col_add = st.columns([2, 1])
+        col_select, col_add = st.columns([1.33, 1.67])
         with col_select:
             selected_city = st.selectbox(
                 "도시", options=city_options, key="city_select_header", index=0,
@@ -385,10 +389,6 @@ if st.session_state.map_open:
                         if st.button(_("remove"), key=f"rem_{idx}"):
                             st.session_state.new_cities.pop(idx)
                             st.rerun()
-
-    # --- 지도 (항상 Pune 중심) ---
-    m = folium.Map(location=[18.52043, 73.856743], zoom_start=7, tiles="OpenStreetMap")
-    st_folium(m, width=900, height=550, key="tour_map")
 
 # --- 사이드바 & 모바일 ---
 st.markdown(f'''
