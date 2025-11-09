@@ -164,36 +164,26 @@ if st.session_state.map_open:
     city_options = ["Mumbai", "Pune", "Nagpur"]
 
     if st.session_state.admin:
-        if st.button(_("add_city"), key="add_city_header_btn"):
-            if 'new_cities' not in st.session_state:
-                st.session_state.new_cities = []
-            st.session_state.new_cities.append({
-                "city": city_options[0], "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True,
-                "date": date.today()
-            })
-            st.rerun()
+        if 'new_cities' not in st.session_state:
+            st.session_state.new_cities = []
+
+        col_select, col_add = st.columns([8, 1])
+        with col_select:
+            selected_city = st.selectbox("도시", options=city_options, key="city_select_header")
+        with col_add:
+            if st.button("+", key="add_city_header_btn", help="도시 추가"):
+                new_city = {
+                    "city": selected_city, "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True,
+                    "date": date.today()
+                }
+                new_city["lat"] = next(c["lat"] for c in DEFAULT_CITIES if c["city"] == selected_city)
+                new_city["lon"] = next(c["lon"] for c in DEFAULT_CITIES if c["city"] == selected_city)
+                st.session_state.new_cities.append(new_city)
+                st.rerun()
 
         if 'new_cities' in st.session_state:
             for idx, new_city in enumerate(st.session_state.new_cities):
                 with st.container():
-                    col_select, col_btn = st.columns([8, 1])
-                    with col_select:
-                        current_city = new_city.get("city", city_options[0])
-                        selected_city = st.selectbox(
-                            "도시", options=city_options, key=f"city_select_{idx}",
-                            index=city_options.index(current_city) if current_city in city_options else 0
-                        )
-                        new_city["city"] = selected_city
-                        new_city["lat"] = next(c["lat"] for c in DEFAULT_CITIES if c["city"] == selected_city)
-                        new_city["lon"] = next(c["lon"] for c in DEFAULT_CITIES if c["city"] == selected_city)
-                    with col_btn:
-                        if st.button("+", key=f"add_block_{idx}", help="도시 추가"):
-                            st.session_state.new_cities.append({
-                                "city": city_options[0], "venue": "", "seats": 500, "note": "", "google_link": "", "indoor": True,
-                                "date": date.today()
-                            })
-                            st.rerun()
-
                     with st.expander(f"{new_city['city']} 상세 정보", expanded=False):
                         col1, col2 = st.columns(2)
                         with col1:
@@ -219,38 +209,8 @@ if st.session_state.map_open:
                         )
                         new_city["indoor"] = venue_type == _("indoor")
 
-                        btn_cols = st.columns(3)
-                        with btn_cols[0]:
-                            if st.button(_("register"), key=f"reg_{idx}"):
-                                if new_city.get("city") and new_city.get("venue"):
-                                    save_city = new_city.copy()
-                                    save_city["date"] = save_city["date"].strftime("%Y-%m-%d")
-                                    save_city["seats"] = str(save_city["seats"])
-                                    cities.append(save_city)
-                                    save_json(CITY_FILE, cities)
-                                    st.session_state.new_cities.pop(idx)
-                                    st.success("등록 완료!")
-                                    st.rerun()
-                                else:
-                                    st.warning(_("warning"))
-                        with btn_cols[2]:
-                            if st.button(_("remove"), key=f"rem_{idx}"):
-                                st.session_state.new_cities.pop(idx)
-                                st.rerun()
-
     # --- 지도 ---
     m = folium.Map(location=[18.5204, 73.8567], zoom_start=7, tiles="OpenStreetMap")
-    for i, c in enumerate(cities):
-        lat, lon = c["lat"], c["lon"]
-        indoor_text = _("indoor") if c.get("indoor") else _("outdoor")
-        popup_html = f"<b>{c['city']}</b><br>{_('venue')}: {c.get('venue','—')}<br>{_('seats')}: {c.get('seats','—')}<br>{indoor_text}"
-        folium.Marker(
-            (lat, lon), popup=folium.Popup(popup_html, max_width=300),
-            icon=folium.Icon(color="red", icon="music", prefix="fa")
-        ).add_to(m)
-        if i < len(cities) - 1:
-            nxt = cities[i+1]
-            AntPath([(lat, lon), (nxt["lat"], nxt["lon"])], color="#e74c3c", weight=6, opacity=0.7).add_to(m)
     st_folium(m, width=900, height=550, key="tour_map")
 
 # --- 사이드바 & 모바일 ---
