@@ -207,6 +207,7 @@ for k, v in defaults.items():
 
 # --- 번역 함수 ---
 def _(key):
+    # 이 함수는 전역 네임스페이스에서 정의된 'LANG' 딕셔너리를 사용합니다.
     lang = st.session_state.lang if isinstance(st.session_state.lang, str) else "ko"
     return LANG.get(lang, LANG["ko"]).get(key, key)
 
@@ -235,20 +236,21 @@ def save_uploaded_files(uploaded_files):
             
     return file_info_list
 
-# --- 파일 Base64 인코딩 함수 (추가) ---
+# --- 파일 Base64 인코딩 함수 (수정 완료) ---
 def get_file_as_base64(file_path):
     """파일 경로를 받아 Base64 문자열을 반환합니다."""
     try:
         with open(file_path, "rb") as f:
             file_bytes = f.read()
-            base64_encoded_data = base66.b64encode(file_bytes).decode('utf-8')
+            # base64 모듈 사용 (이전 오타 base66 수정)
+            base64_encoded_data = base64.b64encode(file_bytes).decode('utf-8')
             return base64_encoded_data
     except Exception:
         # 파일이 없거나 접근할 수 없을 경우
         return None
 
 # --- 미디어 인라인 표시 및 다운로드 헬퍼 함수 (재사용성을 위해 별도 정의) ---
-def display_and_download_file(file_info, notice_id, is_admin=False, is_user_post=False):
+def display_and_download_file(file_info, item_id, is_admin=False, is_user_post=False):
     file_size_kb = round(file_info['size'] / 1024, 1)
     file_type = file_info['type']
     file_path = file_info['path']
@@ -281,7 +283,7 @@ def display_and_download_file(file_info, notice_id, is_admin=False, is_user_post
                             data=f.read(),
                             file_name=file_name,
                             mime=file_type,
-                            key=f"{key_prefix}_download_{notice_id}_{file_name}_imgfallback"
+                            key=f"{key_prefix}_download_{item_id}_{file_name}_imgfallback"
                         )
                 except Exception:
                     pass
@@ -301,7 +303,7 @@ def display_and_download_file(file_info, notice_id, is_admin=False, is_user_post
                         data=f.read(),
                         file_name=file_name,
                         mime=file_type,
-                        key=f"{key_prefix}_download_{notice_id}_{file_name}"
+                        key=f"{key_prefix}_download_{item_id}_{file_name}"
                     )
             except Exception:
                 pass
@@ -372,7 +374,7 @@ def calculate_distance_and_time(p1, p2):
     return f"거리: {distance_str} | 예상 시간: {time_str}"
 
 
-# --- 도시 목록 및 좌표 정의 (원래 코드에서 가져옴) ---
+# --- 도시 목록 및 좌표 정의 ---
 city_dict = {
     "Ahmadnagar": {"lat": 19.095193, "lon": 74.749596}, "Akola": {"lat": 20.702269, "lon": 77.004699},
     "Ambernath": {"lat": 19.186354, "lon": 73.191948}, "Amravati": {"lat": 20.93743, "lon": 77.779271},
@@ -524,7 +526,8 @@ christmas_icons = {
 
 # 랜덤 아이콘 생성 및 애니메이션 스타일
 icon_html = ""
-for _ in range(7): # 7개의 아이콘 생성
+# ERROR FIX: for _ in range(7): 대신 for i in range(7): 사용하여 _ 함수 덮어쓰기 방지
+for i in range(7): 
     icon_name, icon_char = random.choice(list(christmas_icons.items()))
     
     # 랜덤 애니메이션 속성
@@ -811,6 +814,7 @@ with tab1:
                 
                 attached_media = post.get('files', [])
                 if attached_media:
+                    # 사용자 모드에서는 첫 번째 첨부 파일만 표시 및 다운로드 허용
                     display_and_download_file(attached_media[0], post_id, is_admin=False, is_user_post=True)
                 
 
@@ -1149,6 +1153,7 @@ with tab2:
 
     st_folium(m, width=1000, height=600)
     
+# 최종 HTML/CSS 마크다운 블록 (SyntaxError 수정)
 st.markdown(f"""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
@@ -1199,14 +1204,14 @@ st.markdown(f"""
 }}
 
 /* Header Styling */
-.header-container {
+.header-container {{
     position: relative;
     height: 100px; /* 아이콘들이 움직일 공간 확보 */
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: 20px;
-}
+}}
 
 .main-title {{
     font-size: 3em;
@@ -1231,3 +1236,6 @@ st.markdown(f"""
 /* 폼 배경색 */
 .stForm {{
     padding: 15px;
+}}
+</style>
+""")
