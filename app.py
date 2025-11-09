@@ -614,7 +614,8 @@ with tab1:
         # --- 사용자: 공지사항 보기 (안정성 강화) ---
         valid_notices = [n for n in tour_notices if isinstance(n, dict) and n.get('title')]
         if not valid_notices:
-            st.info(_("no_notices"))
+            # st.info 대신 st.write 사용 (요청 반영)
+            st.write(_("no_notices"))
         else:
             notices_to_display = sorted(valid_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
             type_options_rev = {"General": _("general"), "Urgent": _("urgent")}
@@ -626,12 +627,13 @@ with tab1:
                 notice_title = notice.get('title', _("no_title"))
                 notice_content = notice.get('content', _("no_content"))
                 
-                # --- 수정된 부분: Expander로 감싸고 닫힘 상태로 시작 ---
+                # --- Expander로 감싸고 닫힘 상태로 시작 (요청 반영) ---
                 header_text = f"[{translated_type}] {notice_title} - *{notice.get('date', 'N/A')[:16]}*"
                 with st.expander(header_text, expanded=False): 
                     
-                    st.info(notice_content)
-                    
+                    # st.info 대신 custom markdown 사용 (숨겨지는 문제 방지)
+                    st.markdown(f'<div class="notice-content-box">{notice_content}</div>', unsafe_allow_html=True)
+
                     # --- 사용자 모드: 파일 첨부 표시 (이미지는 인라인, 나머지는 다운로드) ---
                     attached_files = notice.get('files', [])
                     if attached_files:
@@ -640,7 +642,7 @@ with tab1:
                             file_size_kb = round(file_info['size'] / 1024, 1)
                             
                             if os.path.exists(file_info['path']):
-                                # 1. 이미지 파일은 인라인으로 표시 (요청 반영)
+                                # 1. 이미지 파일은 인라인으로 표시
                                 if file_info['type'].startswith('image/'):
                                     base64_data = get_file_as_base64(file_info['path'])
                                     if base64_data:
@@ -653,7 +655,7 @@ with tab1:
                                         # Fallback (Hidden)
                                         pass
                                 
-                                # 2. 이미지 외 파일은 다운로드 버튼으로 표시 (요청 반영)
+                                # 2. 이미지 외 파일은 다운로드 버튼으로 표시
                                 else:
                                     icon = "📄"
                                     try:
@@ -821,7 +823,8 @@ with tab2:
                             st.markdown(f"**{_('google_link')}:** [{_('google_link')}]({google_link_url})")
                         st.markdown(f"**{_('note')}:** {item.get('note', 'N/A')}")
         else:
-            st.info(_("no_schedule"))
+            # st.info 대신 st.write 사용 (요청 반영)
+            st.write(_("no_schedule"))
 
     # --- 지도 표시 (사용자 & 관리자 공통) ---
     current_date = date.today()
@@ -1081,7 +1084,18 @@ st.markdown(f"""
     background-color: rgba(255, 193, 7, 0.1);
 }}
 
-/* Streamlit Alert 메시지 숨기기 (사용자 요청 반영) */
+/* Custom Content Box Style (mimicking st.info appearance, to avoid being hidden by stAlert CSS) */
+.notice-content-box {
+    border-left: 5px solid #007BFF; /* Info blue */
+    background-color: rgba(0, 123, 255, 0.1); /* Light blue background */
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+
+/* Streamlit Alert 메시지 숨기기 (사용자 요청 반영: 모든 상태 알림 숨김) */
 div[data-testid="stAlert"] {{
     display: none !important;
 }}
