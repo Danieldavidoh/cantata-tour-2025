@@ -531,7 +531,7 @@ for _ in range(7): # 7개의 아이콘 생성
             z-index: 101; /* 제목 위에 오도록 */
         ">{icon_char}</span>
     """
-# 오류 수정: get_lang() 함수를 사용하도록 통일
+# 오류 수정: get_lang() 함수를 사용하도록 통일하고, 변수를 사용합니다.
 title_cantata = get_lang('title_cantata')
 title_year = get_lang('title_year')
 title_region = get_lang('title_region')
