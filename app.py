@@ -1,6 +1,6 @@
 import json, os, uuid, base64, random
 import streamlit as st
-from datetime import datetime, timedelta, date
+from datetime import datetime, date
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import AntPath
@@ -49,7 +49,7 @@ LANG = {
 }
 
 # --- 세션 초기화 (lang 보장) ---
-defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "edit_city_index": None}
+defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "edit_city_index": None, "new_cities": []}
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -148,6 +148,12 @@ with col2:
         st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
 
+# --- 쿼리 파라미터 처리 (수정 모드) ---
+params = st.experimental_get_query_params()
+if 'edit' in params:
+    st.session_state.edit_city_index = int(params['edit'][0])
+    st.experimental_set_query_params()
+
 # --- 공지 (날짜: 오늘 표시) ---
 if st.session_state.notice_open:
     if st.session_state.admin:
@@ -203,6 +209,45 @@ if st.session_state.map_open:
                 "date": date.today()
             })
             st.rerun()
+
+        # 수정 모드
+        if st.session_state.edit_city_index is not None:
+            edit_idx = st.session_state.edit_city_index
+            if 0 <= edit_idx < len(cities):
+                edit_city = cities[edit_idx]
+                with st.expander(f"{edit_city['city']} 상세 정보 (수정 모드)", expanded=True):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        current_date = edit_city.get("date")
+                        if isinstance(current_date, str) and current_date:
+                            try:
+                                current_date = datetime.strptime(current_date, "%Y-%m-%d").date()
+                            except:
+                                current_date = date.today()
+                        elif not isinstance(current_date, date):
+                            current_date = date.today()
+                        edit_city["date"] = st.date_input(_("date"), value=current_date, key=f"edit_date_{edit_idx}")
+                        edit_city["venue"] = st.text_input(_("venue"), value=edit_city.get("venue", ""), key=f"edit_venue_{edit_idx}")
+                        edit_city["seats"] = st.number_input(_("seats"), min_value=0, value=int(edit_city.get("seats", 500)), step=50, key=f"edit_seats_{edit_idx}")
+                    with col2:
+                        edit_city["google_link"] = st.text_input(_("google_link"), value=edit_city.get("google_link", ""), key=f"edit_google_link_{edit_idx}")
+                        edit_city["note"] = st.text_input(_("note"), value=edit_city.get("note", ""), key=f"edit_note_{edit_idx}")
+
+                        venue_type = st.radio(
+                            "공연 장소 유형", [_("indoor"), _("outdoor")],
+                            index=0 if edit_city.get("indoor", True) else 1,
+                            horizontal=True, key=f"edit_venue_type_{edit_idx}"
+                        )
+                        edit_city["indoor"] = venue_type == _("indoor")
+
+                    if st.button(_("update"), key=f"update_{edit_idx}"):
+                        edit_city["date"] = edit_city["date"].strftime("%Y-%m-%d")
+                        edit_city["seats"] = str(edit_city["seats"])
+                        cities[edit_idx] = edit_city
+                        save_json(CITY_FILE, cities)
+                        st.session_state.edit_city_index = None
+                        st.success("수정 완료!")
+                        st.rerun()
 
         if 'new_cities' in st.session_state:
             for idx, new_city in enumerate(st.session_state.new_cities):
@@ -279,6 +324,71 @@ if st.session_state.map_open:
         <b>{_('seats')}:</b> {c.get('seats','—')}<br>
         """
         if st.session_state.admin:
-            popup_html += f'<button onclick="alert(\'수정 기능 구현 중\')">수정</button>'
+            popup_html += f'<a href="?edit={i}" target="_self">수정</a>'
         folium.Marker(
-            (lat
+            (lat, lon), popup=folium.Popup(popup_html, max_width=300),
+            icon=folium.Icon(color="red", icon="music", prefix="fa")
+        ).add_to(m)
+        if i < len(cities) - 1:
+            nxt = cities[i+1]
+            path = AntPath([(lat, lon), (nxt["lat"], nxt["lon"])], color="#e74c3c", weight=6, opacity=0.7)
+            path.add_to(m)
+            # 중간 지점 계산
+            mid_lat = (lat + nxt["lat"]) / 2
+            mid_lon = (lon + nxt["lon"]) / 2
+            # 거리/시간 계산
+            dist = calculate_distance(lat, lon, nxt["lat"], nxt["lon"])
+            time = calculate_time(dist)
+            # 텍스트 마커 (박스 제거, 검은색 텍스트, 평행)
+            folium.Marker(
+                [mid_lat, mid_lon],
+                icon=folium.DivIcon(html=f'<div style="color:black; font-weight:bold; white-space:nowrap;">{dist:.0f}km / {time}</div>')
+            ).add_to(m)
+
+    st_folium(m, width=900, height=600, key="tour_map")  # 높이 증가로 스크롤 최소화
+
+# --- 사이드바 & 모바일 ---
+st.markdown(f'''
+<button class="hamburger" onclick="document.querySelector('.sidebar-mobile').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open');">☰</button>
+<div class="overlay" onclick="document.querySelector('.sidebar-mobile').classList.remove('open'); this.classList.remove('open');"></div>
+<div class="sidebar-mobile">
+    <h3 style="color:white;">{_("menu")}</h3>
+    <select onchange="window.location.href='?lang='+this.value" style="width:100%; padding:8px; margin:10px 0;">
+        <option value="ko" {'selected' if st.session_state.lang=="ko" else ''}>한국어</option>
+        <option value="en" {'selected' if st.session_state.lang=="en" else ''}>English</option>
+        <option value="hi" {'selected' if st.session_state.lang=="hi" else ''}>हिंदी</option>
+    </select>
+    {'''
+        <input type="password" placeholder="비밀번호" id="mobile_pw" style="width:100%; padding:8px; margin:10px 0;">
+        <button onclick="if(document.getElementById('mobile_pw').value=='0009') window.location.href='?admin=true'; else alert('오류');" style="width:100%; padding:10px; background:#e74c3c; color:white; border:none; border-radius:8px;">{_("login")}</button>
+    ''' if not st.session_state.admin else f'''
+        <button onclick="window.location.href='?admin=false'" style="width:100%; padding:10px; background:#27ae60; color:white; border:none; border-radius:8px;">{_("logout")}</button>
+    ''' }
+</div>
+''', unsafe_allow_html=True)
+
+with st.sidebar:
+    sel = st.selectbox("언어", ["한국어", "English", "हिंदी"], index=0 if st.session_state.lang == "ko" else 1 if st.session_state.lang == "en" else 2)
+    if sel == "English" and st.session_state.lang != "en":
+        st.session_state.lang = "en"
+        st.rerun()
+    elif sel == "한국어" and st.session_state.lang != "ko":
+        st.session_state.lang = "ko"
+        st.rerun()
+    elif sel == "हिंदी" and st.session_state.lang != "hi":
+        st.session_state.lang = "hi"
+        st.rerun()
+
+    if not st.session_state.admin:
+        pw = st.text_input("비밀번호", type="password")
+        if st.button("로그인"):
+            if pw == "0009":
+                st.session_state.admin = True
+                st.rerun()
+            else:
+                st.error("비밀번호 오류")
+    else:
+        st.success("관리자 모드")
+        if st.button("로그아웃"):
+            st.session_state.admin = False
+            st.rerun()
