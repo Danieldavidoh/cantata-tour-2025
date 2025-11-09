@@ -245,8 +245,6 @@ st.markdown("""
 for i in range(52):
     st.markdown(f"<div class='snowflake' style='left:{random.randint(0,100)}vw; animation-duration:{random.randint(10,20)}s; font-size:{random.uniform(0.8,1.4)}em; animation-delay:{random.uniform(0,10)}s;'>❄</div>", unsafe_allow_html=True)
 
-st.markdown("<div style='height: 66vh;'></div>", unsafe_allow_html=True)
-
 # --- 헤더 ---
 st.markdown('<div class="header-container">', unsafe_allow_html=True)
 st.markdown('''
@@ -323,7 +321,7 @@ if st.session_state.map_open:
         if 'new_cities' not in st.session_state:
             st.session_state.new_cities = []
 
-        # 도시 선택 박스 + 추가 버튼 (작은 박스 + 오른쪽 버튼)
+        # 도시 선택 박스 + 추가 버튼 (나란히 배치)
         col_select, col_add = st.columns([2, 1])
         with col_select:
             selected_city = st.selectbox(
@@ -341,12 +339,14 @@ if st.session_state.map_open:
                         "date": date.today(), "lat": lat, "lon": lon
                     }
                     st.session_state.new_cities.append(new_city)
+                    st.session_state[f"expand_{selected_city}"] = True
                     st.rerun()
 
         # 새로 추가된 도시들
         if 'new_cities' in st.session_state:
             for idx, new_city in enumerate(st.session_state.new_cities):
-                with st.expander(f"{new_city['city']}", expanded=True):
+                expanded = st.session_state.get(f"expand_{new_city['city']}", False)
+                with st.expander(f"{new_city['city']}", expanded=expanded):
                     col1, col2 = st.columns(2)
                     with col1:
                         current_date = new_city.get("date")
@@ -378,7 +378,7 @@ if st.session_state.map_open:
                                 save_city = new_city.copy()
                                 save_city["date"] = save_city["date"].strftime("%Y-%m-%d")
                                 save_city["seats"] = str(save_city["seats"])
-                                cities.append(save_city)
+                                cities.insert(0, save_city)
                                 save_json(CITY_FILE, cities)
                                 st.session_state.new_cities.pop(idx)
                                 st.success("등록 완료!")
