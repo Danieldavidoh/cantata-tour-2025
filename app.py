@@ -59,7 +59,6 @@ LANG = {
 }
 
 # --- 세션 초기화 ---
-# show_login_form 상태 추가하여 로그인 로직 안정화
 defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "logged_in_user": None, "show_login_form": False}
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -189,7 +188,8 @@ if not tour_schedule:
 
 
 # --- 관리자 및 UI 설정 ---
-ADMIN_PASS = "admin_password_here" # 실제로는 보안 강화를 해야 합니다.
+ADMIN_PASS = "0009" # 요청 반영: 비밀번호를 '0009'로 변경
+# 실제로는 보안 강화를 해야 합니다.
 
 # 요청 반영: 제목 스타일 및 애니메이션을 위한 HTML 마크다운 처리
 icons_html = """
@@ -235,7 +235,7 @@ with col_lang:
         st.session_state.lang = selected_lang_key
         st.rerun()
 
-# --- 로그인 / 로그아웃 로직 (오류 수정) ---
+# --- 로그인 / 로그아웃 로직 ---
 with col_auth:
     if st.session_state.admin:
         if st.button(_("logout"), key="logout_btn"):
@@ -303,16 +303,17 @@ with tab1:
         
         # --- 관리자: 공지사항 목록 및 수정/삭제 ---
         st.subheader("Existing Notices")
-        notices_to_display = sorted(tour_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
+        
+        # 안정성 강화: 유효한 형식의 공지사항만 필터링하고 날짜순으로 정렬
+        valid_notices = [n for n in tour_notices if isinstance(n, dict) and n.get('id') and n.get('title')]
+        notices_to_display = sorted(valid_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
         
         for notice in notices_to_display:
-            # KeyError 방지: item.get() 사용
-            notice_id = notice.get('id')
-            if not notice_id: continue 
-            
+            notice_id = notice['id'] # 이제 'id'는 반드시 존재
             notice_type = notice.get('type', 'General')
+            notice_title = notice['title'] # 이제 'title'은 반드시 존재
             
-            with st.expander(f"[{notice_type}] {notice['title']} ({notice.get('date', 'N/A')[:10]})", expanded=False):
+            with st.expander(f"[{notice_type}] {notice_title} ({notice.get('date', 'N/A')[:10]})", expanded=False):
                 col_del, col_title = st.columns([1, 4])
                 with col_del:
                     if st.button(_("remove"), key=f"del_n_{notice_id}", help="Delete Notice"):
@@ -322,7 +323,7 @@ with tab1:
                         st.rerun()
                 
                 with col_title:
-                    st.markdown(f"**Content:** {notice['content']}")
+                    st.markdown(f"**Content:** {notice.get('content', 'No Content')}")
                 
                 # 간단한 업데이트 로직 추가
                 with st.form(f"update_notice_{notice_id}", clear_on_submit=True):
@@ -337,14 +338,13 @@ with tab1:
                                 st.rerun()
                         
     else:
-        # --- 사용자: 공지사항 보기 (KeyError 수정) ---
-        if not tour_notices:
+        # --- 사용자: 공지사항 보기 (안정성 강화) ---
+        valid_notices = [n for n in tour_notices if isinstance(n, dict) and n.get('title')]
+        if not valid_notices:
             st.info("No notices available.")
         else:
-            notices_to_display = sorted(tour_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
+            notices_to_display = sorted(valid_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
             for notice in notices_to_display:
-                # KeyError 방지: item.get() 사용
-                if 'id' not in notice: continue
                 notice_type = notice.get('type', 'General')
                 notice_title = notice.get('title', 'No Title')
                 notice_content = notice.get('content', 'No content available.')
@@ -407,22 +407,25 @@ with tab2:
                         st.rerun()
                         
         
-        # --- 관리자: 일정 보기 및 수정/삭제 ---
-        if tour_schedule:
+        # --- 관리자: 일정 보기 및 수정/삭제 (안정성 강화) ---
+        
+        # 안정성 강화: 유효한 형식의 일정만 필터링
+        valid_schedule = [
+            item 
+            for item in tour_schedule 
+            if isinstance(item, dict) and item.get('id') and item.get('city') and item.get('venue')
+        ]
+        
+        if valid_schedule:
             st.subheader("Tour Schedule Management")
             
-            # ID를 키로 사용하여 데이터를 딕셔너리로 변환 (KeyError 'id' 방지)
-            schedule_dict = {
-                item['id']: item 
-                for item in tour_schedule 
-                if 'id' in item
-            }
+            # id를 기준으로 딕셔너리로 변환
+            schedule_dict = {item['id']: item for item in valid_schedule}
             
-            # id를 기준으로 정렬
+            # 날짜를 기준으로 정렬
             sorted_schedule_items = sorted(schedule_dict.items(), key=lambda x: x[1].get('date', '9999-12-31'))
 
             for item_id, item in sorted_schedule_items:
-                # Key access is safe here because it came from schedule_dict
                 with st.expander(f"[{item.get('date', 'N/A')}] {item['city']} - {item['venue']}", expanded=False):
                     col_u, col_d = st.columns([1, 5])
                     
@@ -432,6 +435,7 @@ with tab2:
                             st.session_state[f"edit_mode_{item_id}"] = True
                             st.rerun()
                         if st.button(_("remove"), key=f"del_s_{item_id}"):
+                            # tour_schedule 리스트를 직접 수정
                             tour_schedule[:] = [s for s in tour_schedule if s.get('id') != item_id]
                             save_json(CITY_FILE, tour_schedule)
                             st.success(f"Schedule entry for {item['city']} removed.")
@@ -442,13 +446,20 @@ with tab2:
                             col_uc, col_ud, col_uv = st.columns(3)
                             
                             updated_city = col_uc.selectbox("City", city_options, index=city_options.index(item.get('city', "공연없음")))
-                            updated_date = col_ud.date_input("Date", value=datetime.strptime(item.get('date', '2025-01-01'), "%Y-%m-%d").date() if item.get('date') else date.today())
+                            
+                            # 날짜 형식 처리 개선
+                            try:
+                                initial_date = datetime.strptime(item.get('date', '2025-01-01'), "%Y-%m-%d").date()
+                            except ValueError:
+                                initial_date = date.today()
+                                
+                            updated_date = col_ud.date_input("Date", value=initial_date)
                             updated_venue = col_uv.text_input("Venue", value=item.get('venue'))
                             
                             col_ul, col_us, col_ug = st.columns(3)
                             updated_type = col_ul.radio("Type", [_("indoor"), _("outdoor")], index=[_("indoor"), _("outdoor")].index(item.get('type', 'outdoor')))
                             seats_value = item.get('seats', '0')
-                            updated_seats = col_us.number_input("Seats", min_value=0, value=int(seats_value) if seats_value.isdigit() else 0)
+                            updated_seats = col_us.number_input("Seats", min_value=0, value=int(seats_value) if str(seats_value).isdigit() else 0)
                             updated_google = col_ug.text_input("Google Link", value=item.get('google_link', ''))
 
                             updated_note = st.text_area("Note", value=item.get('note'))
@@ -488,10 +499,11 @@ with tab2:
 
     # --- 지도 표시 (사용자 & 관리자 공통) ---
     
-    # 1. 경로 데이터 준비 (날짜순 정렬)
+    # 1. 경로 데이터 준비 (날짜순 정렬 및 안정성 강화)
     current_date = date.today() # 현재 날짜
     schedule_for_map = sorted([
-        s for s in tour_schedule if s.get('date') and s.get('lat') is not None and s.get('lon') is not None and s.get('id')
+        s for s in tour_schedule 
+        if s.get('date') and s.get('lat') is not None and s.get('lon') is not None and s.get('id')
     ], key=lambda x: x['date'])
     
     # 2. 지도 중심 설정 (일단 Pune로 설정)
@@ -510,7 +522,12 @@ with tab2:
         lon = item['lon']
         date_str = item['date']
         
-        event_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        try:
+            event_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            # 날짜 형식 오류 시, 미래로 간주하여 표시
+            event_date = current_date + timedelta(days=365)
+        
         is_past = event_date < current_date
         
         # 마커 색상 설정
@@ -532,7 +549,6 @@ with tab2:
             popup_html += f'<a href="{google_link_url}" target="_blank">{_("google_link")}</a>'
         
         # 요청 반영: DivIcon을 사용하여 2/3 크기 (scale 0.666) 및 투명도 적용
-        # Font Awesome 아이콘을 사용해 크기를 조절
         city_initial = item.get('city', 'A')[0]
         marker_icon_html = f"""
             <div style="
@@ -565,12 +581,16 @@ with tab2:
         # 현재/미래 공연이 시작되는 인덱스를 찾습니다.
         current_index = -1
         for i, item in enumerate(schedule_for_map):
-            event_date = datetime.strptime(item['date'], "%Y-%m-%d").date()
-            if event_date >= current_date:
-                current_index = i
-                break
+            try:
+                event_date = datetime.strptime(item['date'], "%Y-%m-%d").date()
+                if event_date >= current_date:
+                    current_index = i
+                    break
+            except ValueError:
+                # 날짜 형식 오류 시, 이 항목은 건너뜀
+                continue
         
-        if current_index == -1: # 모든 일정이 과거
+        if current_index == -1: # 모든 일정이 과거 또는 날짜 오류
             past_segments = locations
             future_segments = []
         elif current_index == 0: # 모든 일정이 미래/현재 시작
@@ -606,9 +626,12 @@ with tab2:
             
     elif locations:
         # 도시가 하나만 있는 경우, 해당 위치에 원을 그려 표시
-        single_item_date = datetime.strptime(schedule_for_map[0]['date'], "%Y-%m-%d").date()
-        single_is_past = single_item_date < current_date
-        
+        try:
+            single_item_date = datetime.strptime(schedule_for_map[0]['date'], "%Y-%m-%d").date()
+            single_is_past = single_item_date < current_date
+        except ValueError:
+            single_is_past = False # 날짜 오류 시 미래로 간주
+            
         folium.Circle(
             location=locations[0],
             radius=1000, # 1km
