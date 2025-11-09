@@ -201,7 +201,15 @@ for c in CSV_CITIES:
     if c["lat"] is not None and c["lon"] is not None:
         city_dict[c["city"]] = {"lat": c["lat"], "lon": c["lon"]}
 
-city_options = ["공연없음"] + sorted(city_dict.keys())
+major_cities = ["Mumbai", "Pune", "Nagpur", "Thane", "Nashik", "Kalyan", "Vasai-Virar", "Aurangabad", "Solapur", "Mira-Bhayandar", "Bhiwandi", "Amravati", "Nanded", "Kolhapur", "Ulhasnagar", "Sangli", "Malegaon", "Jalgaon", "Akola", "Latur", "Dhule", "Ahmadnagar", "Chandrapur", "Parbhani", "Ichalkaranji", "Jalna", "Ambernath", "Bhusawal", "Panvel", "Dombivli"]
+
+# 주요 도시 중 city_dict에 있는 것만
+major_cities_available = [c for c in major_cities if c in city_dict]
+
+# 나머지 도시 알파벳 순
+remaining_cities = sorted([c for c in city_dict if c not in major_cities_available])
+
+city_options = ["공연없음"] + major_cities_available + remaining_cities
 
 # --- 초기 도시 (기존 DEFAULT_CITIES는 더 이상 사용하지 않음) ---
 if not os.path.exists(CITY_FILE):
