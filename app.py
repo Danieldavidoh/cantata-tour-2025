@@ -245,7 +245,7 @@ st.markdown("""
 for i in range(52):
     st.markdown(f"<div class='snowflake' style='left:{random.randint(0,100)}vw; animation-duration:{random.randint(10,20)}s; font-size:{random.uniform(0.8,1.4)}em; animation-delay:{random.uniform(0,10)}s;'>❄</div>", unsafe_allow_html=True)
 
-st.markdown("<div style='height: 33vh;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='height: 66vh;'></div>", unsafe_allow_html=True)
 
 # --- 헤더 ---
 st.markdown('<div class="header-container">', unsafe_allow_html=True)
@@ -324,7 +324,7 @@ if st.session_state.map_open:
             st.session_state.new_cities = []
 
         # 도시 선택 박스 + 추가 버튼 (작은 박스 + 오른쪽 버튼)
-        col_select, col_add = st.columns([1.33, 1.67])
+        col_select, col_add = st.columns([2, 1])
         with col_select:
             selected_city = st.selectbox(
                 "도시", options=city_options, key="city_select_header", index=0,
