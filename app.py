@@ -197,8 +197,8 @@ for k, v in defaults.items():
     elif k == "lang" and not isinstance(st.session_state[k], str):
         st.session_state[k] = "ko"
 
-# --- 번역 함수 ---
-def _(key):
+# --- 번역 함수 (이름 변경: _ -> get_lang) ---
+def get_lang(key):
     lang = st.session_state.lang if isinstance(st.session_state.lang, str) else "ko"
     return LANG.get(lang, LANG["ko"]).get(key, key)
 
@@ -244,7 +244,7 @@ def display_and_download_file(file_info, notice_id, is_admin=False, is_user_post
     key_prefix = "admin" if is_admin else "user"
     
     if is_user_post and not is_admin:
-        st.markdown(f"**{_('attached_files')}:** {_('admin_only_files')}")
+        st.markdown(f"**{get_lang('attached_files')}:** {get_lang('admin_only_files')}")
         return
 
     if os.path.exists(file_path):
@@ -531,11 +531,10 @@ for _ in range(7): # 7개의 아이콘 생성
             z-index: 101; /* 제목 위에 오도록 */
         ">{icon_char}</span>
     """
-# 오류 수정: .format() 대신 Python 변수를 직접 사용하도록 단순화 (f-string으로 회귀)
-# 단, title_html 정의를 st.markdown 호출 바로 전에 배치하여 _ 함수 호출이 안전하도록 보장
-title_cantata = _('title_cantata')
-title_year = _('title_year')
-title_region = _('title_region')
+# 오류 수정: get_lang() 함수를 사용하도록 통일
+title_cantata = get_lang('title_cantata')
+title_year = get_lang('title_year')
+title_region = get_lang('title_region')
 
 title_html = f"""
     <div class="header-container" style="position: relative; overflow: visible; height: 100px;">
@@ -560,7 +559,7 @@ with col_lang:
     current_lang_index = lang_keys.index(st.session_state.lang)
 
     selected_lang_display = st.selectbox(
-        _("menu"), 
+        get_lang("menu"), 
         options=lang_display_names, 
         index=current_lang_index,
         key="lang_select"
@@ -579,20 +578,20 @@ def handle_login_button_click():
 
 with col_auth:
     if st.session_state.admin:
-        if st.button(_("logout"), key="logout_btn"):
+        if st.button(get_lang("logout"), key="logout_btn"):
             st.session_state.admin = False
             st.session_state.logged_in_user = None
             st.session_state.show_login_form = False
             safe_rerun()
     else:
-        if st.button(_("login"), key="login_btn"):
+        if st.button(get_lang("login"), key="login_btn"):
             handle_login_button_click()
         
         if st.session_state.show_login_form:
             with st.form("login_form_permanent", clear_on_submit=False):
-                st.write(_("admin_login"))
+                st.write(get_lang("admin_login"))
                 password = st.text_input("Password", type="password")
-                submitted = st.form_submit_button(_("login"))
+                submitted = st.form_submit_button(get_lang("login"))
                 
                 if submitted:
                     if password == ADMIN_PASS:
@@ -605,7 +604,7 @@ with col_auth:
 
 
 # --- 탭 구성 ---
-tab1, tab2 = st.tabs([_("tab_notice"), _("tab_map")])
+tab1, tab2 = st.tabs([get_lang("tab_notice"), get_lang("tab_map")])
 
 # =============================================================================
 # 탭 1: 공지사항 (Notice)
@@ -614,26 +613,26 @@ with tab1:
     
     # 1. 관리자 공지사항 관리
     if st.session_state.admin:
-        st.subheader(f"🔔 {_('existing_notices')} (관리자 모드)")
+        st.subheader(f"🔔 {get_lang('existing_notices')} ({get_lang('admin_login')[:-3]} 모드)")
         
         # --- 관리자: 공지사항 등록/수정 폼 ---
-        with st.expander(_("register"), expanded=False):
+        with st.expander(get_lang("register"), expanded=False):
             with st.form("notice_form", clear_on_submit=True):
-                notice_title = st.text_input(_("title_cantata"))
-                notice_content = st.text_area(_("note"))
+                notice_title = st.text_input(get_lang("title_cantata"))
+                notice_content = st.text_area(get_lang("note"))
                 
                 uploaded_files = st.file_uploader(
-                    _("file_attachment"),
+                    get_lang("file_attachment"),
                     type=["png", "jpg", "jpeg", "pdf", "txt", "zip"],
                     accept_multiple_files=True,
                     key="notice_file_uploader"
                 )
                 
-                type_options = {"General": _("general"), "Urgent": _("urgent")}
-                selected_display_type = st.radio(_("type"), list(type_options.values()))
+                type_options = {"General": get_lang("general"), "Urgent": get_lang("urgent")}
+                selected_display_type = st.radio(get_lang("type"), list(type_options.values()))
                 notice_type = list(type_options.keys())[list(type_options.values()).index(selected_display_type)]
                 
-                submitted = st.form_submit_button(_("register"))
+                submitted = st.form_submit_button(get_lang("register"))
                 
                 if submitted and notice_title and notice_content:
                     file_info_list = save_uploaded_files(uploaded_files)
@@ -655,12 +654,12 @@ with tab1:
         # --- 관리자: 공지사항 목록 및 수정/삭제 ---
         valid_notices = [n for n in tour_notices if isinstance(n, dict) and n.get('id') and n.get('title')]
         notices_to_display = sorted(valid_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
-        type_options_rev = {"General": _("general"), "Urgent": _("urgent")}
+        type_options_rev = {"General": get_lang("general"), "Urgent": get_lang("urgent")}
         
         for notice in notices_to_display:
             notice_id = notice['id']
             notice_type_key = notice.get('type', 'General')
-            translated_type = type_options_rev.get(notice_type_key, _("general"))
+            translated_type = type_options_rev.get(notice_type_key, get_lang("general"))
             notice_title = notice['title']
             
             prefix = "🚨 " if notice_type_key == "Urgent" else ""
@@ -669,7 +668,7 @@ with tab1:
             with st.expander(header_text, expanded=False):
                 col_del, col_title = st.columns([1, 4])
                 with col_del:
-                    if st.button(_("remove"), key=f"del_n_{notice_id}", help=_("remove")):
+                    if st.button(get_lang("remove"), key=f"del_n_{notice_id}", help=get_lang("remove")):
                         for file_info in notice.get('files', []):
                             if os.path.exists(file_info['path']):
                                 os.remove(file_info['path'])
@@ -679,24 +678,24 @@ with tab1:
                         safe_rerun()
                 
                 with col_title:
-                    st.markdown(f"**{_('content')}:** {notice.get('content', _('no_content'))}")
+                    st.markdown(f"**{get_lang('content')}:** {notice.get('content', get_lang('no_content'))}")
                     
                     attached_files = notice.get('files', [])
                     if attached_files:
-                        st.markdown(f"**{_('attached_files')}:**")
+                        st.markdown(f"**{get_lang('attached_files')}:**")
                         for file_info in attached_files:
                             display_and_download_file(file_info, notice_id, is_admin=True, is_user_post=False)
                     else:
-                        st.markdown(f"**{_('attached_files')}:** {_('no_files')}")
+                        st.markdown(f"**{get_lang('attached_files')}:** {get_lang('no_files')}")
                 
                 with st.form(f"update_notice_{notice_id}", clear_on_submit=True):
                     current_type_index = list(type_options_rev.keys()).index(notice_type_key)
-                    updated_display_type = st.radio(_("type"), list(type_options_rev.values()), index=current_type_index, key=f"update_type_{notice_id}")
+                    updated_display_type = st.radio(get_lang("type"), list(type_options_rev.values()), index=current_type_index, key=f"update_type_{notice_id}")
                     updated_type_key = list(type_options_rev.keys())[list(type_options_rev.values()).index(updated_display_type)]
                     
-                    updated_content = st.text_area(_("update_content"), value=notice.get('content', ''))
+                    updated_content = st.text_area(get_lang("update_content"), value=notice.get('content', ''))
                     
-                    if st.form_submit_button(_("update")):
+                    if st.form_submit_button(get_lang("update")):
                         for n in tour_notices:
                             if n.get('id') == notice_id:
                                 n['content'] = updated_content
@@ -707,21 +706,21 @@ with tab1:
         
     # 2. 일반 사용자 공지사항 & 포스트 보기
     if not st.session_state.admin:
-        st.subheader(f"📢 {_('tab_notice')}")
+        st.subheader(f"📢 {get_lang('tab_notice')}")
         
         valid_notices = [n for n in tour_notices if isinstance(n, dict) and n.get('title')]
         if not valid_notices:
-            st.write(_("no_notices"))
+            st.write(get_lang("no_notices"))
         else:
             notices_to_display = sorted(valid_notices, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
-            type_options_rev = {"General": _("general"), "Urgent": _("urgent")}
+            type_options_rev = {"General": get_lang("general"), "Urgent": get_lang("urgent")}
             
             for notice in notices_to_display:
                 notice_id = notice.get('id')
                 notice_type_key = notice.get('type', 'General')
-                translated_type = type_options_rev.get(notice_type_key, _("general"))
-                notice_title = notice.get('title', _("no_title"))
-                notice_content = notice.get('content', _("no_content"))
+                translated_type = type_options_rev.get(notice_type_key, get_lang("general"))
+                notice_title = notice.get('title', get_lang("no_title"))
+                notice_content = notice.get('content', get_lang("no_content"))
                 
                 prefix = "🚨 " if notice_type_key == "Urgent" else ""
                 
@@ -734,24 +733,24 @@ with tab1:
 
                     attached_files = notice.get('files', [])
                     if attached_files:
-                        st.markdown(f"**{_('attached_files')}:**")
+                        st.markdown(f"**{get_lang('attached_files')}:**")
                         for file_info in attached_files:
                             display_and_download_file(file_info, notice_id, is_admin=False, is_user_post=False)
     
     # 3. 사용자 포스트 섹션 (관리자/일반 사용자 공통)
-    st.subheader(f"📸 {_('user_posts')}") 
+    st.subheader(f"📸 {get_lang('user_posts')}") 
     
-    with st.expander(_("new_post"), expanded=False):
+    with st.expander(get_lang("new_post"), expanded=False):
         with st.form("user_post_form", clear_on_submit=True):
-            post_content = st.text_area(_("post_content"), placeholder="여행 후기, 사진 공유 등 자유롭게 작성하세요.")
+            post_content = st.text_area(get_lang("post_content"), placeholder=get_lang("post_content"))
             uploaded_media = st.file_uploader(
-                _("media_attachment"),
+                get_lang("media_attachment"),
                 type=["png", "jpg", "jpeg", "mp4", "mov"], 
                 accept_multiple_files=True,
                 key="user_media_uploader"
             )
             
-            post_submitted = st.form_submit_button(_("register"))
+            post_submitted = st.form_submit_button(get_lang("register"))
             
             if post_submitted and (post_content or uploaded_media):
                 media_info_list = save_uploaded_files(uploaded_media) 
@@ -773,12 +772,12 @@ with tab1:
     
     if st.session_state.admin:
         posts_to_display = sorted(valid_posts, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
-        st.markdown(f"**관리자**는 총 {len(posts_to_display)}개의 사용자 포스트를 확인할 수 있습니다.")
+        st.markdown(f"**{get_lang('admin_login')[:-3]}**는 총 {len(posts_to_display)}개의 사용자 포스트를 확인할 수 있습니다.")
         for post in posts_to_display:
             post_id = post['id']
             
             with st.expander(f"익명 사용자 포스트 - *{post.get('date', 'N/A')[:16]}*", expanded=False):
-                st.markdown(f'<div class="notice-content-box">{post.get("content", _("no_content"))}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="notice-content-box">{post.get("content", get_lang("no_content"))}</div>', unsafe_allow_html=True)
                 
                 attached_media = post.get('files', [])
                 if attached_media:
@@ -789,13 +788,13 @@ with tab1:
         posts_to_display = sorted(valid_posts, key=lambda x: x.get('date', '9999-12-31'), reverse=True)
         
         if not posts_to_display:
-            st.write(_("no_posts"))
+            st.write(get_lang("no_posts"))
         else:
             for post in posts_to_display:
                 post_id = post['id']
                 
                 st.markdown(f"**익명 사용자** - *{post.get('date', 'N/A')[:16]}*")
-                st.markdown(f'<div class="notice-content-box">{post.get("content", _("no_content"))}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="notice-content-box">{post.get("content", get_lang("no_content"))}</div>', unsafe_allow_html=True)
                 
                 attached_media = post.get('files', [])
                 if attached_media:
@@ -806,35 +805,35 @@ with tab1:
 # 탭 2: 투어 경로 (Map)
 # =============================================================================
 with tab2:
-    st.subheader(f"🗺️ {_('tab_map')}")
+    st.subheader(f"🗺️ {get_lang('tab_map')}")
     
     # --- 관리자: 투어 일정 관리 ---
     if st.session_state.admin:
-        st.markdown(f"**{_('register')} {_('tab_map')} {_('set_data')}**")
+        st.markdown(f"**{get_lang('register')} {get_lang('tab_map')} {get_lang('set_data')}**")
         
-        with st.expander(_("add_city"), expanded=False):
+        with st.expander(get_lang("add_city"), expanded=False):
             with st.form("schedule_form", clear_on_submit=True):
                 col_c, col_d, col_v = st.columns(3)
                 
-                city_name_input = col_c.selectbox(_('city_name'), options=city_options, index=0, key="new_city_select")
-                schedule_date = col_d.date_input(_("date"), key="new_date_input")
-                venue_name = col_v.text_input(_("venue"), placeholder=_("venue_placeholder"), key="new_venue_input")
+                city_name_input = col_c.selectbox(get_lang('city_name'), options=city_options, index=0, key="new_city_select")
+                schedule_date = col_d.date_input(get_lang("date"), key="new_date_input")
+                venue_name = col_v.text_input(get_lang("venue"), placeholder=get_lang("venue_placeholder"), key="new_venue_input")
                 
                 col_l, col_s, col_n, col_p = st.columns(4)
                 
-                type_options_map = {_("indoor"): "indoor", _("outdoor"): "outdoor"} # Display -> Internal Key
-                selected_display_type = col_l.radio(_("type"), list(type_options_map.keys()))
-                type_sel = type_options_map[selected_display_type] # Internal key
+                type_options_map = {get_lang("indoor"): "indoor", get_lang("outdoor"): "outdoor"} # Display -> Internal Key
+                selected_display_type = col_l.radio(get_lang("type"), list(type_options_map.values()), index=1)
+                type_sel = selected_display_type # Internal key (이미 value가 internal key)
                 
-                expected_seats = col_s.number_input(_("seats"), min_value=0, value=500, step=50, help=_("seats_tooltip"))
-                google_link = col_n.text_input(_("google_link"), placeholder=_("google_link_placeholder"))
+                expected_seats = col_s.number_input(get_lang("seats"), min_value=0, value=500, step=50, help=get_lang("seats_tooltip"))
+                google_link = col_n.text_input(get_lang("google_link"), placeholder=get_lang("google_link_placeholder"))
                 
-                probability = col_p.slider(_("probability"), min_value=0, max_value=100, value=100, step=5)
+                probability = col_p.slider(get_lang("probability"), min_value=0, max_value=100, value=100, step=5)
 
 
-                note = st.text_area(_("note"), placeholder=_("note_placeholder"))
+                note = st.text_area(get_lang("note"), placeholder=get_lang("note_placeholder"))
                 
-                submitted = st.form_submit_button(_("register"))
+                submitted = st.form_submit_button(get_lang("register"))
                 
                 if submitted:
                     if not city_name_input or not venue_name or not schedule_date:
@@ -878,25 +877,25 @@ with tab2:
         ]
         
         if valid_schedule:
-            st.subheader(_("tour_schedule_management"))
+            st.subheader(get_lang("tour_schedule_management"))
             schedule_dict = {item['id']: item for item in valid_schedule}
             sorted_schedule_items = sorted(schedule_dict.items(), key=lambda x: x[1].get('date', '9999-12-31'))
-            type_options_map_rev = {"indoor": _("indoor"), "outdoor": _("outdoor")}
+            type_options_map_rev = {"indoor": get_lang("indoor"), "outdoor": get_lang("outdoor")}
 
             for item_id, item in sorted_schedule_items:
-                translated_type = type_options_map_rev.get(item.get('type', 'outdoor'), _("outdoor"))
+                translated_type = type_options_map_rev.get(item.get('type', 'outdoor'), get_lang("outdoor"))
                 probability_val = item.get('probability', 100)
                 
-                header_text = f"[{item.get('date', 'N/A')}] {item['city']} - {item['venue']} ({translated_type}) | {_('probability')}: {probability_val}%"
+                header_text = f"[{item.get('date', 'N/A')}] {item['city']} - {item['venue']} ({translated_type}) | {get_lang('probability')}: {probability_val}%"
 
                 with st.expander(header_text, expanded=False):
                     col_u, col_d = st.columns([1, 5])
                     
                     with col_u:
-                        if st.button(_("update"), key=f"upd_s_{item_id}"):
+                        if st.button(get_lang("update"), key=f"upd_s_{item_id}"):
                             st.session_state[f"edit_mode_{item_id}"] = True
                             safe_rerun()
-                        if st.button(_("remove"), key=f"del_s_{item_id}"):
+                        if st.button(get_lang("remove"), key=f"del_s_{item_id}"):
                             tour_schedule[:] = [s for s in tour_schedule if s.get('id') != item_id]
                             save_json(CITY_FILE, tour_schedule)
                             safe_rerun()
@@ -905,32 +904,32 @@ with tab2:
                         with st.form(f"edit_form_{item_id}"):
                             col_uc, col_ud, col_uv = st.columns(3)
                             
-                            updated_city = col_uc.selectbox(_("city"), city_options, index=city_options.index(item.get('city', "Pune") if item.get('city') in city_options else city_options[0]))
+                            updated_city = col_uc.selectbox(get_lang("city"), city_options, index=city_options.index(item.get('city', "Pune") if item.get('city') in city_options else city_options[0]))
                             
                             try:
                                 initial_date = datetime.strptime(item.get('date', '2025-01-01'), "%Y-%m-%d").date()
                             except ValueError:
                                 initial_date = date.today()
                                 
-                            updated_date = col_ud.date_input(_("date"), value=initial_date)
-                            updated_venue = col_uv.text_input(_("venue"), value=item.get('venue'))
+                            updated_date = col_ud.date_input(get_lang("date"), value=initial_date)
+                            updated_venue = col_uv.text_input(get_lang("venue"), value=item.get('venue'))
                             
                             col_ul, col_us, col_ug, col_up = st.columns(4)
                             current_map_type = item.get('type', 'outdoor')
                             current_map_index = 0 if current_map_type == "indoor" else 1
                             map_type_list = list(type_options_map_rev.values())
-                            updated_display_type = col_ul.radio(_("type"), map_type_list, index=current_map_index, key=f"update_map_type_{item_id}")
-                            updated_type = "indoor" if updated_display_type == _("indoor") else "outdoor"
+                            updated_display_type = col_ul.radio(get_lang("type"), map_type_list, index=current_map_index, key=f"update_map_type_{item_id}")
+                            updated_type = "indoor" if updated_display_type == get_lang("indoor") else "outdoor"
                             
                             seats_value = item.get('seats', '0')
-                            updated_seats = col_us.number_input(_("seats"), min_value=0, value=int(seats_value) if str(seats_value).isdigit() else 500, step=50)
-                            updated_google = col_ug.text_input(_("google_link"), value=item.get('google_link', ''))
+                            updated_seats = col_us.number_input(get_lang("seats"), min_value=0, value=int(seats_value) if str(seats_value).isdigit() else 500, step=50)
+                            updated_google = col_ug.text_input(get_lang("google_link"), value=item.get('google_link', ''))
 
-                            updated_probability = col_up.slider(_("probability"), min_value=0, max_value=100, value=item.get('probability', 100), step=5)
+                            updated_probability = col_up.slider(get_lang("probability"), min_value=0, max_value=100, value=item.get('probability', 100), step=5)
 
-                            updated_note = st.text_area(_("note"), value=item.get('note'))
+                            updated_note = st.text_area(get_lang("note"), value=item.get('note'))
                             
-                            if st.form_submit_button(_("update")):
+                            if st.form_submit_button(get_lang("update")):
                                 for idx, s in enumerate(tour_schedule):
                                     if s.get('id') == item_id:
                                         coords = city_dict.get(updated_city, {'lat': s.get('lat', 0), 'lon': s.get('lon', 0)})
@@ -954,17 +953,17 @@ with tab2:
                                         safe_rerun()
                             
                     if not st.session_state.get(f"edit_mode_{item_id}"):
-                        st.markdown(f"**{_('date')}:** {item.get('date', 'N/A')} ({item.get('reg_date', '')})")
-                        st.markdown(f"**{_('venue')}:** {item.get('venue', 'N/A')}")
-                        st.markdown(f"**{_('seats')}:** {item.get('seats', 'N/A')}")
-                        st.markdown(f"**{_('type')}:** {translated_type}")
-                        st.markdown(f"**{_('probability')}:** {probability_val}%")
+                        st.markdown(f"**{get_lang('date')}:** {item.get('date', 'N/A')} ({item.get('reg_date', '')})")
+                        st.markdown(f"**{get_lang('venue')}:** {item.get('venue', 'N/A')}")
+                        st.markdown(f"**{get_lang('seats')}:** {item.get('seats', 'N/A')}")
+                        st.markdown(f"**{get_lang('type')}:** {translated_type}")
+                        st.markdown(f"**{get_lang('probability')}:** {probability_val}%")
                         if item.get('google_link'):
                             nav_link = f"https://www.google.com/maps/dir/?api=1&destination={item['lat']},{item['lon']}"
-                            st.markdown(f"**{_('google_link')}:** [<span style='color:#FFD700;'>{_('google_link')}</span>]({nav_link})", unsafe_allow_html=True)
-                        st.markdown(f"**{_('note')}:** {item.get('note', 'N/A')}")
+                            st.markdown(f"**{get_lang('google_link')}:** [<span style='color:#FFD700;'>{get_lang('google_link')}</span>]({nav_link})", unsafe_allow_html=True)
+                        st.markdown(f"**{get_lang('note')}:** {item.get('note', 'N/A')}")
         else:
-            st.write(_("no_schedule"))
+            st.write(get_lang("no_schedule"))
 
     # --- 지도 표시 (사용자 & 관리자 공통) ---
     current_date = date.today()
@@ -995,8 +994,8 @@ with tab2:
         icon_color = '#BB3333'
         opacity_val = 0.25 if is_past else 1.0
         
-        type_options_map_rev = {"indoor": _("indoor"), "outdoor": _("outdoor")}
-        translated_type = type_options_map_rev.get(item.get('type', 'outdoor'), _("outdoor"))
+        type_options_map_rev = {"indoor": get_lang("indoor"), "outdoor": get_lang("outdoor")}
+        translated_type = type_options_map_rev.get(item.get('type', 'outdoor'), get_lang("outdoor"))
         map_type_icon = '🏠' if item.get('type') == 'indoor' else '🌳'
         probability_val = item.get('probability', 100)
         
@@ -1008,7 +1007,7 @@ with tab2:
         # 수정: '가능성 (%)' -> '가능성'
         prob_bar_html = f"""
         <div style="margin-top: 5px; width: 100%;">
-            <div style="font-weight: bold; color: #FAFAFA;">{_('probability')}</div>
+            <div style="font-weight: bold; color: #FAFAFA;">{get_lang('probability')}</div>
             <div style="width: 100%; height: 10px; background-color: #333; border-radius: 5px; overflow: hidden; margin-top: 3px;">
                 <div style="width: {probability_val}%; height: 100%; background-color: {bar_color};"></div>
             </div>
@@ -1019,16 +1018,16 @@ with tab2:
         # 말풍선 HTML
         popup_html = f"""
         <div style="color: #FAFAFA; background-color: #1A1A1A; padding: 10px; border-radius: 8px; width: 180px;">
-            <b>{_('city')}:</b> {red_city_name}<br>
-            <b>{_('date')}:</b> {date_str}<br>
-            <b>{_('venue')}:</b> {item.get('venue', 'N/A')}<br>
-            <b>{_('type')}:</b> {map_type_icon} {translated_type}<br>
+            <b>{get_lang('city')}:</b> {red_city_name}<br>
+            <b>{get_lang('date')}:</b> {date_str}<br>
+            <b>{get_lang('venue')}:</b> {item.get('venue', 'N/A')}<br>
+            <b>{get_lang('type')}:</b> {map_type_icon} {translated_type}<br>
             {prob_bar_html}
         """
         
         if item.get('google_link'):
             nav_link = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
-            popup_html += f'<a href="{nav_link}" target="_blank" style="color: #FFD700; text-decoration: none; display: block; margin-top: 5px; text-align: center; border: 1px solid #FFD700; border-radius: 5px;">{_("google_link")} (내비게이션)</a>'
+            popup_html += f'<a href="{nav_link}" target="_blank" style="color: #FFD700; text-decoration: none; display: block; margin-top: 5px; text-align: center; border: 1px solid #FFD700; border-radius: 5px;">{get_lang("google_link")} (내비게이션)</a>'
         
         popup_html += "</div>"
         
@@ -1084,7 +1083,7 @@ with tab2:
                 color="#BB3333",
                 weight=5,
                 opacity=0.25,
-                tooltip=_("past_route")
+                tooltip=get_lang("past_route")
             ).add_to(m)
             
         if len(future_segments) > 1:
@@ -1132,7 +1131,7 @@ with tab2:
             fill=True,
             fill_color='#BB3333',
             fill_opacity=0.25 if single_is_past else 0.8,
-            tooltip=_("single_location")
+            tooltip=get_lang("single_location")
         ).add_to(m)
 
     st_folium(m, width=1000, height=600)
