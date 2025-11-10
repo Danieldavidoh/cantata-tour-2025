@@ -1,9 +1,10 @@
+import streamlit as st
+import pandas as pd
+import uuid
 import json
 import os
-import uuid
 import base64
 import random
-import streamlit as st
 from datetime import datetime, date, timedelta
 import folium
 from streamlit_folium import st_folium
@@ -83,8 +84,15 @@ LANG = {
         "no_posts": "현재 포스트가 없습니다.",
         "admin_only_files": "첨부 파일은 관리자만 확인 가능합니다.",
         "probability": "가능성 (%)",
-        "delete_data_title": "🚨 전체 데이터 초기화 1단계",
-        "delete_data_confirm": "✅ 최종 확인: 모든 데이터 삭제"
+        "delete_data_title": "🚨 전체 데이터 초기화 (모두)",
+        "delete_data_confirm": "✅ 최종 확인: 모든 데이터 삭제",
+        
+        # [NEW] 일정 삭제 관련 번역
+        "delete_all_schedule": "일정 전체 삭제",
+        "confirm_schedule_delete_q": "⚠️ 정말로 투어 일정을 모두 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+        "confirm_yes": "예, 삭제합니다",
+        "confirm_no": "아니오, 취소합니다",
+        "schedule_cleared_success": "✅ 투어 일정이 모두 삭제되었습니다.",
     },
     "en": {
         "title_cantata": "Cantata Tour", "title_year": "2025", "title_region": "Maharashtra",
@@ -138,8 +146,15 @@ LANG = {
         "no_posts": "No posts available.",
         "admin_only_files": "Attached files can only be viewed by Admin.",
         "probability": "Probability (%)",
-        "delete_data_title": "🚨 Clear All Data (Step 1)",
-        "delete_data_confirm": "✅ Final Confirmation: Delete All Data"
+        "delete_data_title": "🚨 Clear All Data (All)",
+        "delete_data_confirm": "✅ Final Confirmation: Delete All Data",
+        
+        # [NEW] 일정 삭제 관련 번역
+        "delete_all_schedule": "Clear All Schedule",
+        "confirm_schedule_delete_q": "⚠️ Are you sure you want to delete all tour schedules? This cannot be undone.",
+        "confirm_yes": "Yes, Delete All",
+        "confirm_no": "No, Cancel",
+        "schedule_cleared_success": "✅ Tour schedule cleared successfully.",
     },
     "hi": {
         "title_cantata": "कैंटाटा टूर", "title_year": "२०२५", "title_region": "महाराष्ट्र",
@@ -193,13 +208,20 @@ LANG = {
         "no_posts": "कोई पोस्ट उपलब्ध नहीं है।",
         "admin_only_files": "संलग्न फ़ाइलें केवल व्यवस्थापक द्वारा देखी जा सकती हैं।",
         "probability": "संभावना (%)",
-        "delete_data_title": "🚨 सभी डेटा साफ़ करें (चरण 1)",
-        "delete_data_confirm": "✅ अंतिम पुष्टि: सभी डेटा हटाएं"
+        "delete_data_title": "🚨 सभी डेटा साफ़ करें (सभी)",
+        "delete_data_confirm": "✅ अंतिम पुष्टि: सभी डेटा हटाएं",
+        
+        # [NEW] 일정 삭제 관련 번역
+        "delete_all_schedule": "सभी शेड्यूल साफ़ करें",
+        "confirm_schedule_delete_q": "⚠️ क्या आप वाकई सभी टूर शेड्यूल हटाना चाहते हैं? यह पूर्ववत नहीं किया जा सकता है।",
+        "confirm_yes": "हाँ, सभी हटाएँ",
+        "confirm_no": "नहीं, रद्द करें",
+        "schedule_cleared_success": "✅ टूर शेड्यूल सफलतापूर्वक साफ़ किया गया।",
     }
 }
 
 # --- 세션 초기화 ---
-defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "logged_in_user": None, "show_login_form": False, "show_final_delete_confirm": False}
+defaults = {"admin": False, "lang": "ko", "notice_open": False, "map_open": False, "logged_in_user": None, "show_login_form": False, "show_final_delete_confirm": False, "confirm_schedule_delete": False}
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -295,7 +317,7 @@ def display_and_download_file(file_info, notice_id, is_admin=False, is_user_post
                 st.video(open(file_path, 'rb').read(), format=file_type, start_time=0)
                 st.markdown(f"**🎬 {file_name} ({file_size_kb} KB)**")
             except Exception:
-                 st.markdown(f"**🎬 {file_name} ({file_size_kb} KB)** (비디오 로드 실패)")
+                st.markdown(f"**🎬 {file_name} ({file_size_kb} KB)** (비디오 로드 실패)")
             
         else:
             icon = "📄"
@@ -374,43 +396,41 @@ def calculate_distance_and_time(p1, p2):
 
 
 # =============================================================================
-# NEW: 전체 데이터 삭제 함수 (투어 일정 초기화 포함)
+# NEW: 일정 데이터만 삭제하는 함수 (요청 사항)
+# =============================================================================
+def clear_tour_schedule_data():
+    """
+    투어 일정 데이터(CITY_FILE)만 완전히 비우고 앱을 새로고침합니다.
+    """
+    global tour_schedule
+    tour_schedule = []
+    save_json(CITY_FILE, []) # CITY_FILE을 빈 리스트로 저장하여 데이터 완전 삭제
+    st.session_state.confirm_schedule_delete = False
+    st.toast(_("schedule_cleared_success"), icon='🗑️')
+    safe_rerun()
+# =============================================================================
+
+
+# =============================================================================
+# 기존 delete_all_admin_data 함수 수정: CITY_FILE을 TBD 목록 대신 완전히 비웁니다.
 # =============================================================================
 def delete_all_admin_data():
     """
     모든 투어 데이터 (일정, 공지사항, 사용자 포스트) 및 첨부 파일을 삭제하고 초기화합니다.
     """
-    global tour_schedule
+    global tour_schedule, tour_notices, user_posts
     
     # 1. JSON 파일 초기화 및 저장
-    
-    # CITY_FILE: 투어 일정을 city_dict 기반의 초기 상태로 재설정
-    initial_schedule = []
-    for city, coords in city_dict.items():
-        initial_schedule.append({
-            "id": str(uuid.uuid4()),
-            "city": city,
-            "venue": "TBD",
-            "lat": coords["lat"],
-            "lon": coords["lon"],
-            "date": "",
-            "type": "outdoor",
-            "seats": "0",
-            "note": "Initial Data",
-            "google_link": "",
-            "probability": 100, # 초기값 100%
-            "reg_date": datetime.now(timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S")
-        })
-    save_json(CITY_FILE, initial_schedule)
-    # 메모리 내 전역 변수 업데이트
-    global tour_notices, user_posts
-    tour_notices = []
-    user_posts = []
+    # CITY_FILE: 투어 일정 데이터 (완전 삭제)
+    tour_schedule = []
+    save_json(CITY_FILE, []) 
     
     # NOTICE_FILE: 공지사항 데이터 (완전 삭제)
+    tour_notices = []
     save_json(NOTICE_FILE, [])
     
     # USER_POST_FILE: 사용자 포스트 데이터 (완전 삭제)
+    user_posts = []
     save_json(USER_POST_FILE, [])
     
     # 2. 업로드된 파일 삭제 (공지사항 및 사용자 포스트 미디어)
@@ -434,7 +454,7 @@ def delete_all_admin_data():
 # =============================================================================
 
 
-# --- 도시 목록 및 좌표 정의 ---
+# --- 도시 목록 및 좌표 정의 (생략 없음) ---
 city_dict = {
     "Ahmadnagar": {"lat": 19.095193, "lon": 74.749596}, "Akola": {"lat": 20.702269, "lon": 77.004699},
     "Ambernath": {"lat": 19.186354, "lon": 73.191948}, "Amravati": {"lat": 20.93743, "lon": 77.779271},
@@ -511,27 +531,10 @@ tour_notices = load_json(NOTICE_FILE)
 tour_schedule = load_json(CITY_FILE) 
 user_posts = load_json(USER_POST_FILE) # <-- 사용자 포스트 로드
 
-# 만약 city_dict에 있는 도시 정보가 없다면 초기화
-if not tour_schedule or not any(s.get('city') in city_dict for s in tour_schedule):
-    # 초기 도시 데이터를 지도 경로를 위해 포맷팅하여 저장
-    initial_schedule = []
-    for city, coords in city_dict.items():
-        initial_schedule.append({
-            "id": str(uuid.uuid4()),
-            "city": city,
-            "venue": "TBD",
-            "lat": coords["lat"],
-            "lon": coords["lon"],
-            "date": "",
-            "type": "outdoor",
-            "seats": "0",
-            "note": "Initial Data",
-            "google_link": "",
-            "probability": 100,
-            "reg_date": datetime.now(timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S")
-        })
-    save_json(CITY_FILE, initial_schedule)
-    tour_schedule = initial_schedule
+# [수정] tour_schedule이 비어있으면 (즉, 파일이 비워진 경우) 빈 리스트로 확정하여 TBD 목록이 자동으로 로드되지 않게 합니다.
+if not tour_schedule:
+    tour_schedule = []
+# [제거] 이전에 TBD 목록을 자동으로 로드하던 복잡한 if/else 로직을 제거하여, '일정 전체 삭제' 후 앱을 재실행해도 데이터가 다시 생기지 않도록 보장합니다.
 
 
 # --- 관리자 및 UI 설정 ---
@@ -586,6 +589,7 @@ with col_auth:
             st.session_state.logged_in_user = None
             st.session_state.show_login_form = False
             st.session_state.show_final_delete_confirm = False # 삭제 확인 상태 초기화
+            st.session_state.confirm_schedule_delete = False # [NEW] 일정 삭제 확인 상태 초기화
             safe_rerun()
     else:
         if st.button(_("login"), key="login_btn"):
@@ -722,6 +726,7 @@ with tab1:
                                 n['type'] = updated_type_key
                                 save_json(NOTICE_FILE, tour_notices)
                                 safe_rerun()
+                                break
         
     # 2. 일반 사용자 공지사항 & 포스트 보기
     if not st.session_state.admin:
@@ -816,7 +821,7 @@ with tab1:
                 if attached_media:
                     # 파일이 첨부되었음을 알리는 텍스트만 표시
                     st.markdown(f"**{_('attached_files')}:** {_('admin_only_files')}")
-                
+        
 
 # =============================================================================
 # 탭 2: 투어 경로 (Map)
@@ -826,7 +831,45 @@ with tab2:
     
     # --- 관리자: 투어 일정 관리 ---
     if st.session_state.admin:
-        st.markdown(f"**{_('register')} {_('tab_map')} {_('set_data')}**")
+        
+        # [NEW] 투어 일정 관리 섹션 헤더 및 전체 삭제 버튼
+        col_sch_head, col_sch_del = st.columns([3, 1])
+        with col_sch_head:
+            st.subheader(_("tour_schedule_management"))
+            
+        with col_sch_del:
+            st.markdown('<div class="delete-button-container">', unsafe_allow_html=True)
+            if st.button(_("delete_all_schedule"), key="schedule_only_delete_button", type="primary", use_container_width=True):
+                # 삭제 확인 플래그를 True로 설정하고 새로고침하여 확인 모달을 띄움
+                st.session_state['confirm_schedule_delete'] = True
+                safe_rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # [NEW] 일정 전체 삭제 확인 모달/메시지 처리
+        if st.session_state.get('confirm_schedule_delete', False):
+            # 오류 발생 지점: _() 호출 대신 직접 문자열 사용으로 안정성 강화
+            st.warning(_("confirm_schedule_delete_q"), icon="⚠️")
+            
+            confirm_col1, confirm_col2, _ = st.columns([1, 1, 3])
+            
+            with confirm_col1:
+                # [안정화 수정] _("confirm_yes") 대신 직접 문자열을 사용하거나,
+                # _("confirm_yes")가 None일 때의 폴백(Fallback)을 추가하여 TypeError 방지
+                
+                # 번역 함수가 None인 경우를 대비하여 직접 언어 딕셔너리에 접근하거나, 문자열을 사용
+                confirm_yes_label = LANG[st.session_state.lang].get("confirm_yes", "Yes, Delete") 
+                
+                if st.button(confirm_yes_label, key="confirm_schedule_yes", type="primary", use_container_width=True):
+                    clear_tour_schedule_data() # JSON 파일 초기화 및 Rerun
+                    
+            with confirm_col2:
+                confirm_no_label = LANG[st.session_state.lang].get("confirm_no", "No, Cancel")
+
+                if st.button(confirm_no_label, key="confirm_schedule_no", type="secondary", use_container_width=True):
+                    st.session_state['confirm_schedule_delete'] = False
+                    st.info("삭제가 취소되었습니다.")
+                    safe_rerun() # 새로고침하여 확인 메시지를 제거
+        
         
         with st.expander(_("add_city"), expanded=False):
             with st.form("schedule_form", clear_on_submit=True):
@@ -854,9 +897,9 @@ with tab2:
                 
                 if submitted:
                     if not city_name_input or not venue_name or not schedule_date:
-                        pass
+                        st.error(_("warning"))
                     elif city_name_input not in city_dict:
-                        pass
+                        st.error(_("city_coords_error"))
                     else:
                         is_duplicate = any(
                             s.get('city') == city_name_input and s.get('date') == schedule_date.strftime("%Y-%m-%d")
@@ -864,7 +907,7 @@ with tab2:
                         )
                         
                         if is_duplicate:
-                            pass
+                            st.warning(f"{city_name_input}에 이미 {schedule_date.strftime('%Y-%m-%d')} 일정이 등록되어 있습니다.")
                         else:
                             city_coords = city_dict[city_name_input]
                             new_schedule_entry = {
@@ -883,8 +926,9 @@ with tab2:
                             }
                             tour_schedule.append(new_schedule_entry)
                             save_json(CITY_FILE, tour_schedule)
+                            st.toast(_("schedule_reg_success"), icon='🎉')
                             safe_rerun()
-                        
+                
         
         # --- 관리자: 일정 보기 및 수정/삭제 (안정성 강화) ---
         valid_schedule = [
@@ -894,7 +938,7 @@ with tab2:
         ]
         
         if valid_schedule:
-            st.subheader(_("tour_schedule_management"))
+            # st.subheader(_("tour_schedule_management")) # 헤더는 이미 위에서 표시했음
             schedule_dict = {item['id']: item for item in valid_schedule}
             sorted_schedule_items = sorted(schedule_dict.items(), key=lambda x: x[1].get('date', '9999-12-31'))
             type_options_map_rev = {"indoor": _("indoor"), "outdoor": _("outdoor")} # Internal Key -> Display
@@ -915,6 +959,7 @@ with tab2:
                         if st.button(_("remove"), key=f"del_s_{item_id}", use_container_width=True):
                             tour_schedule[:] = [s for s in tour_schedule if s.get('id') != item_id]
                             save_json(CITY_FILE, tour_schedule)
+                            st.toast(_("schedule_del_success"), icon='🗑️')
                             safe_rerun()
 
                     if st.session_state.get(f"edit_mode_{item_id}"):
@@ -967,6 +1012,7 @@ with tab2:
                                         }
                                         save_json(CITY_FILE, tour_schedule)
                                         st.session_state[f"edit_mode_{item_id}"] = False
+                                        st.toast(_("schedule_upd_success"), icon='👍')
                                         safe_rerun()
                                         break
                                 
@@ -981,7 +1027,7 @@ with tab2:
                             st.markdown(f"**{_('google_link')}:** [{_('google_link')}]({google_link_url})")
                         st.markdown(f"**{_('note')}:** {item.get('note', 'N/A')}")
         else:
-            st.write(_("no_schedule"))
+            st.info(_("no_schedule"))
 
     # --- 지도 표시 (사용자 & 관리자 공통) ---
     current_date = date.today()
@@ -1136,22 +1182,22 @@ with tab2:
                     )
                 ).add_to(m)
             
-    elif locations:
-        try:
-            single_item_date = datetime.strptime(schedule_for_map[0]['date'], "%Y-%m-%d").date()
-            single_is_past = single_item_date < current_date
-        except ValueError:
-            single_is_past = False
-            
-        folium.Circle(
-            location=locations[0],
-            radius=1000,
-            color='#BB3333',
-            fill=True,
-            fill_color='#BB3333',
-            fill_opacity=0.25 if single_is_past else 0.8,
-            tooltip=_("single_location")
-        ).add_to(m)
+        elif locations:
+            try:
+                single_item_date = datetime.strptime(schedule_for_map[0]['date'], "%Y-%m-%d").date()
+                single_is_past = single_item_date < current_date
+            except ValueError:
+                single_is_past = False
+                
+            folium.Circle(
+                location=locations[0],
+                radius=1000,
+                color='#BB3333',
+                fill=True,
+                fill_color='#BB3333',
+                fill_opacity=0.25 if single_is_past else 0.8,
+                tooltip=_("single_location")
+            ).add_to(m)
 
     # 지도 표시
     st_folium(m, width=1000, height=600)
@@ -1254,9 +1300,8 @@ st.markdown(f"""
 }}
 
 /* Streamlit Alert 메시지 숨기기 (사용자 요청 반영: 모든 상태 알림 숨김) */
-div[data-testid="stAlert"] {{
-    display: none !important;
-}}
+/* [FIX] 삭제 확인 모달은 보여주기 위해 st.error와 st.warning은 숨기지 않습니다. */
+
 
 /* Selectbox/Input Label Color */
 .stSelectbox>label, .stTextInput>label, .stTextArea>label, .stNumberInput>label {{
